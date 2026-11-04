@@ -55,7 +55,7 @@ input[type=range]{padding:0;accent-color:#d946a8}.v{color:#ffb3dd;font-weight:bo
 .ring .l1{background:conic-gradient(transparent 0 58%,#1e5bff 70%,#8b2bff 82%,#ff2fb3 93%,#fff 100%);mix-blend-mode:screen}
 .ring .l2{background:conic-gradient(transparent 0 58%,#ff2a3d 72%,#ff2fb3 88%,#ffd6ea 100%);mix-blend-mode:screen}
 #edgeB{filter:blur(22px)}#edgeB .ring{padding:calc(var(--rt,4px)*4)}.ring{padding:var(--rt,4px)}.ring .l3{background:conic-gradient(#ff2a3d,#ffb300,#7cff00,#00e5ff,#2979ff,#8b2bff,#ff2fb3,#ff2a3d);opacity:0}
-</style><style>:root{--rt:5px}#edgeA .ring .l1,#edgeA .ring .l2,#edgeA .ring .l3,#edgeB .ring .l1,#edgeB .ring .l2,#edgeB .ring .l3{display:none}#edgeA .ring .l0,#edgeB .ring .l0{background:conic-gradient(#ff1744 0%,#ff2fb3 18%,rgba(255,47,179,0) 32%,#1e5bff 50%,#00ff85 68%,rgba(0,255,133,0) 82%,#ff1744 100%);opacity:1}</style><style>#sos{position:fixed;top:calc(env(safe-area-inset-top,0px) + 10px);left:10px;z-index:60;display:none;width:42px;height:42px;border-radius:50%;border:0;background:#b91c1c;color:#fff;font-size:20px;box-shadow:0 0 14px #ef4444aa}body.incall #sos{display:block}</style><style>#acts a.btn.act{display:none!important}</style><style>.sfoot{position:sticky;bottom:0;display:flex;flex-wrap:wrap;gap:8px;padding:10px 0 6px;margin-top:14px;background:linear-gradient(180deg,#0d0a1a00,#0d0a1a 30%)}.sfoot button{flex:1;padding:11px 4px;border-radius:14px;border:1px solid #51416e;background:#1b1430;color:#fff;font:inherit;font-size:14px}
+.gtabs{display:flex;gap:8px;margin:6px 0 10px}.gtab{flex:1;padding:10px 6px;border-radius:14px;border:1px solid #6b57c4;background:#1d1744;color:#d8cff5;font:inherit;font-size:13px;cursor:pointer}.gtab.on{background:linear-gradient(180deg,#ffe08a,#f3a81d);color:#2a1700;font-weight:800;border-color:#ffe29a}</style><style>:root{--rt:5px}#edgeA .ring .l1,#edgeA .ring .l2,#edgeA .ring .l3,#edgeB .ring .l1,#edgeB .ring .l2,#edgeB .ring .l3{display:none}#edgeA .ring .l0,#edgeB .ring .l0{background:conic-gradient(#ff1744 0%,#ff2fb3 18%,rgba(255,47,179,0) 32%,#1e5bff 50%,#00ff85 68%,rgba(0,255,133,0) 82%,#ff1744 100%);opacity:1}</style><style>#sos{position:fixed;top:calc(env(safe-area-inset-top,0px) + 10px);left:10px;z-index:60;display:none;width:42px;height:42px;border-radius:50%;border:0;background:#b91c1c;color:#fff;font-size:20px;box-shadow:0 0 14px #ef4444aa}body.incall #sos{display:block}</style><style>#acts a.btn.act{display:none!important}</style><style>.sfoot{position:sticky;bottom:0;display:flex;flex-wrap:wrap;gap:8px;padding:10px 0 6px;margin-top:14px;background:linear-gradient(180deg,#0d0a1a00,#0d0a1a 30%)}.sfoot button{flex:1;padding:11px 4px;border-radius:14px;border:1px solid #51416e;background:#1b1430;color:#fff;font:inherit;font-size:14px}
 #pg{position:fixed;inset:0;z-index:300;background:radial-gradient(120% 70% at 50% 0%,#2b1a58 0%,#0d0a1a 62%);color:#fff;display:none;flex-direction:column;overflow:hidden}#pg.show{display:flex}
 #pg header{display:flex;align-items:center;gap:12px;padding:calc(env(safe-area-inset-top,0px) + 12px) 14px 8px}#pg header button{width:40px;height:40px;border-radius:50%;border:1px solid #51416e;background:#1b1430;color:#fff;font-size:20px}#pg header h2{margin:0;font-size:19px;color:#ffd36b}
 #pgM{flex:1;overflow-y:auto;padding:4px 16px calc(env(safe-area-inset-bottom,0px) + 28px);line-height:1.9;font-size:16px}
@@ -91,9 +91,9 @@ body.drm #edgeA .ring .l0,body.drm #edgeB .ring .l0{background:conic-gradient(#0
 #chat .log{padding:6px 2px;font-size:16px}#chat .msg{border-radius:16px;margin:9px 0}
 .cin input{border-radius:22px!important;padding-inline:16px!important}
 </style><style>#pick{display:none!important}#bell{position:fixed;top:calc(env(safe-area-inset-top,0px) + 10px);left:10px;z-index:19;width:42px;height:42px;border-radius:50%;border:1px solid #ffffff30;background:#150d2bd9;color:#ffd36b;font-size:20px;backdrop-filter:blur(8px)}#bell.has{animation:bw 2.4s ease-in-out infinite;box-shadow:0 0 14px #ffd36b99}#bell.has::after{content:attr(data-n);position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;padding:0 4px;box-sizing:border-box;border-radius:9px;background:#ef4444;color:#fff;font-size:11px;line-height:18px}@keyframes bw{0%,60%,100%{transform:rotate(0)}10%{transform:rotate(15deg)}20%{transform:rotate(-13deg)}30%{transform:rotate(9deg)}40%{transform:rotate(-5deg)}}body.locked #bell{display:none}#sos{left:60px!important}</style><style>.stk{position:sticky;bottom:0;margin:12px -16px -16px;background:linear-gradient(180deg,#0a071600,#0a0716 18%);z-index:3}.stk .savebar{position:static;margin:0;padding:10px 16px 0;border-top:1px solid #ffd36b33!important;background:none!important}.stk .sfoot{position:static;margin:0;padding:8px 16px calc(8px + env(safe-area-inset-bottom));background:none}</style></head><body><div id="gate" dir="ltr"><div class="gbox"><div class="gold big">✦ Mayra Premium</div><p class="small">Activate the app to continue</p>
-<label>Activation Key</label><input id="gKey" placeholder="MAYRA-XXXX-XXXX-XXXX" dir="ltr" autocapitalize="characters" autocomplete="off">
-<label>Gemini API Key <span class="small">(from Google — see below)</span></label><input id="gApi" type="password" dir="ltr" placeholder="Paste your Gemini API key" autocomplete="off"><div class="gget" dir="rtl"><button class="btn" id="gGet" type="button">🔑 مفت Gemini Key حاصل کریں</button><button class="btn" id="gPaste" type="button">📋 Paste</button><p class="small">1️⃣ اوپر والا بٹن دبائیں اور اپنے گوگل اکاؤنٹ سے لاگ ان کریں۔ 2️⃣ “Create API key” دبائیں اور بننے والی key کاپی کریں۔ 3️⃣ واپس آ کر اوپر والے خانے “Gemini API Key” میں Paste کر دیں۔ لائسنس (Activation) key آپ کو ڈیولپر دے گا۔</p></div>
-<button class="btn" id="gBtn">🔓 Activate</button><div class="gmsg" id="gMsg"></div><p class="small">Device ID: <span id="gDev"></span></p><a id="waGate" href="#" style="display:flex;align-items:center;justify-content:center;gap:10px;color:#9ef0bd;text-decoration:none;margin-top:8px;font-size:13px"><span class="wa" style="width:32px;height:32px"><svg viewBox="0 0 32 32" width="18" height="18" fill="#fff"><path d="M16.04 4C9.4 4 4 9.38 4 16.02c0 2.12.55 4.2 1.6 6.03L4 28l6.1-1.6a12.02 12.02 0 0 0 5.94 1.52h.01C22.68 27.92 28 22.54 28 15.9 28 9.3 22.64 4 16.04 4zm0 21.9h-.01a9.97 9.97 0 0 1-5.08-1.39l-.36-.22-3.62.95.97-3.53-.24-.37a9.93 9.93 0 0 1-1.53-5.3c0-5.5 4.48-9.98 10-9.98 2.67 0 5.18 1.04 7.06 2.93a9.9 9.9 0 0 1 2.92 7.06c0 5.5-4.5 9.85-9.99 9.85zm5.48-7.47c-.3-.15-1.78-.88-2.05-.98-.28-.1-.48-.15-.68.15-.2.3-.78.98-.95 1.18-.18.2-.35.22-.65.08-.3-.15-1.27-.47-2.42-1.5-.9-.8-1.5-1.78-1.67-2.08-.18-.3-.02-.46.13-.6.13-.14.3-.35.45-.52.15-.18.2-.3.3-.5.1-.2.05-.38-.02-.53-.08-.15-.68-1.64-.93-2.25-.24-.58-.5-.5-.68-.5l-.58-.01c-.2 0-.52.08-.8.38-.27.3-1.04 1.02-1.04 2.5 0 1.47 1.07 2.9 1.22 3.1.15.2 2.1 3.2 5.08 4.5.7.3 1.26.48 1.7.62.72.22 1.37.2 1.88.12.58-.08 1.78-.73 2.03-1.43.25-.7.25-1.3.18-1.43-.08-.12-.28-.2-.58-.35z"/></svg></span><span dir="rtl">لائسنس key چاہیے؟ ڈیویلپر سے واٹس ایپ پر رابطہ کریں</span></a></div></div>
+<div class="gtabs"><button type="button" id="tLic" class="gtab on">💎 لائسنس · License</button><button type="button" id="tFree" class="gtab">🆓 مفت · Free</button></div><div id="licRow"><label>Activation Key</label><input id="gKey" placeholder="MAYRA-XXXX-XXXX-XXXX" dir="ltr" autocapitalize="characters" autocomplete="off">
+</div><label>Gemini API Key <span class="small">(from Google — see below)</span></label><input id="gApi" type="password" dir="ltr" placeholder="Paste your Gemini API key" autocomplete="off"><div class="gget" dir="rtl"><button class="btn" id="gGet" type="button">🔑 مفت Gemini Key حاصل کریں</button><button class="btn" id="gPaste" type="button">📋 Paste</button><p class="small">1️⃣ اوپر والا بٹن دبائیں اور اپنے گوگل اکاؤنٹ سے لاگ ان کریں۔ 2️⃣ “Create API key” دبائیں اور بننے والی key کاپی کریں۔ 3️⃣ واپس آ کر اوپر والے خانے “Gemini API Key” میں Paste کر دیں۔ لائسنس (Activation) key آپ کو ڈیولپر دے گا۔</p></div>
+<button class="btn" id="gBtn">🔓 Activate</button><div id="fBox" style="display:none"><p class="small" style="text-align:center;line-height:1.8">مفت مایرا چلانے کے لیے ویڈیو دیکھنی ہوگی: ہر ویڈیو = 5 منٹ۔<br>Free Mayra: watch a video to get 5 minutes each.</p><button type="button" id="fStart" class="btn" style="width:100%">▶ شروع کریں · Start</button></div><div class="gmsg" id="gMsg"></div><p class="small">Device ID: <span id="gDev"></span></p><a id="waGate" href="#" style="display:flex;align-items:center;justify-content:center;gap:10px;color:#9ef0bd;text-decoration:none;margin-top:8px;font-size:13px"><span class="wa" style="width:32px;height:32px"><svg viewBox="0 0 32 32" width="18" height="18" fill="#fff"><path d="M16.04 4C9.4 4 4 9.38 4 16.02c0 2.12.55 4.2 1.6 6.03L4 28l6.1-1.6a12.02 12.02 0 0 0 5.94 1.52h.01C22.68 27.92 28 22.54 28 15.9 28 9.3 22.64 4 16.04 4zm0 21.9h-.01a9.97 9.97 0 0 1-5.08-1.39l-.36-.22-3.62.95.97-3.53-.24-.37a9.93 9.93 0 0 1-1.53-5.3c0-5.5 4.48-9.98 10-9.98 2.67 0 5.18 1.04 7.06 2.93a9.9 9.9 0 0 1 2.92 7.06c0 5.5-4.5 9.85-9.99 9.85zm5.48-7.47c-.3-.15-1.78-.88-2.05-.98-.28-.1-.48-.15-.68.15-.2.3-.78.98-.95 1.18-.18.2-.35.22-.65.08-.3-.15-1.27-.47-2.42-1.5-.9-.8-1.5-1.78-1.67-2.08-.18-.3-.02-.46.13-.6.13-.14.3-.35.45-.52.15-.18.2-.3.3-.5.1-.2.05-.38-.02-.53-.08-.15-.68-1.64-.93-2.25-.24-.58-.5-.5-.68-.5l-.58-.01c-.2 0-.52.08-.8.38-.27.3-1.04 1.02-1.04 2.5 0 1.47 1.07 2.9 1.22 3.1.15.2 2.1 3.2 5.08 4.5.7.3 1.26.48 1.7.62.72.22 1.37.2 1.88.12.58-.08 1.78-.73 2.03-1.43.25-.7.25-1.3.18-1.43-.08-.12-.28-.2-.58-.35z"/></svg></span><span dir="rtl">لائسنس key چاہیے؟ ڈیویلپر سے واٹس ایپ پر رابطہ کریں</span></a></div></div>
 <canvas id="bg"></canvas><div id="edgeB"><div class="ring"><i class="l0"></i><i class="l1"></i><i class="l2"></i><i class="l3"></i></div></div><div id="edgeA"><div class="ring"><i class="l0"></i><i class="l1"></i><i class="l2"></i><i class="l3"></i></div></div>
 <div class="stage" id="orb"><canvas id="gl"></canvas><video id="tv" class="tvv" muted loop playsinline autoplay></video></div>
 <div class="ui"><button class="fab" id="menu" aria-label="menu">☰</button><div class="status" id="status">ابھی منسلک نہیں</div>
@@ -599,7 +599,7 @@ $('contacts').oninput=()=>{try{localStorage.setItem('mayra_contacts',$('contacts
 $('clrmem').onclick=()=>{clearAllMem();alert('Memory cleared')};
 $('pick').onclick=async()=>{if(NATIVE){const n=await importPB();if(n>=0){alert(n+' contacts imported');return}}if(!(navigator.contacts&&navigator.contacts.select)){alert('This works only in the Android app or Android Chrome. Please type contacts as Name=92300...');return}
   try{const r=await navigator.contacts.select(['name','tel'],{multiple:true});const v=$('contacts').value;$('contacts').value=v+(v&&!v.endsWith('\n')?'\n':'')+r.filter(x=>x.name[0]&&x.tel[0]).map(x=>x.name[0]+'='+x.tel[0].replace(/[^\d+]/g,'')).join('\n');$('contacts').oninput()}catch(e){}};
-$('start').onclick=()=>{want=true;licRecheck(true);tries=0;greeted=false;resumeHandle='';start()};
+$('start').onclick=()=>{if(isFree()&&freeSecs<=0){freeEnd();return}want=true;licRecheck(true);tries=0;greeted=false;resumeHandle='';start()};
 
 let mediaBusy=false,mHot=0,mCool=0,mLast=-9;
 async function mediaTick(){
@@ -615,7 +615,7 @@ async function mediaTick(){
   }catch(e){}}
 setInterval(mediaTick,1500);
 
-$('stop').onclick=()=>{want=false;stopping=true;cleanup();status('گفتگو بند ہوگئی')};
+$('stop').onclick=()=>{want=false;stopping=true;freeReport();cleanup();status('گفتگو بند ہوگئی')};
 $('bExit').onclick=async()=>{
   if(!(await confirmAct('کیا ایپ مکمل بند کریں؟\nExit Mayra completely')))return;
   want=false;stopping=true;try{cleanup()}catch(e){}try{await bgOff()}catch(e){}try{if(screenOn)await stopScreenNative()}catch(e){}
@@ -648,7 +648,7 @@ async function deviceId(){
 async function licCall(a,k){const d=await deviceId(),c=new AbortController(),to=setTimeout(()=>c.abort(),12000);
   try{const r=await fetch(LICENSE_URL+'?action='+a+'&key='+encodeURIComponent(k)+'&device='+encodeURIComponent(d),{signal:c.signal});return await r.json()}finally{clearTimeout(to)}}
 function gate(show,msg){if(show&&!$('gApi').value&&$('key').value&&!$('key').readOnly)$('gApi').value=$('key').value;document.body.classList.toggle('locked',!!show);$('gate').classList.toggle('show',!!show);if(msg!==undefined)$('gMsg').textContent=msg}
-function unlock(d,k){unlocked=true;gate(false,'');
+function unlock(d,k){try{localStorage.removeItem('mayra_free')}catch(e){}unlocked=true;gate(false,'');
   if(d&&d.geminiKey){$('key').value=d.geminiKey;$('key').readOnly=true;try{localStorage.setItem('mayra_srvkey','1')}catch(e){}saveAll()}
   $('licInfo').textContent='Active ✓  Key: '+k.slice(0,6)+'••••'+k.slice(-4)+(d&&d.expires?'  Expires: '+d.expires:'');
   if(!$('key').value)setTimeout(openSide,400);setTimeout(autoImport,1800)}
@@ -656,7 +656,7 @@ async function licBoot(){
   if(!/^https:\/\//.test(LICENSE_URL)){$('licInfo').textContent='License check is OFF (no server URL set in the file).';$('licDev').textContent='-';if(!$('key').value)setTimeout(openSide,400);return}
   const dv=await deviceId();$('gDev').textContent=$('licDev').textContent=dv.slice(0,16)+'…';
   let sv=null;try{sv=JSON.parse(localStorage.getItem('mayra_lic')||'null')}catch(e){}
-  if(!sv||!sv.key){gate(true);return}
+  if(!sv||!sv.key){if(isFree()){freeRestore();return}gate(true);return}
   try{const d=await licCall('check',sv.key);
     if(d.ok){sv.t=Date.now();try{localStorage.setItem('mayra_lic',JSON.stringify(sv))}catch(e){}unlock(d,sv.key)}
     else{try{localStorage.removeItem('mayra_lic')}catch(e){}dropServerKey();gate(true,LMSG[d.reason]||'This key is not valid.')}}
@@ -988,7 +988,7 @@ const PG_ABOUT=`<p class="pg-c" style="margin-top:2px">مایرہ ایک ارد�
 <h3>7. Children</h3><p>The app is not designed for children.</p>
 <h3>8. Our commitments</h3><p>We do not sell your personal information, and the app does not contain advertising.</p>
 <h3>9. Changes</h3><p>If this policy changes, the updated version will appear here with a new date.</p>
-<h3>10. Contact</h3><p>Questions or requests? Message the developer, RJ Bilal, on WhatsApp: 0332 6984171.</p>`,PG_DEV='<div class="pg-dev"><div class="avw"><i></i><img alt="RJ Bilal" src="'+DEVIMG+'"></div><h1>RJ Bilal</h1><p class="pg-role">Developer — مایرہ AI کا بنانے والا</p><p dir="rtl" style="margin:12px 4px">السلام علیکم! میں <span dir="ltr">RJ Bilal</span> ہوں، مایرہ AI کا ڈیولپر اور بنانے والا۔ میں نے مایرہ اس سوچ سے بنائی کہ ہر اردو بولنے والا اپنی ہی زبان میں، اپنے ہی لہجے میں اپنے فون سے بات کر سکے۔ یہ صرف ایک ایپ نہیں، آپ کی ساتھی، آپ کی ٹیچر، آپ کی اسسٹنٹ اور ضرورت پڑنے پر آپ کی ڈاکٹر بھی ہے۔</p><div class="pg-q" dir="rtl">ٹیکنالوجی وہی اچھی جو اپنی زبان میں، اپنے لوگوں سے بات کرے۔</div><img class="pg-badge" alt="Creator RJ Bilal" src="'+BADGE+'"><br><a id="pgWA" class="pg-wa" href="https://wa.me/923326984171">💬 WhatsApp • 0332 6984171</a><p dir="rtl" style="margin-top:6px">آپ کے اعتماد اور ساتھ کا بے حد شکریہ۔ آپ کی رائے مایرہ کو ہر روز بہتر بناتی ہے۔</p><p class="pg-foot">Mayra AI v1.2 • Made with ❤️ in Pakistan • © 2026 RJ Bilal. All rights reserved.</p></div>';
+<h3>10. Contact</h3><p>Questions or requests? Message the developer, RJ Bilal, on WhatsApp: 0332 6984171.</p>`,PG_DEV='<div class="pg-dev"><div class="avw"><i></i><img alt="RJ Bilal" src="'+DEVIMG+'"></div><h1>RJ Bilal</h1><p class="pg-role">Developer — مایرہ AI کا بنانے والا</p><p dir="rtl" style="margin:12px 4px">السلام علیکم! میں <span dir="ltr">RJ Bilal</span> ہوں، مایرہ AI کا ڈیولپر اور بنانے والا۔ میں نے مایرہ اس سوچ سے بنائی کہ ہر اردو بولنے والا اپنی ہی زبان میں، اپنے ہی لہجے میں اپنے فون سے بات کر سکے۔ یہ صرف ایک ایپ نہیں، آپ کی ساتھی، آپ کی ٹیچر، آپ کی اسسٹنٹ اور ضرورت پڑنے پر آپ کی ڈاکٹر بھی ہے۔</p><div class="pg-q" dir="rtl">ٹیکنالوجی وہی اچھی جو اپنی زبان میں، اپنے لوگوں سے بات کرے۔</div><img class="pg-badge" alt="Creator RJ Bilal" src="'+BADGE+'"><br><a id="pgWA" class="pg-wa" href="https://wa.me/923326984171">💬 WhatsApp • 0332 6984171</a><p dir="rtl" style="margin-top:6px">آپ کے اعتماد اور ساتھ کا بے حد شکریہ۔ آپ کی رائے مایرہ کو ہر روز بہتر بناتی ہے۔</p><p class="pg-foot">Mayra AI v1.3 • Made with ❤️ in Pakistan • © 2026 RJ Bilal. All rights reserved.</p></div>';
 let pgOpen=null;(()=>{const pg=document.createElement('div');pg.id='pg';pg.innerHTML='<header dir="ltr"><button id="pgBack" aria-label="Back">←</button><h2 id="pgT"></h2></header><main id="pgM"></main>';document.body.appendChild(pg);
   const open=pgOpen=(t,h,d)=>{$('pgT').textContent=t;const m=$('pgM');m.innerHTML=h;m.dir=d;m.scrollTop=0;pg.classList.add('show');const w=m.querySelector('#pgWA');if(w)w.onclick=e=>{e.preventDefault();openLink('WhatsApp',NATIVE?'whatsapp://send?phone=923326984171':'https://wa.me/923326984171')}};
   $('pgBack').onclick=()=>pg.classList.remove('show');
@@ -1005,7 +1005,7 @@ async function licRecheck(force){if(!unlocked||!/^https:\/\//.test(LICENSE_URL))
   try{const d=await licCall('check',sv.key);if(d&&d.ok){sv.t=Date.now();try{localStorage.setItem('mayra_lic',JSON.stringify(sv))}catch(e){}return}if(d&&d.ok===false)revokeNow(d.reason)}catch(e){}}
 setInterval(()=>licRecheck(false),5*60*1000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)licRecheck(false)});
-const APP_VER='1.2',UPDATE_URL='https://script.google.com/macros/s/AKfycbyjpthUa4I5t9T2NJk1zz4v3b-yCj27KAmpwgvKEw563BqF0RBA9GLamZacEmX8oF6vOw/exec',DL_DEFAULT='https://apkpure.com/p/com.rjbilal.mayraai';
+const APP_VER='1.3',UPDATE_URL='https://script.google.com/macros/s/AKfycbyjpthUa4I5t9T2NJk1zz4v3b-yCj27KAmpwgvKEw563BqF0RBA9GLamZacEmX8oF6vOw/exec',DL_DEFAULT='https://apkpure.com/p/com.rjbilal.mayraai';
 const escH=x=>String(x==null?'':x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function vgt(a,b){const x=String(a||'0').split('.').map(n=>parseInt(n,10)||0),y=String(b||'0').split('.').map(n=>parseInt(n,10)||0);for(let i=0;i<Math.max(x.length,y.length);i++){const p=x[i]||0,q=y[i]||0;if(p!==q)return p>q}return false}
 let upd=null,news=[],lastUpd=0;
@@ -1045,5 +1045,129 @@ sos.onclick=async()=>{try{const MA=plug('MayraAccess');if(MA&&MA.disarm)await MA
 window.addEventListener('offline',()=>status('انٹرنیٹ بند ہے — بحال ہوتے ہی دوبارہ جڑ جائے گا'));
 window.addEventListener('online',()=>setTimeout(()=>{if(want&&!live&&!ws){stopping=false;tries=0;start()}},1200));
 licBoot();
+
+/* ===== Mayra 1.3: free (watch video = +5 min) + premium tabs ===== */
+const FREE_URL='https://script.google.com/macros/s/AKfycbzo5gUu1mwEeBz7T3OBe5fnbtA3MjTBnrbI90jnS7fZZsryK6h-roUOD6S_ROzhv6kC/exec';
+const AD_REWARD_TEST='ca-app-pub-3940256099942544/5224354917';
+let freeSecs=0,freeUsed=0,freeWarned={},freeCard_=null;
+function isFree(){try{return localStorage.getItem('mayra_free')==='1'}catch(e){return false}}
+function gTab(f){
+  $('licRow').style.display=f?'none':'';$('gBtn').style.display=f?'none':'';$('fBox').style.display=f?'':'none';
+  $('tLic').classList.toggle('on',!f);$('tFree').classList.toggle('on',f);
+  if(f)gate(true,'');
+}
+async function freeCall(action,extra){
+  const d=await deviceId();const c=new AbortController(),to=setTimeout(()=>c.abort(),12000);
+  try{const r=await fetch(FREE_URL+'?device='+encodeURIComponent(d)+'&action='+action+(extra||''),{signal:c.signal});return await r.json()}
+  catch(e){return null}finally{clearTimeout(to)}
+}
+function freeApply(j){if(j&&typeof j.minutes==='number'){freeSecs=Math.max(0,Math.round(j.minutes*60));freeDraw()}}
+async function freeReport(){
+  if(!isFree()||freeUsed<=0)return;const s=freeUsed;freeUsed=0;
+  const j=await freeCall('used','&sec='+s);if(j)freeApply(j);
+}
+function freeDraw(){
+  const c=$('freeCard');if(!c)return;
+  if(!isFree()){c.style.display='none';return}
+  c.style.display='block';
+  const m=Math.floor(freeSecs/60),x=freeSecs%60;
+  $('fTime').textContent=String(m).padStart(2,'0')+':'+String(x).padStart(2,'0');
+  $('fTime').parentNode.classList.toggle('warn',freeSecs>0&&freeSecs<=60);
+}
+const FSAY={
+ w2:'آپ سے بات کر کے اچھا لگ رہا ہے۔ ابھی 2 منٹ باقی ہیں۔ ایک ویڈیو دیکھ لیں تو ہم بات جاری رکھ سکیں گے۔ · About 2 minutes left. Watch one video and we can keep talking.',
+ w1:'جان، صرف ایک منٹ رہ گیا ہے۔ ایک ویڈیو دیکھ لیں تو میں ایسے ہی آپ کے ساتھ باتیں کرتی رہوں گی۔ · Only one minute left. Watch one video and I will keep talking with you.',
+ w45:'ہم بات کرتے رہنا چاہتے ہیں، ٹائم تقریباً ختم ہونے والا ہے۔ ویڈیو دیکھیں تو بات یوں ہی چلے گی۔ · We want to keep talking. Time is almost over. Watch a video to continue.',
+ w30:'صرف 30 سیکنڈ رہ گئے ہیں! اگر وقت ختم ہو گیا تو ہماری بات رک جائے گی۔ ابھی ویڈیو دیکھیں۔ · Only 30 seconds left! Watch a video now or our chat will stop.'
+};
+function freeSay(k){
+  if(freeWarned[k])return;freeWarned[k]=1;
+  const b=$('fSay');if(!b)return;b.textContent=FSAY[k];b.style.display='block';
+  setTimeout(()=>{b.style.display='none'},9000);
+}
+function freeTick(){
+  if(!isFree()||!live)return;
+  if(freeSecs<=0){$('stop').click();freeEnd();return}
+  freeSecs--;freeUsed++;freeDraw();
+  if(freeSecs<=120&&freeSecs>60)freeSay('w2');
+  if(freeSecs<=60&&freeSecs>45)freeSay('w1');
+  if(freeSecs<=45&&freeSecs>30)freeSay('w45');
+  if(freeSecs<=30&&freeSecs>0)freeSay('w30');
+  if(freeUsed>=60)freeReport();
+  if(freeSecs<=0){$('stop').click();freeEnd()}
+}
+setInterval(freeTick,1000);
+function testAd(cb){
+  const o=document.createElement('div');
+  o.style.cssText='position:fixed;inset:0;background:#000d;display:flex;align-items:center;justify-content:center;z-index:99999;padding:20px';
+  o.innerHTML='<div style="background:#1a1730;border:1px solid #7a69d0;border-radius:20px;padding:18px;width:100%;max-width:360px;text-align:center;color:#f1ecff"><b>🎬 ویڈیو · Video</b><div style="height:160px;margin:10px 0;background:#000;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#aaa">▶ ٹیسٹ ویڈیو · Test video</div><button id="tAdOk" disabled style="width:100%;padding:12px;border-radius:14px;border:0;background:linear-gradient(180deg,#ffe08a,#f3a81d);font-weight:800;color:#2a1700">5</button><div style="font-size:11px;color:#a99fd0;margin-top:8px">ٹیسٹ ایڈ · Test ad only</div></div>';
+  document.body.appendChild(o);
+  let n=5;const b=o.querySelector('#tAdOk');
+  const iv=setInterval(()=>{n--;if(n>0)b.textContent=n;else{clearInterval(iv);b.disabled=false;b.textContent='✔ انعام لیں · Claim'}},1000);
+  b.onclick=()=>{o.remove();cb()};
+}
+function watchAd(){
+  const cb=async()=>{
+    const j=await freeCall('watched');
+    if(j&&typeof j.minutes==='number'){freeApply(j);toast('✅ +5 منٹ · +5 min')}else{toast('⚠ انٹرنیٹ چیک کریں · Check internet')}
+  };
+  const A=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.AdMob;
+  if(A&&NATIVE){
+    (async()=>{try{
+      await A.prepareRewardVideoAd({adId:AD_REWARD_TEST});
+      const h=await A.addListener('onRewardedVideoAdReward',()=>{cb()});
+      await A.showRewardVideoAd();
+      setTimeout(()=>{try{h.remove()}catch(e){}},600000);
+    }catch(e){toast('⚠ ویڈیو نہیں چلی · Video failed');testAd(cb)}})();
+    return;
+  }
+  testAd(cb);
+}
+function freeEnd(){
+  if(document.getElementById('fEnd'))return;
+  const o=document.createElement('div');o.id='fEnd';
+  o.style.cssText='position:fixed;inset:0;background:#000d;display:flex;align-items:center;justify-content:center;z-index:99998;padding:20px';
+  o.innerHTML='<div style="background:#1a1730;border:1px solid #7a69d0;border-radius:20px;padding:18px;width:100%;max-width:360px;text-align:center;color:#f1ecff"><b style="font-size:18px">⏱ وقت ختم ہو گیا · Time is up</b><p style="font-size:13px;line-height:1.7">ایک ویڈیو دیکھیں اور بات جاری رکھیں، یا لائسنس لیں۔<br>Watch a video to keep talking, or get a license.</p><button id="feW" style="width:100%;padding:12px;border-radius:14px;border:0;background:linear-gradient(180deg,#ffe08a,#f3a81d);font-weight:800;color:#2a1700;margin-bottom:8px">▶ ویڈیو دیکھیں، +5 منٹ · Watch, +5 min</button><button id="feL" style="width:100%;padding:12px;border-radius:14px;border:1px solid #8a78e0;background:#2a2260;color:#f0eaff;font-weight:700">🔓 لائسنس لیں · Get license</button><button id="feC" style="margin-top:8px;background:none;border:0;color:#a99fd0">بند کریں · Close</button></div>';
+  document.body.appendChild(o);
+  o.querySelector('#feC').onclick=()=>o.remove();
+  o.querySelector('#feL').onclick=()=>{o.remove();waOpen('السلام علیکم! مجھے Mayra Ai Pro ایپ کی Activation Key چاہیے.')};
+  o.querySelector('#feW').onclick=()=>{o.remove();watchAd()};
+}
+function freeEnter(){
+  unlocked=true;gate(false,'');
+  freeDraw();
+  $('licInfo').textContent='Free mode · مفت';
+}
+async function freeRestore(){
+  const j=await freeCall('status');
+  if(j&&j.status==='blocked'){try{localStorage.removeItem('mayra_free')}catch(e){}gate(true,'یہ فون مفت استعمال کے لیے بند ہے · Free access is disabled');return}
+  if(j)freeApply(j);
+  freeEnter();
+}
+(function freeSetup(){
+  const row=$('start').parentNode;
+  const fc=document.createElement('div');fc.id='freeCard';
+  fc.style.cssText='display:none;margin:0 14px 10px;padding:10px 12px;border-radius:20px;background:linear-gradient(180deg,#4b4b58dd,#2b2b36dd);border:1px solid #b1b1c4;box-shadow:0 10px 26px #0008';
+  fc.innerHTML='<div style="display:flex;align-items:center;gap:10px"><div style="flex:1;direction:ltr;text-align:left"><small style="display:block;font-size:11px;color:#ddd4f4">باقی وقت · Remaining</small><b id="fTime" style="font-size:24px;letter-spacing:1px">00:00</b></div><button id="fWatch" style="border:1px solid #d6a8ff;border-radius:999px;padding:9px 12px;background:linear-gradient(180deg,#a64bff,#5a14b8 60%,#3d0c82);color:#fff;font-weight:800;font-size:13px;cursor:pointer;line-height:1.2">WATCH ADS<i style="display:block;font-style:normal;font-size:10px;opacity:.9">ویڈیو دیکھیں</i></button></div><div id="fSay" style="display:none;margin-top:8px;padding:8px 10px;border-radius:14px;background:#2c1f5e;font-size:12px;line-height:1.6;color:#f5efff"></div>';
+  row.parentNode.insertBefore(fc,row);
+  $('fWatch').onclick=()=>watchAd();
+  $('tLic').addEventListener('click',()=>gTab(false));
+  $('tFree').addEventListener('click',()=>gTab(true));
+  $('fStart').addEventListener('click',async()=>{
+    const api=$('gApi').value.trim();
+    if(!api){fx.shake=1;gate(true,'Gemini API Key لازمی ہے · Gemini API key is required');return}
+    $('fStart').disabled=true;gate(true,'جانچ ہو رہی ہے… · Checking…');
+    try{
+      const gv=await geminiCheck(api);
+      if(!gv.ok){fx.shake=1;gate(true,gv.msg);return}
+      const j=await freeCall('status');
+      if(!j){gate(true,'انٹرنیٹ چیک کریں · Check internet');return}
+      if(j.status==='blocked'){gate(true,'یہ فون مفت استعمال کے لیے بند ہے · Free access is disabled');return}
+      try{localStorage.setItem('mayra_free','1')}catch(e){}
+      $('key').value=api;saveAll();
+      freeApply(j);freeEnter();
+    }finally{$('fStart').disabled=false}
+  });
+})();
 })();
 </script></body></html>
