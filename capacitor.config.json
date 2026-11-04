@@ -1,0 +1,8 @@
+{
+  "appId": "com.rjbilal.mayraai",
+  "appName": "Mayra AI",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}
