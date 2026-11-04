@@ -1,0 +1,109 @@
+name: Build Mayra APK
+on:
+  workflow_dispatch:
+env:
+  APP_VERSION: "1.2"
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Pillow (for the app icon)
+        run: pip install pillow
+      - name: Put the web app in place
+        run: |
+          mkdir -p www
+          cp index.html www/index.html
+          if [ -d themes ]; then cp -r themes www/themes; fi
+      - name: Install Capacitor
+        run: npm install --legacy-peer-deps
+      - name: Install plugins (each one optional)
+        run: |
+          for p in "@capacitor/app-launcher@^7" "@capacitor/device@^7" "@capacitor/local-notifications@^7" "@capacitor-community/contacts@^7" "capacitor-call-number" "@anuradev/capacitor-background-mode"; do
+            npm install "$p" --legacy-peer-deps || echo "SKIPPED $p"
+          done
+      - name: Install Android platform 36 (for Google Play target)
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null 2>&1 || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" || echo "sdkmanager failed"
+      - name: Build APK (tries native Accessibility first, then falls back)
+        run: |
+          attempt() {
+            rm -rf android
+            npx cap add android &&
+            sed -i -E "s/compileSdkVersion = [0-9]+/compileSdkVersion = 36/; s/targetSdkVersion = [0-9]+/targetSdkVersion = 36/" android/variables.gradle &&
+            grep -E "compileSdkVersion|targetSdkVersion" android/variables.gradle &&
+            sed -i "s/versionCode 1/versionCode $((GITHUB_RUN_NUMBER+100))/" android/app/build.gradle &&
+            sed -i "s/versionName \"1.0\"/versionName \"${APP_VERSION}\"/" android/app/build.gradle &&
+            node patch-manifest.js "$1" &&
+            python3 make_icons.py &&
+            npx cap sync android &&
+            (cd android && chmod +x gradlew && ./gradlew assembleDebug --no-daemon)
+          }
+          built=0
+          for mode in native access plain; do
+            if attempt $mode; then built=1; echo "BUILT with mode=$mode"; break; fi
+          done
+          if [ $built = 0 ]; then
+            for p in capacitor-call-number @capacitor-community/contacts @anuradev/capacitor-background-mode; do
+              npm uninstall "$p" --legacy-peer-deps || true
+              for mode in native access plain; do
+                if attempt $mode; then built=1; echo "BUILT without $p (and earlier), mode=$mode"; break 2; fi
+              done
+            done
+          fi
+          test -f android/app/build/outputs/apk/debug/app-debug.apk
+      - name: Build and sign the AAB for Google Play (release)
+        env:
+          MAYRA_KS_PASS: ${{ secrets.MAYRA_KS_PASS }}
+          MAYRA_KS_B64: ${{ secrets.MAYRA_KS_B64 }}
+        run: |
+          if [ -z "$MAYRA_KS_B64" ] || [ -z "$MAYRA_KS_PASS" ]; then
+            echo "ERROR: MAYRA_KS_B64 / MAYRA_KS_PASS secrets missing"; exit 1
+          fi
+          echo "$MAYRA_KS_B64" | base64 -d > "$RUNNER_TEMP/mayra.p12"
+          (cd android && ./gradlew bundleRelease --no-daemon)
+          AAB=android/app/build/outputs/bundle/release/app-release.aab
+          test -f "$AAB"
+          jarsigner -keystore "$RUNNER_TEMP/mayra.p12" -storetype PKCS12 -storepass:env MAYRA_KS_PASS -keypass:env MAYRA_KS_PASS -sigalg SHA256withRSA -digestalg SHA-256 "$AAB" mayra
+          mkdir -p aab-out && cp "$AAB" aab-out/Mayra-AI-${APP_VERSION}.aab
+          rm -f "$RUNNER_TEMP/mayra.p12"
+      - name: Upload the AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mayra-AAB
+          path: aab-out/
+      - name: Sign with the permanent key (stored in GitHub Secrets)
+        env:
+          MAYRA_KS_PASS: ${{ secrets.MAYRA_KS_PASS }}
+          MAYRA_KS_B64: ${{ secrets.MAYRA_KS_B64 }}
+        run: |
+          if [ -z "$MAYRA_KS_B64" ] || [ -z "$MAYRA_KS_PASS" ]; then
+            echo "ERROR: the GitHub secrets MAYRA_KS_B64 and MAYRA_KS_PASS are missing."
+            echo "Add them in: Settings > Secrets and variables > Actions, then run again."
+            exit 1
+          fi
+          echo "$MAYRA_KS_B64" | base64 -d > "$RUNNER_TEMP/mayra.p12"
+          APK=android/app/build/outputs/apk/debug/app-debug.apk
+          BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
+          $BT/zipalign -p -f 4 $APK aligned.apk
+          $BT/apksigner sign --ks "$RUNNER_TEMP/mayra.p12" --ks-type PKCS12 --ks-key-alias mayra --ks-pass env:MAYRA_KS_PASS --key-pass env:MAYRA_KS_PASS --out signed.apk aligned.apk
+          $BT/apksigner verify --print-certs signed.apk
+          cp signed.apk $APK
+          rm -f "$RUNNER_TEMP/mayra.p12"
+          echo "SIGNED with the permanent Mayra key - the certificate fingerprint is printed above"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Mayra-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          
