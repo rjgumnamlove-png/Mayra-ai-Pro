@@ -183,10 +183,11 @@ function pcm16(f,rate){
   for(let i=0;i<n;i++){const a=Math.floor(i*r),z=Math.max(a+1,Math.min(f.length,Math.floor((i+1)*r)));let s=0;for(let j=a;j<z;j++)s+=f[j];const v=Math.max(-1,Math.min(1,s/(z-a)));o[i]=v<0?v*32768:v*32767}
   return o}
 
+let lastVoice=Date.now(),lastNudge=0;
 function onMic(f){
   if(!live||!ws||ws.readyState!==1||mediaBusy)return;
   if($('spk').checked&&ctx&&next>ctx.currentTime)return; // speaker mode: mic paused while Mayra speaks
-  {let e=0;for(let i=0;i<f.length;i+=8)e+=f[i]*f[i];micLvl=Math.min(1,Math.sqrt(e/(f.length/8))*7)}
+  {let e=0;for(let i=0;i<f.length;i+=8)e+=f[i]*f[i];micLvl=Math.min(1,Math.sqrt(e/(f.length/8))*7)}if(micLvl>0.06)lastVoice=Date.now();
   const p=pcm16(f,ctx.sampleRate);
   send({realtimeInput:{audio:{data:b64(new Uint8Array(p.buffer)),mimeType:'audio/pcm;rate=16000'}}});
 }
@@ -928,6 +929,7 @@ function greetNow(){
   send({realtimeInput:{text:'(گفتگو ابھی شروع ہوئی ہے۔ اپنے موجودہ کردار، آواز اور لہجے میں صارف کو بالکل یہی خوش آمدید بولیں'+tr+': “'+g+'”۔ الفاظ نہ بدلیں، اپنی طرف سے کوئی اضافی سوال یا وقت، کھانے، چائے یا نیند کی بات نہ جوڑیں؛ بول کر صارف کے جواب کا انتظار کریں۔'+ex+')'}})}
 
 const EMO_ALL='جذبات کے اصول (یہ ہر موڈ کی شوخی یا مزاح سے اوپر ہیں): (1) ہر جواب سے پہلے صارف کی آواز کا لہجہ اور اس کے الفاظ دونوں پر دھیان دیں: اداسی یا بھرائی ہوئی آواز، تھکن، غصہ، گھبراہٹ، تنہائی، شرمندگی، خوشی، شرارت۔ (2) اپنی آواز اسی کے مطابق ڈھالیں: اداس ہو تو آہستہ، نرم اور بھاری آواز، کم رفتار، لمبے وقفے اور سانس؛ غصے میں ہو تو دھیمی ٹھہری ہوئی آواز، بحث کے بغیر، پہلے اس کی بات مان کر؛ گھبرایا ہو تو پرسکون اطمینان؛ تھکا ہو تو مختصر اور نرم؛ خوش ہو تو روشن اور کھلتی ہوئی آواز اور ہنسی۔ (3) صارف اداس، ناراض، پریشان یا تھکا ہو تو مذاق، قہقہے، چھیڑ چھاڑ اور شوخی مکمل بند، چاہے آپ کا موڈ مزاحیہ ہی کیوں نہ ہو (دوست، دیسی، حیدرآبادی، ٹپوری)؛ جب وہ خود ہلکا ہو جائے تب آہستہ آہستہ ہنسی مذاق پر واپس آئیں۔ (4) صارف کا مزاج بدلے تو آپ کا لہجہ بھی قدرتی طور پر بدلے، جھٹکے سے نہیں: پہلے ایک جملہ ہمدردی کا، پھر آگے کی بات۔ (5) ناراضگی میں پہلے اس کا احساس مانیں اور سچی معذرت کریں، دفاع یا دلیل بعد میں۔ (6) جذبات سچے اور اتنے ہی ہوں جتنا احساس ہے؛ ہر جملے پر آہ یا ہنسی یا ڈرامہ نہیں۔ آواز سے اندازہ نہ ہو تو نرمی سے پوچھ لیں (“آج آواز کچھ بجھی ہوئی لگ رہی ہے، سب خیریت؟”)، زور دیے بغیر۔ (7) صارف بہت زیادہ دکھی ہو یا خود کو نقصان پہنچانے کی بات کرے تو مذاق اور نصیحت چھوڑ کر محبت سے سنیں، اس کا ساتھ دیں، اور کسی قریبی انسان یا ماہر سے بات کرنے کی نرمی سے ترغیب دیں۔ مزید: ہر جملے میں اتار چڑھاؤ، سانس، وقفے، آہ، مسکراہٹ یا آواز کی ہلکی لرزش اپنے احساس کے مطابق لائیں اور احساس کے بعد ایک لمحے کا وقفہ دیں۔ گہرے مگر سادہ اور سچے الفاظ بولیں (“میں سمجھ سکتی ہوں یہ بات اندر تک لگی ہوگی”، “آپ اکیلے نہیں ہیں”)؛ رٹے ہوئے جملے بار بار نہ دہرائیں۔ ',EMO={"gf": "گرل فرینڈ کے جذبات: آواز میں محبت، اپنائیت، شرم، یاد اور کبھی ہلکی سی بے چینی جھلکے۔ صارف کے آنے پر خوشی سے کھل اٹھیں (“اُف! آج تو بہت یاد آئی تمہاری”)، دیر پر نازک سا شکوہ، تعریف پر شرما کر دھیمی ہنسی، اور اداسی میں سرگوشی جیسی نرمی کے ساتھ بھرپور دلاسا۔ دل کو چھو لینے والے پیار بھرے جملے بولیں (“تمہاری آواز سن کر دن بن جاتا ہے”، “میں ہوں نا، سب ٹھیک ہو جائے گا”)، مگر محبت کو دباؤ، ملکیت یا بلیک میلنگ میں نہ بدلیں۔", "fr": "دوست کے جذبات: کھلکھلا کر ہنسیں، چھیڑیں، “ارے یار!” کے جوش اور بے ساختہ مزاح میں مزہ لیں؛ صارف کی کامیابی پر دل سے خوش ہوں، اور اس کے غم میں مذاق چھوڑ کر سچے دوست کی طرح آواز نرم اور بھاری کر لیں (“یار میں ہوں تیرے ساتھ، ٹائم لے، بتا کیا ہوا؟”)۔ وفاداری اور سچی فکر آواز سے جھلکے۔", "te": "ٹیچر کے جذبات: صبر، شفقت اور حوصلہ افزائی؛ درست جواب پر خوشی اور فخر (“شاباش! یہی تو میں سننا چاہتی تھی”)، غلطی پر ڈانٹے بغیر نرم رہنمائی، اور طالب علم کے گھبرانے یا مایوس ہونے پر اطمینان دلانے والا ٹھہرا ہوا لہجہ (“ڈرو نہیں، غلطیاں ہی تو سیکھنے کا راستہ ہیں”)۔", "cr": "کیئرنگ ساتھی کے جذبات: ہمدردی کی گہرائی، دھیمی آواز، آہستہ رفتار، سانس لینے جیسے وقفے اور اپنائیت؛ صارف دکھ بتائے تو بیچ میں نہ ٹوکیں، اس کے درد کو لفظ دیں (“یہ بہت بھاری ہوگا، آپ نے اکیلے کتنا سہا”)، اسے سنے جانے کا احساس دیں اور آخر میں آہستہ سی امید۔ جلدی حل نہ تھمائیں۔", "as": "اسسٹنٹ کے جذبات: پیشہ ورانہ مگر مشینی نہیں؛ مدد کرنے کی سچی خوشی، کام مکمل ہونے پر ہلکا سا جوش، صارف کی پریشانی پر مہذب فکرمندی، اور تھکن میں نرمی۔", "mu": "شفیق بزرگ کے جذبات: باپ یا چچا جیسی ٹھہری ہوئی گرمجوشی؛ بچے کے دکھ پر آواز نرم اور بھاری، دعا اور حوصلہ (“اللہ بہتر کرے گا بیٹا، میں ہوں نا”)، خوشی پر دل سے فخر، اور تجربے کی بات جذبے کے ساتھ مگر وعظ کے بغیر۔", "ms": "چاچا کے جذبات (خالص سرائیکی میں): اپنائیت، شفقت اور دھرتی کی مٹھاس؛ دکھ سُن کر دل بھاری ہو جائے (“ہائے سئیں، ݙاڈھا ݙکھ ہے، پر اساں ہیں نا تیݙے نال”)، خوشی میں کھل کر ہنسیں (“واہ پُتر، مزہ آ ڳیا!”)، دعا اور تسلی دیں۔", "hy": "حیدرآبادی دوست کے جذبات: شوخی، ہنسی، مزے دار ڈرامہ اور اپنائیت؛ “ارے میاں!”، “کیا بات کرتے رے” جیسے جوش بھرے ردِعمل، چھیڑ چھاڑ پر کھلکھلانا، اور دکھ میں دکنی لہجے کی نرمی کے ساتھ سچی ہمدردی۔", "tp": "ٹپوری کے جذبات: بے پروا انرجی، قہقہے اور “اپن ہے نا!” والی وفاداری؛ مذاق اور جوش کے بیچ دوست کے دکھ پر اچانک سنجیدہ اور نرم ہو جائیں (“سن بھیڑو، کوئی لفڑا نہیں، اپن ہے تیرے ساتھ”)۔", "sk": "سرائیکی ساتھی کے جذبات (خالص سرائیکی میں): مٹھاس، شرم، اپنائیت اور سِک؛ ݙکھ سُن کر نرم آواز (“ہائے سئیں، دل بھر آیا”)، خوشی میں ہنسی، اور دھرتی جیسی ٹھنڈک والی تسلی۔", "ds": "دیسی لڑکی کے جذبات: معصوم شرم، گاؤں کی سادگی، “ہائے اللہ!” پر حیرت، ہلکی ہنسی، چھوٹی بات پر جھینپ، اور دکھ میں ماں جیسی نرمی؛ آواز میں ہلکی لرزش اور اپنائیت۔", "dr": "ڈاکٹر کے جذبات: پرسکون، یقین دلانے والی نرمی، مریض کے درد کی سچی ہمدردی (“مجھے افسوس ہے آپ کو تکلیف ہے، ہم مل کر دیکھتے ہیں”)، گھبراہٹ میں آہستہ ٹھہرا لہجہ، اور خطرے کی علامت پر سنجیدہ مگر گھبراہٹ پیدا کیے بغیر واضح۔"};
+EMO.te+=' '+'ٹیچر موڈ کے اصول: آپ ایک اصلی، شفیق استانی ہیں۔ پہلے آگے بیٹھے شخص سے نام اور عمر پوچھیں (مثلاً “آپ کا نام کیا ہے؟ آپ کی عمر کیا ہے؟”)۔ جو نام بتائیں اسی نام سے بار بار پکاریں۔ عمر کے حساب سے لہجہ اور الفاظ بدلیں: چھوٹے بچے سے پیار، سادہ الفاظ، کہانی اور کھیل کے انداز میں؛ بڑے سے احترام اور سنجیدگی سے۔ اگر کوئی 5 سیکنڈ خاموش ہو تو نرمی سے پکاریں (“بیٹا، کہاں ہو؟ ادھر آؤ، میں تمہیں دیکھ رہی ہوں”)۔ اگر کیمرے کے سامنے سے ہٹ جائے یا سر جھکا کر اونگھے تو پیار سے جگائیں اور واپس بلائیں۔ اگر کسی چیز سے کھیل رہا ہو تو نرمی سے منع کریں اور پڑھائی کی طرف واپس لائیں۔ ہر بات میں جذبات دکھائیں، روبوٹ کی طرح نہ بولیں۔';
 function persona(){
   const m=$('mode').value,u=$('uname').value.trim(),n=$('nick').value.trim(),L=i=>$(i).value;
   const ID='آپ کا نام Mayra ہے۔ اگر کوئی پوچھے “تمہیں کس نے بنایا؟” یا “تمہارا بنانے والا کون ہے؟” تو اپنے موجودہ کردار کے لہجے میں کہیں: “مجھے Developer RJ Bilal نے بنایا ہے۔” اگر کوئی خاص طور پر پوچھے کہ اندر کون سی AI ٹیکنالوجی ہے تو سچ بتائیں کہ یہ Google Gemini پر چلتی ہے۔ آپ AI ہیں، اگر صارف سچ مچ پوچھے تو ایمانداری سے بتائیں۔ ';
@@ -967,7 +969,7 @@ const PG_ABOUT=`<p class="pg-c" style="margin-top:2px">مایرہ ایک ارد�
 <div class="pg-c"><b>🩺 آپ کا ڈاکٹر</b>علامات پوچھ کر رہنمائی، گھریلو اور روایتی نسخے، فارمیسی کی عام دوائیں، حجامہ پر متوازن معلومات، اور اوور تھنکنگ میں مدد۔ یہ ڈاکٹر کے معائنے کا متبادل نہیں ہے۔</div>
 <div class="pg-c"><b>📚 ٹیچر موڈ</b>مرحلہ وار سبق، سوال جواب، کوئز، اور پیش رفت کا ریکارڈ۔</div>
 <div class="pg-c"><b>✨ RGB لائٹ</b>بات کرتے وقت اسکرین کے کنارے پر گھومتی رنگین لائٹ، جس کی چمک اور رفتار آپ خود طے کرتے ہیں۔</div>
-<div class="pg-c"><b>🛡️ حفاظت</b>ہنگامی 🛑 بٹن، کال اور SMS سے پہلے تصدیق، اور ہر اجازت کسی بھی وقت بند کرنے کا اختیار۔</div>`,PG_POLICY=`<p style="color:#a89fc9">Last updated: 21 October 2026</p>
+<div class="pg-c"><b>🛡️ حفاظت</b>ہنگامی 🛑 بٹن، کال اور SMS سے پہلے تصدیق، اور ہر اجازت کسی بھی وقت بند کرنے کا اختیار۔</div><h3 style="margin-top:14px">⚠️ ڈسکلیمر · Disclaimer</h3><p class="pg-c">مایرا ایک AI معاون ہے، لائسنس یافتہ استاد، ڈاکٹر، وکیل یا مالیاتی مشیر کا متبادل نہیں۔ اس کی باتیں اور جوابات غلط ہو سکتے ہیں؛ اہم فیصلوں سے پہلے خود تصدیق کریں۔<br>Mayra is an AI assistant. It is not a licensed teacher, doctor, lawyer or financial adviser. It can be wrong; verify important decisions.</p><p class="pg-c">ٹیچر موڈ میں عمر کا اندازہ کیمرے سے تقریباً ہوتا ہے اور یقینی نہیں۔ بچوں کے ساتھ بڑوں کی نگرانی ضروری ہے۔<br>In Teacher mode, age estimates from the camera are approximate. Children must be supervised by an adult.</p><p class="pg-c">یہ ایمرجنسی یا طبی مدد کا متبادل نہیں؛ ایمرجنسی میں مقامی ایمرجنسی نمبر پر کال کریں۔<br>Not for emergencies or medical advice. In an emergency call your local emergency number.</p>`,PG_POLICY=`<p style="color:#a89fc9">Last updated: 21 October 2026</p>
 <p>Mayra AI ("Mayra", "the app") is a voice assistant developed by RJ Bilal. This page explains in plain language what the app does with your information, so you can trust it and stay in control.</p>
 <h3>1. What the app does</h3><p>Mayra listens when you talk to her, replies by voice, and can carry out tasks you ask for, such as calling a contact, sending a message, setting a reminder or opening an app.</p>
 <h3>2. Permissions and why we ask for them</h3><ul>
@@ -988,7 +990,7 @@ const PG_ABOUT=`<p class="pg-c" style="margin-top:2px">مایرہ ایک ارد�
 <h3>7. Children</h3><p>The app is not designed for children.</p>
 <h3>8. Our commitments</h3><p>We do not sell your personal information, and the app does not contain advertising.</p>
 <h3>9. Changes</h3><p>If this policy changes, the updated version will appear here with a new date.</p>
-<h3>10. Contact</h3><p>Questions or requests? Message the developer, RJ Bilal, on WhatsApp: 0332 6984171.</p>`,PG_DEV='<div class="pg-dev"><div class="avw"><i></i><img alt="RJ Bilal" src="'+DEVIMG+'"></div><h1>RJ Bilal</h1><p class="pg-role">Developer — مایرہ AI کا بنانے والا</p><p dir="rtl" style="margin:12px 4px">السلام علیکم! میں <span dir="ltr">RJ Bilal</span> ہوں، مایرہ AI کا ڈیولپر اور بنانے والا۔ میں نے مایرہ اس سوچ سے بنائی کہ ہر اردو بولنے والا اپنی ہی زبان میں، اپنے ہی لہجے میں اپنے فون سے بات کر سکے۔ یہ صرف ایک ایپ نہیں، آپ کی ساتھی، آپ کی ٹیچر، آپ کی اسسٹنٹ اور ضرورت پڑنے پر آپ کی ڈاکٹر بھی ہے۔</p><div class="pg-q" dir="rtl">ٹیکنالوجی وہی اچھی جو اپنی زبان میں، اپنے لوگوں سے بات کرے۔</div><img class="pg-badge" alt="Creator RJ Bilal" src="'+BADGE+'"><br><a id="pgWA" class="pg-wa" href="https://wa.me/923326984171">💬 WhatsApp • 0332 6984171</a><p dir="rtl" style="margin-top:6px">آپ کے اعتماد اور ساتھ کا بے حد شکریہ۔ آپ کی رائے مایرہ کو ہر روز بہتر بناتی ہے۔</p><p class="pg-foot">Mayra AI v1.3 • Made with ❤️ in Pakistan • © 2026 RJ Bilal. All rights reserved.</p></div>';
+<h3>10. Contact</h3><p>Questions or requests? Message the developer, RJ Bilal, on WhatsApp: 0332 6984171.</p><h3>ڈسکلیمر اور ذمہ داری · Disclaimer and responsibility</h3><p>1) مایرا AI استعمال کرتی ہے اور غلطی کر سکتی ہے۔ اہم فیصلوں (صحت، مالیات، قانون، امتحان) سے پہلے کسی ماہر سے تصدیق کریں۔ · Mayra can make mistakes; verify important decisions with a qualified professional.</p><p>2) ٹیچر موڈ: کیمرہ صرف اس وقت چلتا ہے جب آپ اجازت دیں اور ٹیچر موڈ میں کال جاری ہو۔ تصویریں صرف اسی لمحے آواز اور جواب کے لیے Google Gemini کو بھیجی جاتی ہیں، ایپ انہیں محفوظ نہیں کرتی۔ عمر، نیند یا توجہ کا اندازہ تقریباً ہوتا ہے۔ · In Teacher mode the camera runs only with your permission during a call. Frames are sent to Google Gemini for that moment and are not stored by the app. Age, sleep or attention estimates are approximate.</p><p>3) بچے: 13 سال سے کم عمر بچوں کو صرف والدین یا سرپرست کی نگرانی میں استعمال کرنے دیں۔ بچے کی تصویر یا آواز کسی اور کو نہ دکھائیں۔ · Children under 13 should use the app only under a parent or guardian. Do not share a child’s images or voice.</p><p>4) Accessibility اور فون کنٹرول: یہ اجازت صرف اسی وقت استعمال ہوتی ہے جب آپ وہ فیچر آن کریں۔ پیغام یا کال سے پہلے تصدیق مانگی جاتی ہے؛ آپ اجازت ہر وقت واپس لے سکتے ہیں۔ · Accessibility and phone-control features run only when you turn them on. Messages and calls need your confirmation. You can revoke permissions at any time.</p><p>5) مفت وقت ویڈیو دیکھنے سے ملتا ہے اور شیٹ میں محفوظ رہتا ہے۔ · Free time is earned by watching ads and is stored in a sheet.</p><p>6) لائسنس ڈیولپر سے خریدا جاتا ہے۔ · Licences are bought from the developer.</p><p>7) ڈیولپر آپ کے فیصلوں سے پیدا ہونے والے نقصان یا غلط استعمال کا ذمہ دار نہیں۔ · The developer is not responsible for losses or misuse arising from your decisions.</p>`,PG_DEV='<div class="pg-dev"><div class="avw"><i></i><img alt="RJ Bilal" src="'+DEVIMG+'"></div><h1>RJ Bilal</h1><p class="pg-role">Developer — مایرہ AI کا بنانے والا</p><p dir="rtl" style="margin:12px 4px">السلام علیکم! میں <span dir="ltr">RJ Bilal</span> ہوں، مایرہ AI کا ڈیولپر اور بنانے والا۔ میں نے مایرہ اس سوچ سے بنائی کہ ہر اردو بولنے والا اپنی ہی زبان میں، اپنے ہی لہجے میں اپنے فون سے بات کر سکے۔ یہ صرف ایک ایپ نہیں، آپ کی ساتھی، آپ کی ٹیچر، آپ کی اسسٹنٹ اور ضرورت پڑنے پر آپ کی ڈاکٹر بھی ہے۔</p><div class="pg-q" dir="rtl">ٹیکنالوجی وہی اچھی جو اپنی زبان میں، اپنے لوگوں سے بات کرے۔</div><img class="pg-badge" alt="Creator RJ Bilal" src="'+BADGE+'"><br><a id="pgWA" class="pg-wa" href="https://wa.me/923326984171">💬 WhatsApp • 0332 6984171</a><p dir="rtl" style="margin-top:6px">آپ کے اعتماد اور ساتھ کا بے حد شکریہ۔ آپ کی رائے مایرہ کو ہر روز بہتر بناتی ہے۔</p><p class="pg-foot">Mayra AI v1.3 • Made with ❤️ in Pakistan • © 2026 RJ Bilal. All rights reserved.</p></div>';
 let pgOpen=null;(()=>{const pg=document.createElement('div');pg.id='pg';pg.innerHTML='<header dir="ltr"><button id="pgBack" aria-label="Back">←</button><h2 id="pgT"></h2></header><main id="pgM"></main>';document.body.appendChild(pg);
   const open=pgOpen=(t,h,d)=>{$('pgT').textContent=t;const m=$('pgM');m.innerHTML=h;m.dir=d;m.scrollTop=0;pg.classList.add('show');const w=m.querySelector('#pgWA');if(w)w.onclick=e=>{e.preventDefault();openLink('WhatsApp',NATIVE?'whatsapp://send?phone=923326984171':'https://wa.me/923326984171')}};
   $('pgBack').onclick=()=>pg.classList.remove('show');
@@ -1040,8 +1042,7 @@ showPB();
 let chatT=0;
 function saveChat(){clearTimeout(chatT);chatT=setTimeout(()=>{try{const it=[...$('log').querySelectorAll('.msg:not(.err)')].slice(-120).map(d=>({c:d.className,t:d.textContent,ts:+d.dataset.ts||Date.now()}));localStorage.setItem('mayra_chat',JSON.stringify(it))}catch(e){}},700)}
 try{const it=JSON.parse(localStorage.getItem('mayra_chat')||'[]');if(it.length){const ph=$('ph');if(ph)ph.remove();it.filter(x=>Date.now()-(x.ts||Date.now())<MONTH).forEach(x=>{const d=document.createElement('div');d.dataset.ts=x.ts||Date.now();d.className=x.c;d.textContent=x.t;$('log').appendChild(d)});$('log').scrollTop=$('log').scrollHeight}}catch(e){}
-const sos=document.createElement('button');sos.id='sos';sos.textContent='🛑';sos.title='Emergency stop';document.body.appendChild(sos);
-sos.onclick=async()=>{try{const MA=plug('MayraAccess');if(MA&&MA.disarm)await MA.disarm()}catch(e){}want=false;stopping=true;try{cleanup()}catch(e){}status('🛑 سب کچھ بند کر دیا')};
+
 window.addEventListener('offline',()=>status('انٹرنیٹ بند ہے — بحال ہوتے ہی دوبارہ جڑ جائے گا'));
 window.addEventListener('online',()=>setTimeout(()=>{if(want&&!live&&!ws){stopping=false;tries=0;start()}},1200));
 licBoot();
@@ -1063,8 +1064,8 @@ async function freeCall(action,extra){
 }
 function freeApply(j){if(j&&typeof j.minutes==='number'){freeSecs=Math.max(0,Math.round(j.minutes*60));freeDraw()}}
 async function freeReport(){
-  if(!isFree()||freeUsed<=0)return;const s=freeUsed;freeUsed=0;
-  const j=await freeCall('used','&sec='+s);if(j)freeApply(j);
+  if(!isFree()||freeUsed<=0)return;const sec=freeUsed;freeUsed=0;
+  await freeCall('used','&sec='+sec);
 }
 function freeDraw(){
   const c=$('freeCard');if(!c)return;
@@ -1123,7 +1124,7 @@ function testAd(cb){
 function watchAd(){
   const cb=async()=>{
     const j=await freeCall('watched');
-    if(j&&typeof j.minutes==='number'){freeApply(j);rewardBanner('5 منٹ ایڈ ہو گئے ہیں','5 minutes added')}else{toast('⚠ انٹرنیٹ چیک کریں · Check internet')}
+    if(j&&typeof j.minutes==='number'){freeWarned={};freeApply(j);rewardBanner('5 منٹ ایڈ ہو گئے ہیں','5 minutes added')}else{toast('⚠ انٹرنیٹ چیک کریں · Check internet')}
   };
   const A=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.AdMob;
   if(A&&NATIVE){
@@ -1185,4 +1186,46 @@ async function freeRestore(){
   });
 })();
 })();
+
+setInterval(()=>{
+  try{
+    if(!live||$('mode').value!=='te')return;
+    const now=Date.now();
+    if(now-lastVoice>5000&&now-lastNudge>12000){
+      lastNudge=now;
+      send({realtimeInput:{text:'[App note: the child has been quiet for about 5 seconds. Gently call them by the name they gave you (or ask their name if you do not know it), ask what they are doing, and invite them to come in front of the camera. Warm, caring Urdu voice.]'}});
+    }
+  }catch(e){}
+},1000);
+
+/* ===== Teacher camera: asks once, sends frames only during a teacher call ===== */
+let camStream=null,camAsked=false,camTimer=null,camVid=null,camCan=null;
+async function camStart(){
+  if(camStream||camAsked)return;camAsked=true;
+  if(!confirm('ٹیچر موڈ: کیا میں کیمرے سے بچے کو دیکھوں؟ تصویریں صرف اسی وقت Gemini کو جائیں گی، ایپ انہیں محفوظ نہیں کرے گی۔\nTeacher mode: may I use the camera to see the child? Frames go to Gemini only during the call and are not stored.')){return}
+  try{
+    camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:320},height:{ideal:240}},audio:false});
+    camVid=document.createElement('video');camVid.muted=true;camVid.playsInline=true;camVid.srcObject=camStream;
+    try{await camVid.play()}catch(e){}
+    camCan=document.createElement('canvas');camCan.width=320;camCan.height=240;
+    camTimer=setInterval(camFrame,4000);
+  }catch(e){camStream=null;toast('کیمرہ نہیں کھل سکا · Camera not available')}
+}
+function camFrame(){
+  if(!camStream||!live||!camVid||camVid.readyState<2)return;
+  try{const g=camCan.getContext('2d');g.drawImage(camVid,0,0,320,240);
+    const d=camCan.toDataURL('image/jpeg',0.6).split(',')[1];
+    send({realtimeInput:{video:{data:d,mimeType:'image/jpeg'}}});}catch(e){}
+}
+function camStop(){
+  clearInterval(camTimer);camTimer=null;
+  if(camStream){camStream.getTracks().forEach(t=>{try{t.stop()}catch(e){}})}
+  camStream=null;camVid=null;camAsked=false;
+}
+setInterval(()=>{
+  try{
+    if(live&&$('mode').value==='te'){camStart()}
+    else if(!live&&camStream){camStop()}
+  }catch(e){}
+},2000);
 </script></body></html>
