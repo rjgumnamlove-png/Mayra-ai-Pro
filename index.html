@@ -1051,6 +1051,7 @@ licBoot();
 /* ===== Mayra 1.3: free (watch video = +5 min) + premium tabs ===== */
 const FREE_URL='https://script.google.com/macros/s/AKfycbzo5gUu1mwEeBz7T3OBe5fnbtA3MjTBnrbI90jnS7fZZsryK6h-roUOD6S_ROzhv6kC/exec';
 const AD_REWARD_TEST='ca-app-pub-3940256099942544/5224354917';
+const AD_REWARD='ca-app-pub-3076525107457572/4190586434';
 let freeSecs=0,freeUsed=0,freeWarned={},freeCard_=null;
 function isFree(){try{return localStorage.getItem('mayra_free')==='1'}catch(e){return false}}
 function gTab(f){
@@ -1124,22 +1125,30 @@ function testAd(cb){
   const iv=setInterval(()=>{n--;if(n>0)b.textContent=n;else{clearInterval(iv);b.disabled=false;b.textContent='✔ انعام لیں · Claim'}},1000);
   b.onclick=()=>{o.remove();cb()};
 }
+function adInit(){try{const A=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.AdMob;if(A&&NATIVE)A.initialize({}).catch(function(){})}catch(e){}}
 function watchAd(){
-  const cb=async()=>{
+  const cb=async function(){
     const j=await freeCall('watched');
-    if(j&&typeof j.minutes==='number'){freeWarned={};freeApply(j);rewardBanner('5 منٹ ایڈ ہو گئے ہیں','5 minutes added')}else{toast('⚠ انٹرنیٹ چیک کریں · Check internet')}
+    if(j&&j.reason==='cooldown'){toast('⏳ انتظار: '+j.waitSec+' سیکنڈ · Wait '+j.waitSec+' seconds');return}
+    if(j&&typeof j.minutes==='number'){freeWarned={};freeApply(j);rewardBanner('5 منٹ ایڈ ہو گئے ہیں','5 minutes added')}
+    else{toast('⚠ انٹرنیٹ چیک کریں · Check internet')}
   };
-  const A=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.AdMob;
-  if(A&&NATIVE){
-    (async()=>{try{
-      await A.prepareRewardVideoAd({adId:AD_REWARD_TEST});
-      const h=await A.addListener('onRewardedVideoAdReward',()=>{cb()});
-      await A.showRewardVideoAd();
-      setTimeout(()=>{try{h.remove()}catch(e){}},600000);
-    }catch(e){toast('⚠ ویڈیو نہیں چلی · Video failed');testAd(cb)}})();
-    return;
-  }
-  testAd(cb);
+  (async function(){
+    const st=await freeCall('status');
+    if(st&&st.waitSec>0){toast('⏳ انتظار: '+st.waitSec+' سیکنڈ · Wait '+st.waitSec+' seconds');return}
+    const A=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.AdMob;
+    if(A&&NATIVE){
+      try{
+        await A.prepareRewardVideoAd({adId:AD_REWARD});
+        const h=await A.addListener('onRewardedVideoAdReward',function(){cb()});
+        await A.showRewardVideoAd();
+        setTimeout(function(){try{h.remove()}catch(e){}},600000);
+      }catch(e){toast('ویڈیو ابھی دستیاب نہیں · Video not available right now')}
+      return;
+    }
+    if(NATIVE){toast('ویڈیو ابھی دستیاب نہیں · Video not available right now');return}
+    testAd(cb);
+  })();
 }
 function freeEnd(){
   if(document.getElementById('fEnd'))return;
@@ -1163,6 +1172,7 @@ async function freeRestore(){
   freeEnter();
 }
 (function freeSetup(){
+  adInit();
   const row=$('start').parentNode;
   const fc=document.createElement('div');fc.id='freeCard';
   fc.style.cssText='display:none;width:calc(100% - 28px);margin:0 14px 10px;padding:10px 12px;border-radius:20px;background:linear-gradient(180deg,#4b4b58dd,#2b2b36dd);border:1px solid #b1b1c4;box-shadow:0 10px 26px #0008';
@@ -1281,7 +1291,7 @@ function chScreenToWorld(el){
 function dbg(m){try{console.log('[mayra] '+m)}catch(e){}}
 
 /* ===== 2D boy with a real walk cycle (legs and arms move), stands above the WATCH ADS card, taps it, walks out ===== */
-const FB_SVG='<svg viewBox="0 0 120 200" width="120" height="200" style="overflow:visible"><defs><radialGradient id="fbSk" cx="40%" cy="30%" r="70%"><stop offset="0" stop-color="#fff4ea"/><stop offset="1" stop-color="#f2c4a2"/></radialGradient><linearGradient id="fbSh" x1="0" x2="1"><stop offset="0" stop-color="#7cc0ff"/><stop offset="1" stop-color="#3b7fd6"/></linearGradient></defs>'+
+const FB_SVG='<svg viewBox="0 0 120 200" width="84" height="140" style="overflow:visible"><defs><radialGradient id="fbSk" cx="40%" cy="30%" r="70%"><stop offset="0" stop-color="#fff4ea"/><stop offset="1" stop-color="#f2c4a2"/></radialGradient><linearGradient id="fbSh" x1="0" x2="1"><stop offset="0" stop-color="#7cc0ff"/><stop offset="1" stop-color="#3b7fd6"/></linearGradient></defs>'+
  '<ellipse cx="60" cy="196" rx="34" ry="5" fill="#000a"/>'+
  '<g id="fbLgL" style="transform-origin:52px 120px"><rect x="45" y="120" width="13" height="58" rx="6.5" fill="#262b48"/><ellipse cx="50" cy="184" rx="10" ry="5" fill="#fff"/></g>'+
  '<g id="fbLgR" style="transform-origin:68px 120px"><rect x="62" y="120" width="13" height="58" rx="6.5" fill="#262b48"/><ellipse cx="70" cy="184" rx="10" ry="5" fill="#fff"/></g>'+
@@ -1310,7 +1320,7 @@ function fallbackShow(){
   const b=$('fWatch'),card=$('freeCard');if(!b||!card)return;
   const r=b.getBoundingClientRect(),cr=card.getBoundingClientRect();
   const el=document.createElement('div');el.id='fbBoy';
-  el.style.cssText='position:fixed;left:0;bottom:'+(window.innerHeight-cr.top+2)+'px;width:120px;height:200px;z-index:9500;pointer-events:none;filter:drop-shadow(0 8px 6px #0009)';
+  el.style.cssText='position:fixed;left:0;bottom:'+(window.innerHeight-cr.top-2)+'px;width:84px;height:140px;z-index:9500;pointer-events:none;filter:drop-shadow(0 6px 5px #0009)';
   el.innerHTML=FB_SVG;document.body.appendChild(el);
   const speed=130;
   const standX=Math.max(6,r.left+r.width/2-60);
@@ -1320,7 +1330,7 @@ function fallbackShow(){
   setTimeout(function(){
     walkers.forEach(function(a){a.cancel()});fbStand(el);
     const AR=el.querySelector('#fbArR');
-    for(let i=0;i<5;i++)setTimeout(function(){try{AR.animate([{transform:'rotate(0deg)'},{transform:'rotate(-80deg)'},{transform:'rotate(-20deg)'}],{duration:700,easing:'ease-in-out'})}catch(e){}},i*950);
+    for(let i=0;i<5;i++)setTimeout(function(){try{AR.animate([{transform:'rotate(0deg)'},{transform:'rotate(-30deg)'},{transform:'rotate(0deg)'}],{duration:700,easing:'ease-in-out'})}catch(e){}},i*950);
     try{b.animate([{transform:'scale(1)'},{transform:'scale(.93)'},{transform:'scale(1)'}],{duration:700,iterations:5})}catch(e){}
   },d1);
   const restAt=d1+5000;
