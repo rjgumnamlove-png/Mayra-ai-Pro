@@ -66,6 +66,7 @@ for (const jf of javaFiles) {
   fs.writeFileSync(dir + '/' + jf, src);
 }
 fs.writeFileSync(dir + '/MainActivity.java', 'package ' + pkg + ';\n\nimport android.os.Bundle;\nimport com.getcapacitor.BridgeActivity;\n\npublic class MainActivity extends BridgeActivity {\n    @Override\n    public void onCreate(Bundle savedInstanceState) {\n' + reg + '        super.onCreate(savedInstanceState);\n    }\n}\n');
+x = x.replace('</application>', '<meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-3076525107457572~8103665304"/></application>');
 x = x.replace('</manifest>', add + '</manifest>');
 fs.writeFileSync(f, x);
 console.log('Manifest patched (' + mode + ').');
