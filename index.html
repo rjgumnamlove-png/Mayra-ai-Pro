@@ -1280,27 +1280,56 @@ function chScreenToWorld(el){
 
 function dbg(m){try{console.log('[mayra] '+m)}catch(e){}}
 
-/* ===== 2D smart cute boy: walks in from the left, taps WATCH ADS, walks out to the right (no canvas, so it cannot blank the screen) ===== */
-const FB_SVG='<svg viewBox="0 0 100 160" width="100" height="160"><defs><radialGradient id="fbSk" cx="40%" cy="30%" r="70%"><stop offset="0" stop-color="#fff3e6"/><stop offset="1" stop-color="#f0c2a0"/></radialGradient></defs><ellipse cx="50" cy="156" rx="30" ry="4" fill="#0008"/><rect x="36" y="110" width="11" height="40" rx="5" fill="#2b2f4a"/><rect x="53" y="110" width="11" height="40" rx="5" fill="#2b2f4a"/><ellipse cx="41" cy="152" rx="8" ry="4" fill="#fff"/><ellipse cx="59" cy="152" rx="8" ry="4" fill="#fff"/><rect x="31" y="62" width="38" height="52" rx="12" fill="#5aa9ff"/><rect x="43" y="62" width="14" height="52" fill="#e9f5ff" opacity=".85"/><rect x="24" y="66" width="10" height="36" rx="5" fill="#5aa9ff"/><g id="fbArm" style="transform-origin:69px 68px"><rect x="65" y="66" width="10" height="38" rx="5" fill="#5aa9ff"/><circle cx="70" cy="106" r="5.5" fill="url(#fbSk)"/></g><circle cx="50" cy="38" r="24" fill="url(#fbSk)"/><path d="M24 36 Q26 10 50 11 Q76 10 77 36 Q70 24 50 24 Q32 24 24 36Z" fill="#2b1d4a"/><path d="M24 36 Q20 52 28 56" fill="#2b1d4a"/><ellipse cx="41" cy="40" rx="3.2" ry="4.2" fill="#2b1d4a"/><ellipse cx="59" cy="40" rx="3.2" ry="4.2" fill="#2b1d4a"/><circle cx="42" cy="38.5" r="1.1" fill="#fff"/><circle cx="60" cy="38.5" r="1.1" fill="#fff"/><ellipse cx="36" cy="49" rx="4" ry="2.4" fill="#ff8fa3" opacity=".55"/><ellipse cx="64" cy="49" rx="4" ry="2.4" fill="#ff8fa3" opacity=".55"/><path d="M44 52 Q50 57 56 52" fill="none" stroke="#b5435d" stroke-width="2.2" stroke-linecap="round"/></svg>';
+/* ===== 2D boy with a real walk cycle (legs and arms move), stands above the WATCH ADS card, taps it, walks out ===== */
+const FB_SVG='<svg viewBox="0 0 120 200" width="120" height="200" style="overflow:visible"><defs><radialGradient id="fbSk" cx="40%" cy="30%" r="70%"><stop offset="0" stop-color="#fff4ea"/><stop offset="1" stop-color="#f2c4a2"/></radialGradient><linearGradient id="fbSh" x1="0" x2="1"><stop offset="0" stop-color="#7cc0ff"/><stop offset="1" stop-color="#3b7fd6"/></linearGradient></defs>'+
+ '<ellipse cx="60" cy="196" rx="34" ry="5" fill="#000a"/>'+
+ '<g id="fbLgL" style="transform-origin:52px 120px"><rect x="45" y="120" width="13" height="58" rx="6.5" fill="#262b48"/><ellipse cx="50" cy="184" rx="10" ry="5" fill="#fff"/></g>'+
+ '<g id="fbLgR" style="transform-origin:68px 120px"><rect x="62" y="120" width="13" height="58" rx="6.5" fill="#262b48"/><ellipse cx="70" cy="184" rx="10" ry="5" fill="#fff"/></g>'+
+ '<g id="fbBody"><rect x="38" y="70" width="44" height="56" rx="16" fill="url(#fbSh)"/><rect x="54" y="72" width="12" height="52" fill="#eaf6ff" opacity=".85"/>'+
+ '<g id="fbArL" style="transform-origin:42px 78px"><rect x="28" y="78" width="12" height="44" rx="6" fill="#4d9be8"/><circle cx="34" cy="126" r="6" fill="url(#fbSk)"/></g>'+
+ '<g id="fbArR" style="transform-origin:78px 78px"><rect x="80" y="78" width="12" height="44" rx="6" fill="#4d9be8"/><circle cx="86" cy="126" r="6" fill="url(#fbSk)"/></g></g>'+
+ '<g id="fbHead"><circle cx="60" cy="46" r="29" fill="url(#fbSk)"/><path d="M30 44 Q31 14 60 15 Q90 14 91 44 Q82 30 60 30 Q40 30 30 44Z" fill="#2a1c4c"/><path d="M30 44 Q24 60 34 66" fill="#2a1c4c"/>'+
+ '<ellipse cx="49" cy="50" rx="4" ry="5.2" fill="#2a1c4c"/><ellipse cx="71" cy="50" rx="4" ry="5.2" fill="#2a1c4c"/><circle cx="50.4" cy="48.2" r="1.3" fill="#fff"/><circle cx="72.4" cy="48.2" r="1.3" fill="#fff"/>'+
+ '<ellipse cx="42" cy="59" rx="5" ry="3" fill="#ff8fa3" opacity=".6"/><ellipse cx="78" cy="59" rx="5" ry="3" fill="#ff8fa3" opacity=".6"/><path d="M53 63 Q60 70 67 63" fill="none" stroke="#b5435d" stroke-width="2.6" stroke-linecap="round"/></g></svg>';
+function fbWalk(el,ms){
+  const L=el.querySelector('#fbLgL'),R=el.querySelector('#fbLgR'),AL=el.querySelector('#fbArL'),AR=el.querySelector('#fbArR'),B=el.querySelector('#fbBody');
+  const o={duration:520,iterations:Infinity,easing:'ease-in-out',direction:'alternate'};
+  return [
+    L.animate([{transform:'rotate(-24deg)'},{transform:'rotate(24deg)'}],o),
+    R.animate([{transform:'rotate(24deg)'},{transform:'rotate(-24deg)'}],o),
+    AL.animate([{transform:'rotate(18deg)'},{transform:'rotate(-18deg)'}],o),
+    AR.animate([{transform:'rotate(-18deg)'},{transform:'rotate(18deg)'}],o),
+    B.animate([{transform:'translateY(0px)'},{transform:'translateY(-3px)'}],{duration:260,iterations:Infinity,direction:'alternate',easing:'ease-in-out'})
+  ];
+}
+function fbStand(el){
+  el.querySelectorAll('#fbLgL,#fbLgR,#fbArL,#fbArR,#fbBody').forEach(function(g){g.getAnimations().forEach(function(a){a.cancel()})});
+}
 function fallbackShow(){
   if(document.getElementById('fbBoy'))return;
-  const b=$('fWatch');if(!b)return;
-  const r=b.getBoundingClientRect();
+  const b=$('fWatch'),card=$('freeCard');if(!b||!card)return;
+  const r=b.getBoundingClientRect(),cr=card.getBoundingClientRect();
   const el=document.createElement('div');el.id='fbBoy';
-  el.style.cssText='position:fixed;bottom:'+(window.innerHeight-r.top-6)+'px;left:0;width:100px;height:160px;z-index:9500;pointer-events:none;filter:drop-shadow(4px 8px 6px #0007)';
+  el.style.cssText='position:fixed;left:0;bottom:'+(window.innerHeight-cr.top+2)+'px;width:120px;height:200px;z-index:9500;pointer-events:none;filter:drop-shadow(0 8px 6px #0009)';
   el.innerHTML=FB_SVG;document.body.appendChild(el);
-  const targetX=Math.max(8,r.left-96);
-  const walkMs=2800;
-  el.animate([{transform:'translateX(-120px)'},{transform:'translateX('+targetX+'px)'}],{duration:walkMs,easing:'ease-out',fill:'forwards'});
-  const arm=el.querySelector('#fbArm');
+  const speed=130;
+  const standX=Math.max(6,r.left+r.width/2-60);
+  const d1=(standX+130)/speed*1000;
+  let walkers=fbWalk(el);
+  const move1=el.animate([{transform:'translateX(-130px)'},{transform:'translateX('+standX+'px)'}],{duration:d1,easing:'linear',fill:'forwards'});
   setTimeout(function(){
-    for(let i=0;i<5;i++)setTimeout(function(){try{arm.animate([{transform:'rotate(0deg)'},{transform:'rotate(-60deg)'},{transform:'rotate(0deg)'}],{duration:620,easing:'ease-in-out'})}catch(e){}},i*950);
-    try{b.animate([{transform:'scale(1)'},{transform:'scale(.93)'},{transform:'scale(1)'}],{duration:620,iterations:5})}catch(e){}
-  },walkMs);
+    walkers.forEach(function(a){a.cancel()});fbStand(el);
+    const AR=el.querySelector('#fbArR');
+    for(let i=0;i<5;i++)setTimeout(function(){try{AR.animate([{transform:'rotate(0deg)'},{transform:'rotate(-80deg)'},{transform:'rotate(-20deg)'}],{duration:700,easing:'ease-in-out'})}catch(e){}},i*950);
+    try{b.animate([{transform:'scale(1)'},{transform:'scale(.93)'},{transform:'scale(1)'}],{duration:700,iterations:5})}catch(e){}
+  },d1);
+  const restAt=d1+5000;
   setTimeout(function(){
-    el.animate([{transform:'translateX('+targetX+'px)'},{transform:'translateX('+(window.innerWidth+130)+'px)'}],{duration:2600,easing:'ease-in',fill:'forwards'});
-  },walkMs+5000);
-  setTimeout(function(){try{el.remove()}catch(e){}},walkMs+5000+2800);
+    walkers=fbWalk(el);
+    const dist=window.innerWidth+130-standX, d2=dist/speed*1000;
+    el.animate([{transform:'translateX('+standX+'px)'},{transform:'translateX('+(window.innerWidth+20)+'px)'}],{duration:d2,easing:'linear',fill:'forwards'});
+    setTimeout(function(){try{el.remove()}catch(e){}},d2+200);
+  },restAt);
 }
 const CHAR_ON=false;
 async function charShow(){
