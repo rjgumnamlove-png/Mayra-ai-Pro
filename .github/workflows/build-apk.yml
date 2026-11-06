@@ -29,7 +29,7 @@ jobs:
         run: npm install --legacy-peer-deps
       - name: Install plugins (each one optional)
         run: |
-          for p in "@capacitor/app-launcher@^7" "@capacitor/device@^7" "@capacitor/local-notifications@^7" "@capacitor-community/contacts@^7" "capacitor-call-number" "@anuradev/capacitor-background-mode" "@capacitor-community/admob@^7"; do
+          for p in "@capacitor/app-launcher@^7" "@capacitor/device@^7" "@capacitor/local-notifications@^7" "@capacitor-community/contacts@^7" "capacitor-call-number" "@anuradev/capacitor-background-mode" "@capacitor-community/admob@^7" "@capacitor/app@^7" "@capacitor/share@^7"; do
             npm install "$p" --legacy-peer-deps || echo "SKIPPED $p"
           done
       - name: Install Android platform 36 (for Google Play target)
