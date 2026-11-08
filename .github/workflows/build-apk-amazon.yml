@@ -1,0 +1,96 @@
+name: Build Mayra APK for Amazon (Fire tablets)
+on:
+  workflow_dispatch:
+env:
+  APP_VERSION: "1.3"
+  PACKAGE_NAME: "com.rjbilal.mayraai"
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Pillow (for the app icon)
+        run: pip install pillow
+      - name: Put the web app in place
+        run: |
+          mkdir -p www
+          cp index.html www/index.html
+          if [ -d themes ]; then cp -r themes www/themes; fi
+      - name: Install Capacitor
+        run: npm install --legacy-peer-deps
+      - name: Install only the plugins Amazon allows (no Google Play services)
+        run: |
+          for p in "@capacitor/app@^7" "@capacitor/share@^7"; do
+            npm install "$p" --legacy-peer-deps || echo "SKIPPED $p"
+          done
+      - name: Install Android platform 36
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null 2>&1 || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" || echo "sdkmanager failed"
+      - name: Build the Amazon APK
+        run: |
+          # Package name: exactly the existing one, com.rjbilal.mayraai (never changed)
+          sed -i -E "s/\"appId\": *\"[^\"]*\"/\"appId\": \"${PACKAGE_NAME}\"/" capacitor.config.json
+          grep -q "\"appId\": \"${PACKAGE_NAME}\"" capacitor.config.json || { echo "ERROR: package name is not ${PACKAGE_NAME}"; exit 1; }
+          echo "Package name used for this build: ${PACKAGE_NAME}"
+          rm -rf android
+          npx cap add android
+          sed -i -E "s/compileSdkVersion = [0-9]+/compileSdkVersion = 36/; s/targetSdkVersion = [0-9]+/targetSdkVersion = 36/" android/variables.gradle
+          grep -E "compileSdkVersion|targetSdkVersion" android/variables.gradle
+          sed -i "s/versionCode 1/versionCode $((GITHUB_RUN_NUMBER+100))/" android/app/build.gradle
+          sed -i "s/versionName \"1.0\"/versionName \"${APP_VERSION}\"/" android/app/build.gradle
+          # Plain mode: no native phone plugins (calls, SMS, contacts, accessibility)
+          node patch-manifest.js plain || true
+          # Amazon only: remove phone, SMS, contacts and accessibility permissions from this build
+          python3 - <<'PY'
+          import re
+          f='android/app/src/main/AndroidManifest.xml'
+          x=open(f,encoding='utf-8').read()
+          perms=['CALL_PHONE','SEND_SMS','READ_SMS','RECEIVE_SMS','READ_CONTACTS','WRITE_CONTACTS','READ_CALL_LOG','WRITE_CALL_LOG','ANSWER_PHONE_CALLS','READ_PHONE_NUMBERS','READ_PHONE_STATE','BIND_ACCESSIBILITY_SERVICE']
+          x=re.sub(r'<uses-permission[^>]*android:name="android\.permission\.(' + '|'.join(perms) + r')"[^>]*/>', '', x)
+          x=re.sub(r'<service[^>]*BIND_ACCESSIBILITY_SERVICE[\s\S]*?</service>', '', x)
+          x=re.sub(r'<service[^>]*MayraAccessService[\s\S]*?</service>', '', x)
+          open(f,'w',encoding='utf-8').write(x)
+          print('Amazon manifest cleaned')
+          PY
+          # Remove the Google Mobile Ads App ID (not used on Amazon)
+          sed -i -E 's#<meta-data android:name="com.google.android.gms.ads.APPLICATION_ID"[^>]*/>##g' android/app/src/main/AndroidManifest.xml
+          # Declare telephony, camera, GPS and similar as optional, so Fire tablets are not filtered out
+          sed -i 's#</manifest>#<uses-feature android:name="android.hardware.telephony" android:required="false"/><uses-feature android:name="android.hardware.camera" android:required="false"/><uses-feature android:name="android.hardware.camera.autofocus" android:required="false"/><uses-feature android:name="android.hardware.location" android:required="false"/><uses-feature android:name="android.hardware.location.gps" android:required="false"/><uses-feature android:name="android.hardware.bluetooth" android:required="false"/><uses-feature android:name="android.hardware.microphone" android:required="false"/></manifest>#' android/app/src/main/AndroidManifest.xml
+          python3 make_icons.py
+          npx cap sync android
+          (cd android && chmod +x gradlew && ./gradlew assembleDebug --no-daemon)
+          test -f android/app/build/outputs/apk/debug/app-debug.apk
+      - name: Sign the Amazon APK with the permanent key
+        env:
+          MAYRA_KS_PASS: ${{ secrets.MAYRA_KS_PASS }}
+          MAYRA_KS_B64: ${{ secrets.MAYRA_KS_B64 }}
+        run: |
+          if [ -z "$MAYRA_KS_B64" ] || [ -z "$MAYRA_KS_PASS" ]; then
+            echo "ERROR: MAYRA_KS_B64 / MAYRA_KS_PASS secrets missing"; exit 1
+          fi
+          echo "$MAYRA_KS_B64" | base64 -d > "$RUNNER_TEMP/mayra.p12"
+          APK=android/app/build/outputs/apk/debug/app-debug.apk
+          BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
+          $BT/zipalign -p -f 4 $APK aligned.apk
+          $BT/apksigner sign --ks "$RUNNER_TEMP/mayra.p12" --ks-type PKCS12 --ks-key-alias mayra --ks-pass env:MAYRA_KS_PASS --key-pass env:MAYRA_KS_PASS --out signed.apk aligned.apk
+          $BT/apksigner verify --print-certs signed.apk
+          mkdir -p amazon-out && cp signed.apk amazon-out/Mayra-AI-Amazon-${APP_VERSION}.apk
+          rm -f "$RUNNER_TEMP/mayra.p12"
+          echo "SIGNED with the permanent Mayra key (Amazon build)"
+      - name: Upload the Amazon APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mayra-Amazon-APK
+          path: amazon-out/
+          
