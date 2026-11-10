@@ -30,7 +30,7 @@ jobs:
         run: npm install --legacy-peer-deps
       - name: Install only the plugins Amazon allows (no Google Play services)
         run: |
-          for p in "@capacitor/app@^7" "@capacitor/share@^7"; do
+          for p in "@capacitor/app@^7" "@capacitor/share@^7" "@capacitor-community/admob@^7"; do
             npm install "$p" --legacy-peer-deps || echo "SKIPPED $p"
           done
       - name: Install Android platform 36
@@ -64,7 +64,7 @@ jobs:
           print('Amazon manifest cleaned')
           PY
           # Remove the Google Mobile Ads App ID (not used on Amazon)
-          sed -i -E 's#<meta-data android:name="com.google.android.gms.ads.APPLICATION_ID"[^>]*/>##g' android/app/src/main/AndroidManifest.xml
+          # AdMob App ID is kept in this build (ads on Amazon are tested with AdMob)
           # Declare telephony, camera, GPS and similar as optional, so Fire tablets are not filtered out
           sed -i 's#</manifest>#<uses-feature android:name="android.hardware.telephony" android:required="false"/><uses-feature android:name="android.hardware.camera" android:required="false"/><uses-feature android:name="android.hardware.camera.autofocus" android:required="false"/><uses-feature android:name="android.hardware.location" android:required="false"/><uses-feature android:name="android.hardware.location.gps" android:required="false"/><uses-feature android:name="android.hardware.bluetooth" android:required="false"/><uses-feature android:name="android.hardware.microphone" android:required="false"/></manifest>#' android/app/src/main/AndroidManifest.xml
           python3 make_icons.py
