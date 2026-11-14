@@ -61,7 +61,8 @@ if (mode === 'native' || mode === 'access') {
   fs.copyFileSync('mayra_strings.xml', 'android/app/src/main/res/values/mayra_strings.xml');
 }
 // Mayra native helpers (close app, opt-in wake service)
-javaFiles.push('MayraSysPlugin.java', 'MayraWakeService.java', 'MayraBridge.java');
+javaFiles.push('MayraSysPlugin.java', 'MayraWakeService.java', 'MayraBridge.java', 'MayraSpeech.java');
+reg += '        registerPlugin(MayraSpeech.class);\n';
 reg += '        registerPlugin(MayraSysPlugin.class);\n';
 x = x.replace('</application>', '<service android:name=".MayraWakeService" android:exported="false" android:foregroundServiceType="microphone"/></application>');
 x = x.replace('</manifest>', '<uses-permission android:name="android.permission.FOREGROUND_SERVICE"/><uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE"/><uses-permission android:name="android.permission.POST_NOTIFICATIONS"/><uses-permission android:name="android.permission.RECORD_AUDIO"/></manifest>');
