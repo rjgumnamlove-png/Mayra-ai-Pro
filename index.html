@@ -189,7 +189,7 @@ function onMic(f){
   if($('spk').checked&&ctx&&next>ctx.currentTime)return; // speaker mode: mic paused while Mayra speaks
   {let e=0;for(let i=0;i<f.length;i+=8)e+=f[i]*f[i];micLvl=Math.min(1,Math.sqrt(e/(f.length/8))*7)}if(micLvl>0.06){lastVoice=Date.now();nudgeCount=0;}
   const p=pcm16(f,ctx.sampleRate);
-  send({realtimeInput:{audio:{data:b64(new Uint8Array(p.buffer)),mimeType:'audio/pcm;rate=16000'}}});
+  DIAG.sent++;send({realtimeInput:{audio:{data:b64(new Uint8Array(p.buffer)),mimeType:'audio/pcm;rate=16000'}}});
 }
 
 
@@ -202,7 +202,9 @@ function checkVoiceCommand(tx){
 
 
 /* ===== Wake phrases ("Hello Mayra" / "Hi Mera" ...): background service, off during calls ===== */
+const WAKE_ON=false;
 function mayraListen(on){
+  if(!WAKE_ON)return;
   try{
     const M=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.MayraSpeech;
     if(!M)return;
@@ -210,6 +212,7 @@ function mayraListen(on){
   }catch(e){}
 }
 function mayraWakeSetup(){
+  if(!WAKE_ON)return;
   try{
     const M=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.MayraSpeech;
     if(!M||!M.addListener)return;
@@ -235,8 +238,10 @@ function startLeave(){
   },6000);
 }
 let lastModelAudio=0;
+const DIAG={sent:0,recv:0,close:'',err:''};
 function play(u){
   if(!ctx)return;
+  DIAG.recv++;
   lastModelAudio=Date.now();
   const n=Math.floor(u.byteLength/2),p=new Int16Array(n),dv=new DataView(u.buffer,u.byteOffset,n*2);
   for(let i=0;i<n;i++)p[i]=dv.getInt16(i*2,true);
@@ -291,6 +296,7 @@ async function handle(d){
   if(s.turnComplete){saveTurn();cur=null;status('لائیو ہے — بات جاری رکھیں',true)}
 }
 
+setInterval(function(){try{if(live)status('سن رہی ہوں · بھیجا '+DIAG.sent+' · جواب '+DIAG.recv+(DIAG.close?' · بند: '+DIAG.close:''))}catch(e){}},3000);
 async function start(){
   if(!unlocked){gate(true);return}
   const key=$('key').value.trim();
@@ -302,6 +308,8 @@ async function start(){
     ctx=new(window.AudioContext||window.webkitAudioContext)();await ctx.resume();ctx.onstatechange=()=>{dbg('audio engine '+ctx.state);if(live&&ctx&&ctx.state==='suspended')ctx.resume().catch(()=>{})};try{const kb=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate),kd=kb.getChannelData(0);for(let i=0;i<kd.length;i++)kd[i]=(Math.random()-.5)*4e-4;const ks=ctx.createBufferSource();ks.buffer=kb;ks.loop=true;ks.connect(ctx.destination);ks.start()}catch(e){}next=0;nodes=[];an=ctx.createAnalyser();an.fftSize=512;outG=ctx.createGain();outG.gain.value=+$('vol').value;const cp=ctx.createDynamicsCompressor();an.connect(outG);outG.connect(cp);cp.connect(ctx.destination);
     status('Gemini سے جڑ رہا ہے…');
     const w=ws=new WebSocket(URL_+encodeURIComponent(key));
+    w.addEventListener('close',function(ev){DIAG.close=(ev.code||'')+' '+(ev.reason||'');if(!ev.wasClean)status('کنکشن بند ہوا · code '+DIAG.close)});
+    w.addEventListener('error',function(){DIAG.err='socket error'});
     w.onopen=()=>send({setup:{
       model:'models/'+modelName(),
       generationConfig:{responseModalities:['AUDIO'],speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:$('voice').value}}}},
@@ -1466,12 +1474,12 @@ const FB_SVG='<svg viewBox="0 0 120 200" width="84" height="140" style="overflow
  '<ellipse cx="42" cy="59" rx="5" ry="3" fill="#ff8fa3" opacity=".6"/><ellipse cx="78" cy="59" rx="5" ry="3" fill="#ff8fa3" opacity=".6"/><path d="M53 63 Q60 70 67 63" fill="none" stroke="#b5435d" stroke-width="2.6" stroke-linecap="round"/></g></svg>';
 function fbWalk(el,ms){
   const L=el.querySelector('#fbLgL'),R=el.querySelector('#fbLgR'),AL=el.querySelector('#fbArL'),AR=el.querySelector('#fbArR'),B=el.querySelector('#fbBody');
-  const o={duration:520,iterations:Infinity,easing:'ease-in-out',direction:'alternate'};
+  const o={duration:380,iterations:Infinity,easing:'ease-in-out',direction:'alternate'};
   return [
-    L.animate([{transform:'rotate(-24deg)'},{transform:'rotate(24deg)'}],o),
-    R.animate([{transform:'rotate(24deg)'},{transform:'rotate(-24deg)'}],o),
-    AL.animate([{transform:'rotate(18deg)'},{transform:'rotate(-18deg)'}],o),
-    AR.animate([{transform:'rotate(-18deg)'},{transform:'rotate(18deg)'}],o),
+    L.animate([{transform:'rotate(-34deg)'},{transform:'rotate(34deg)'}],o),
+    R.animate([{transform:'rotate(34deg)'},{transform:'rotate(-34deg)'}],o),
+    AL.animate([{transform:'rotate(24deg)'},{transform:'rotate(-24deg)'}],o),
+    AR.animate([{transform:'rotate(-24deg)'},{transform:'rotate(24deg)'}],o),
     B.animate([{transform:'translateY(0px)'},{transform:'translateY(-3px)'}],{duration:260,iterations:Infinity,direction:'alternate',easing:'ease-in-out'})
   ];
 }
