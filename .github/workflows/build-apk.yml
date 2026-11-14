@@ -41,7 +41,6 @@ jobs:
           attempt() {
             rm -rf android
             npx cap add android &&
-            (bash add_speech.sh || echo "SPEECH ADD-ON SKIPPED (build continues without background wake)") &&
             sed -i -E "s/compileSdkVersion = [0-9]+/compileSdkVersion = 36/; s/targetSdkVersion = [0-9]+/targetSdkVersion = 36/" android/variables.gradle &&
             grep -E "compileSdkVersion|targetSdkVersion" android/variables.gradle &&
             sed -i "s/versionCode 1/versionCode $((GITHUB_RUN_NUMBER+100))/" android/app/build.gradle &&
