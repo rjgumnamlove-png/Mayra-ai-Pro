@@ -2,7 +2,7 @@ name: Build Mayra APK
 on:
   workflow_dispatch:
 env:
-  APP_VERSION: "1.3"
+  APP_VERSION: "1.4"
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -106,4 +106,3 @@ jobs:
         with:
           name: Mayra-APK
           path: android/app/build/outputs/apk/debug/app-debug.apk
-          
