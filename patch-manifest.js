@@ -67,6 +67,9 @@ if (fs.existsSync('android/.native_ad_ok')) {
   javaFiles.push('MayraNativeAd.java');
   reg += '        registerPlugin(MayraNativeAd.class);\n';
 }
+// Saves files (generated web pages) to Downloads
+javaFiles.push('MayraSave.java');
+reg += '        registerPlugin(MayraSave.class);\n';
 for (const jf of javaFiles) {
   if (!fs.existsSync(jf)) throw new Error('MISSING FILE in the repository root: ' + jf);
   const src = fs.readFileSync(jf, 'utf8').replace(/^package\s+[\w.]+;/m, 'package ' + pkg + ';');
