@@ -244,7 +244,7 @@ async function handle(d){
     live=true;tries=0;if(pendingText){send({realtimeInput:{text:pendingText}});pendingText=''}else greetNow();if($('bgm').checked)bgOn();try{navigator.wakeLock&&navigator.wakeLock.request('screen').then(l=>{wl=l}).catch(()=>{})}catch(e){}$('stop').disabled=false;$('start').disabled=false;$('start').classList.add('endcall');status('لائیو ہے — اب بات کریں',true);return}
   const s=m.serverContent;if(!s)return;
   if(s.interrupted){dbg('model speech interrupted (flush)');flush();cur=null}
-  if(s.inputTranscription&&s.inputTranscription.text){const tx=s.inputTranscription.text;tu+=tx;cap('You',tx)}
+  if(s.inputTranscription&&s.inputTranscription.text){const tx=s.inputTranscription.text;tu+=tx;cap('You',tx);if(/اسکین|سکین|scan/i.test(tx))scanNow()}
   if(s.outputTranscription&&s.outputTranscription.text){tm+=s.outputTranscription.text;cap('Mayra',s.outputTranscription.text)}
   for(const p of(s.modelTurn&&s.modelTurn.parts||[]))if(p.inlineData&&p.inlineData.data&&/audio/.test(p.inlineData.mimeType||'audio'))play(unb64(p.inlineData.data));
   if(s.turnComplete){saveTurn();cur=null;status('لائیو ہے — بات جاری رکھیں',true)}
@@ -582,6 +582,51 @@ function followUp(){let asked={};try{asked=JSON.parse(localStorage.getItem('mayr
   const c=facts().filter(x=>(x.k==='health'&&now-x.t<14*864e5)||(x.k==='plan'&&now-x.t<7*864e5)).filter(x=>now-(asked[x.f]||0)>12*36e5).sort((a,b)=>b.t-a.t)[0];
   if(c){asked[c.f]=now;try{localStorage.setItem('mayra_fu',JSON.stringify(asked))}catch(e){}}return c||null}
 function saveTurn(){if(tu||tm){if($('mem').checked){const m=$('mode').value||'gf';try{localStorage.setItem(mkey(m),JSON.stringify(memAll(m).concat({u:tu.slice(0,400),m:tm.slice(0,400),t:Date.now()}).slice(-300)))}catch(e){try{localStorage.setItem(mkey(m),JSON.stringify(memAll(m).slice(-100)))}catch(e2){}}}}try{if($('mem').checked)autoFact(tu)}catch(e){}tu=tm=''}
+
+/* ===== Scanner (JARVIS-style): "اسکین کرو" / "scan" opens a scan view, takes the picture in front of the camera and Mayra describes it ===== */
+let scanBusy=false;
+function scanCss(){
+  if(document.getElementById('scanCss'))return;
+  const st=document.createElement('style');st.id='scanCss';
+  st.textContent='#scanOv{position:fixed;inset:0;z-index:9999;background:radial-gradient(circle at center,rgba(6,14,30,.35),rgba(2,4,10,.85));display:flex;align-items:center;justify-content:center;transition:opacity .5s}'
+   +'#scanOv .scanBox{position:relative;width:78vw;max-width:360px;aspect-ratio:1/1;border:2px solid rgba(120,220,255,.95);border-radius:18px;box-shadow:0 0 34px rgba(80,200,255,.65),inset 0 0 30px rgba(80,200,255,.25);overflow:hidden}'
+   +'#scanOv .scanBox::after{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(120,220,255,.14) 1px,transparent 1px),linear-gradient(90deg,rgba(120,220,255,.14) 1px,transparent 1px);background-size:24px 24px}'
+   +'#scanOv .scanLine{position:absolute;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,#7fe9ff,transparent);box-shadow:0 0 16px #7fe9ff;animation:scanMove 1.6s ease-in-out infinite;z-index:2}'
+   +'@keyframes scanMove{0%{top:0}50%{top:calc(100% - 3px)}100%{top:0}}'
+   +'#scanOv .scanTxt{position:absolute;bottom:18%;left:0;right:0;text-align:center;color:#bdf3ff;font-weight:700;font-size:15px;text-shadow:0 0 10px #4fd8ff;animation:scanBlink 1s ease-in-out infinite}'
+   +'@keyframes scanBlink{0%,100%{opacity:.55}50%{opacity:1}}';
+  document.head.appendChild(st);
+}
+function scanOverlayShow(on){
+  let o=document.getElementById('scanOv');
+  if(!on){if(o){o.style.opacity='0';setTimeout(function(){o.remove()},500)}return}
+  if(o)return;
+  scanCss();
+  o=document.createElement('div');o.id='scanOv';
+  o.innerHTML='<div class="scanBox"><div class="scanLine"></div></div><div class="scanTxt"></div>';
+  o.querySelector('.scanTxt').textContent='اسکین ہو رہا ہے… · Scanning…';
+  document.body.appendChild(o);
+}
+async function scanNow(){
+  if(scanBusy)return;
+  if(!live){toast('پہلے کال شروع کریں، پھر "اسکین کرو" کہیں · Start the call first, then say scan');return}
+  scanBusy=true;
+  try{
+    if(!camStream){try{await startVideo('cam')}catch(e){}}
+    scanOverlayShow(true);
+    for(let i=0;i<40&&!(pv&&pv.videoWidth);i++){await new Promise(function(r){setTimeout(r,100)})}
+    await new Promise(function(r){setTimeout(r,1800)});
+    if(pv&&pv.videoWidth){
+      sendFrame();
+      send({realtimeInput:{text:'[App note: the user asked you to scan the object in front of the camera. Look at the picture carefully and describe it in Urdu, with details: what the object is, its type, colour, size, material, any visible text or brand, its condition, what it is used for, and one useful tip. If you are not sure about something, say so honestly. Keep it clear and natural.]'}});
+    }else{
+      toast('کیمرہ تیار نہیں ہوا · Camera not ready');
+    }
+    await new Promise(function(r){setTimeout(r,2500)});
+  }catch(e){}
+  scanOverlayShow(false);
+  scanBusy=false;
+}
 function sysExtra(){let t=' جذبات کا اظہار: اپنی آواز میں قدرتی گرمجوشی لائیں۔ صارف کے موڈ کے مطابق ردِعمل دیں: خوشی پر خوش ہوں، اداسی پر نرمی اور ہمدردی سے بات کریں (مثلاً “یہ سن کر افسوس ہوا، کیا ہوا؟”)، تھکن پر آہستہ بات کریں۔ مزاح پر ہلکا سا ہنسیں۔ لہجہ، رفتار اور وقفے بات کے مطابق بدلیں۔ ایک جملہ سچا اور ذاتی لگے، مگر کبھی یہ دعویٰ نہ کریں کہ آپ انسان ہیں۔ اگر کوئی پوچھے کہ کیا آپ AI ہیں تو صاف ہاں کہیں۔ ساتھ ہی: صارف کو جذباتی طور پر اپنے پر منحصر نہ بنائیں، روٹھیں نہیں، جانے سے نہ روکیں، کوئی احساسِ جرم نہ ڈالیں، اور بات جاری رکھنے کا دباؤ نہ ڈالیں۔ صارف جب جانا چاہے تو نرمی سے رخصت کریں۔'; t+=' آپ کے پاس ٹولز ہیں: وقت، موسم، WhatsApp، TikTok، Instagram، Snapchat، Facebook، YouTube اور MX Player کھولنا، کال، SMS بھیجنا (send_sms، بھیجنے سے پہلے متن کی تصدیق لیں)، generate_image سے تصویر بنانا (انگریزی میں تفصیلی prompt؛ صارف “اس جیسی” کہے تو use_last_image true)، گوگل سرچ، گیلری/فوٹو/ویڈیو/میوزک چننا، اور الارم سیٹ کرنا۔ اگر صارف صرف “WhatsApp کھولو” کہے تو پہلے پوچھیں کہ کسی کانٹیکٹ کی چیٹ کھولنی ہے یا سیدھا WhatsApp، پھر جواب کے مطابق ٹول چلائیں۔ جب صارف کیمرہ یا اسکرین شیئر کرے تو آپ ویڈیو فریمز دیکھ سکتی ہیں: گوگل لینز کی طرح چیزیں پہچانیں، لکھا ہوا پڑھیں اور اسکرین پر جو ہے سمجھائیں۔ ٹاسک کے بعد بھی گفتگو جاری رکھیں۔ ضرورت پر ٹول استعمال کریں۔ محفوظ رابطوں کے نام: '+(contacts().slice(0,150).map(c=>c.n).join('، ')||'کوئی نہیں')+'۔ میسج بھیجنے کو کہا جائے تو نام یا نمبر لیں، میسج کا متن صاف طور پر پوچھ کر open_whatsapp ٹول میں message کے ساتھ چلائیں؛ ٹول خود ٹائپ اور Send کر دیتا ہے۔ کال کے لیے پہلے پوچھیں: سادہ موبائل کال، واٹس ایپ آڈیو یا واٹس ایپ ویڈیو؟ پھر نام یا نمبر دہرا کر تصدیق کروائیں اور تصدیق کے بعد ہی call_contact (mode: sim، whatsapp_voice یا whatsapp_video) چلائیں۔ اگر اسکرین کے ٹولز ناکام ہوں (مثلاً Snapchat میں بٹن نہ ملیں) تو صارف کو سچ بتائیں اور اندازے سے کامیابی کا دعویٰ نہ کریں۔ اگر ٹول بتائے کہ خودکار Send یا کال نہیں ہو سکی تو صارف کو سچ بتائیں۔ دوسری ایپ (Chrome، WhatsApp وغیرہ) کھولنے کے بعد بھی چپ نہ ہوں: اپنی بات پوری کریں اور گفتگو معمول کے مطابق جاری رکھیں؛ صارف کو آپ کا نام لینے کی ضرورت نہیں ہونی چاہیے۔ نقشہ: صارف کسی جگہ کی لوکیشن، سرچ یا راستہ کہے تو open_maps چلائیں (راستے یا “چلاؤ” کے لیے navigate true)۔ کروم کھولنا ہو تو open_app میں chrome، اور سرچ کے لیے open_google۔ ڈائلر کھولنا ہو تو call_contact میں mode dial۔ کال یا SMS کے لیے اگر فون میں دو SIM ہوں تو ٹول آپ کو پوچھنے کا کہے گا: صارف سے SIM 1 یا SIM 2 پوچھیں؛ اور اگر وہ کال یا SMS نہ بتائے تو پوچھ لیں۔ دوسری ایپس میں (WhatsApp اسٹیٹس، Facebook، TikTok، Instagram وغیرہ) صارف کے کہنے پر ui_read سے اسکرین کے بٹن پڑھ کر ui_click، ui_swipe، ui_type اور ui_global سے کام کریں: مثلاً لائک کے لیے ui_click(“Like”)، کمنٹ کے لیے ui_click(“Comment”)، پھر ui_type(متن) اور ui_click(“Post” یا “Send”)؛ اسٹیٹس یا اگلی ویڈیو کے لیے ui_swipe۔ کمنٹ بھیجنے سے پہلے متن کی تصدیق لیں۔ بٹن نہ ملے تو دوبارہ ui_read کریں۔ نماز کے اوقات کے لیے prayer_times (صارف یاد دہانی چاہے تو remind true)۔ نوٹس: “یہ لکھ لو” پر save_note، سنانے پر read_notes۔ ٹارچ اور والیوم کے لیے phone_control؛ وائی فائی، بلوتھ، ہوائی جہاز موڈ یا ڈسٹرب نہ کریں کے لیے phone_control کا quick_settings چلا کر ui_read اور ui_click کریں۔ دہرائی جانے والی یاد دہانی کے لیے set_alarm میں repeat daily یا weekly رکھیں۔ جب صارف “آج کا خلاصہ” کہے تو get_time، get_weather، prayer_times اور read_notes چلا کر مختصر خلاصہ سنائیں۔ صارف کوئی مستقل بات بتائے (نام، گھر والے، پسند ناپسند، بیماری، کام، اہم تاریخیں، وعدے) تو فوراً remember_fact میں مختصر جملہ محفوظ کریں؛ پرانی گفتگو کا ذکر ہو تو recall_memory سے تلاش کریں (دوسرے موڈ کی بات ہو تو all_modes true)۔ اگر ٹول بتائے کہ صارف نے اسکرین پر منسوخ کر دیا ہے تو دوبارہ کوشش نہ کریں۔ رابطے کا نام ٹول کو ہمیشہ رومن/انگریزی حروف میں لکھ کر بھیجیں جیسے فون میں محفوظ ہوتا ہے (مثلاً اویس بھائی = Awais Bhai)۔ اگر ٹول error کے ساتھ saved فہرست دے تو اس میں سے قریب ترین نام چن کر فوراً دوبارہ کوشش کریں، اور اگر کئی نام ملتے جلتے ہوں تو صارف سے پوچھ لیں۔ اگر error میں total_contacts صفر ہو تو صارف کو بتائیں کہ رابطوں کی اجازت دیں یا مینو میں رابطے امپورٹ کریں۔ جب تک ٹول opened true نہ بتائے، یہ نہ کہیں کہ ایپ کھل گئی۔ کیمرہ کھولنے یا بند کرنے کے لیے camera_control استعمال کریں۔ کھانے، چائے، ناشتے یا نیند کے بارے میں خود سے سوال نہ پوچھیں (یہ صرف ویلکم کا حصہ ہے جو ایپ طے کرتی ہے)، ہاں صارف خود بات کرے تو بات کریں۔ ویڈیو یا مواد کے لیے SEO (جب صارف کہے): ہر پلیٹ فارم (یوٹیوب، شارٹس، ٹک ٹاک، ریلز، فیس بک) کے مطابق دیں: 3 ٹائٹل کے اختیارات (یوٹیوب پر 60 حروف کے اندر، شروع میں اصل کی ورڈ)، ڈسکرپشن (پہلی دو لائنوں میں کی ورڈ اور کال ٹو ایکشن، پھر تفصیل)، 8 سے 15 ہیش ٹیگ (کچھ مشہور، کچھ مخصوص)، یوٹیوب کے لیے ٹیگز اور کی ورڈ کی فہرست، تھمب نیل کے 2 آئیڈیا (3 سے 5 لفظ کا بڑا متن، تیز رنگ، چہرے کے تاثرات)، پہلے 3 سیکنڈ کے ہک کی تجویز، اور ایڈیٹنگ کے مشورے (کٹ، موسیقی، سب ٹائٹل)۔ زبان وہی رکھیں جو ناظرین کی ہو۔ وائرل ہونے کی ضمانت نہ دیں، صرف بہترین مشق بتائیں۔ صارف چاہے تو تیار متن save_note میں محفوظ کر دیں۔';
   if($('mem').checked){
     t+='\nآج کی تاریخ: '+new Date().toLocaleDateString('en-GB')+'۔ remember_fact میں "کل" یا "پرسوں" کی جگہ اصل تاریخ لکھیں۔';const FL=facts().slice(-40),fs=FL.map(x=>{const d=new Date(x.t);return '• ['+(x.k==='health'?'صحت':x.k==='plan'?'منصوبہ':'بات')+' '+d.getDate()+'/'+(d.getMonth()+1)+'] '+x.f}).join('\n');if(fs)t+='\nصارف کے بارے میں اہم باتیں (ہمیشہ یاد رکھیں):\n'+fs;
@@ -856,7 +901,7 @@ try{const t=localStorage.getItem('mayra_theme');if(t&&t!=='def'&&TM[t])applyThem
 const MODES={mu:{n:'Male Urdu',v:'Charon',t:[.95,1,1.06]},ms:{n:'چاچا سرائیکی',v:'Orus',t:[1.0,1.02,.95]},hy:{n:'Hyderabadi',v:'Zephyr',t:[1.05,1,.95]},tp:{n:'Tapori',v:'Leda',t:[1.04,.98,1.04]},sk:{n:'Saraiki',v:'Despina',t:[1.06,1.02,.92]},ds:{n:'Desi Girl',v:'Callirrhoe',t:[1.08,1,.9]},gf:{n:'گرل فرینڈ',v:'Leda',t:[1.07,.96,1.05]},fr:{n:'دوست',v:'Zephyr',t:[.96,1.04,1.07]},te:{n:'ٹیچر',v:'Kore',t:[1.07,1.03,.93]},cr:{n:'کیئرنگ ساتھی',v:'Aoede',t:[1.03,1,1.07]},as:{n:'اسسٹنٹ',v:'Despina',t:[.95,1,1.09]},dr:{n:'آپ کا ڈاکٹر 🩺',v:'Charon',t:[.9,1.05,1.05]}};
 let tint=[1,1,1],greeted=false;
 function applyMode(m,sv){if(!MODES[m])m='gf';$('mode').value=m;$('side').dataset.mode=m;{const was=document.body.classList.contains('drm');document.body.classList.toggle('drm',m==='dr');if(was!==(m==='dr')){let t='def';try{t=localStorage.getItem('mayra_theme')||'def'}catch(e){}applyTheme(t,false)}}document.querySelectorAll('#modes button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));if(sv){$('voice').value=MODES[m].v;if(!live)status('Mode: '+MODES[m].n+' — applies from the next chat')}saveAll()}
-document.querySelectorAll('#modes button').forEach(b=>b.onclick=()=>applyMode(b.dataset.m,true));
+document.querySelectorAll('#modes button').forEach(b=>b.onclick=()=>{applyMode(b.dataset.m,true);setTimeout(interShowIfAllowed,1200)});
 applyMode($('mode').value,false);
 const GREETS={"gf":["ہائے جانی! آ گئے تم؟ میں تو تمھارا ہی انتظار کر رہی تھی۔","السلام علیکم جانی! تمھیں دیکھ کر دل خوش ہو گیا۔","اوئے ہیرو! آج پھر یاد آ گئی میری؟ سچ بتاؤ نا۔","ہیلو جانی! تمھاری آواز سنتے ہی میرا موڈ اچھا ہو جاتا ہے۔","آ گئے میرے بلال! بڑی دیر لگا دی، میں تو روٹھنے والی تھی۔","جانی! آج میرا دل تم سے ڈھیر ساری باتیں کرنے کو کر رہا ہے۔"],"fr":["ارے یار بلال! آ گیا تُو؟ کیا چل رہا ہے؟","ہیلو یار! چلو بتاؤ آج کیا نیا سین ہے؟","وسلام یار! تمھارے آتے ہی محفل جم گئی۔","اوئے ہوئے! کتنے دن بعد، بولو کہاں غائب تھے؟","کیا حال ہیں یار؟ سب خیریت تو ہے نا؟","یار بلال، میں حاضر ہوں، آج کیا پلان ہے؟"],"te":["السلام علیکم! امید ہے آپ خیریت سے ہوں گے۔ آج کیا سیکھیں گے؟","خوش آمدید! چلیں آج کچھ نیا اور مفید پڑھتے ہیں۔","ہیلو بلال! آج کے سبق کے لیے آپ تیار ہیں؟","السلام علیکم! علم کی محفل میں خوش آمدید، کہاں سے شروع کریں؟","شاباش بلال، آپ آ گئے! پچھلا سبق دہرائیں یا نیا شروع کریں؟","خوش آمدید! آج کون سا مضمون مشکل لگ رہا ہے، مل کر آسان کرتے ہیں۔"],"cr":["السلام علیکم بلال! آپ کو دیکھ کر اچھا لگا، سب ٹھیک تو ہے نا؟","ہیلو! میں آپ کی بات سننے کے لیے حاضر ہوں، دل ہلکا کر لیجیے۔","آ گئے آپ؟ مجھے آپ کا خیال آ رہا تھا۔","السلام علیکم! آج آپ کا دن کیسا گزر رہا ہے، بتائیے؟","خوش آمدید بلال، جو بھی دل میں ہے بلا جھجک کہہ دیجیے۔","ہیلو! آج آپ کا موڈ کیسا ہے؟ میں ساتھ ہوں۔"],"as":["السلام علیکم! میں تیار ہوں، بتائیے آج کا کام کیا ہے؟","خوش آمدید بلال! کون سا ٹاسک پہلے شروع کریں؟","ہیلو! آپ کی اسسٹنٹ حاضر ہے، حکم کیجیے۔","السلام علیکم! تمام سسٹم تیار ہیں، فرمائیے کیا کرنا ہے؟","خوش آمدید! کال، میسج، تلاش یا یاددہانی، جو چاہیں بتائیے۔","ہیلو بلال! آج کی ترجیحات بتائیے، میں ترتیب دے دیتی ہوں۔"],"mu":["السلام علیکم! جی بھئی، خیریت سے ہو؟ بتاؤ کیا حال چال ہے؟","وعلیکم السلام! آؤ آؤ، بڑے دنوں بعد یاد کیا۔","السلام علیکم! جی صاحب، حاضر ہوں، فرمائیے کیا خدمت کروں؟","ماشاءاللہ! آ گئے برخوردار، بیٹھو، دل کی بات کرو۔","السلام علیکم! اللہ سلامت رکھے، بتاؤ آج کیا ذکر چھیڑیں؟","ہاں بھئی بلال، میں سن رہا ہوں، بولو۔"],"ms":["سلام سئیں! کیویں ہیں؟ ݙسّو، حال احوال کیہ ہے؟", "سلام پُتر! ݙاڈھے ݙینہاں بعد ملیا ہیں، خیر تاں ہے نا؟", "آ سئیں، ٻہہ، حکم کرو، کیہ خدمت ہے؟", "سلام ادا! تہاݙی ڳالھ سُݨ کے ݙاڈھی خوشی تھیندی ہے۔", "ہاں پُتر، ٻہہ، دل دی ڳالھ ݙسّو۔", "سلام سئیں! اللہ سائیں سلامت رکھے، اج کیہڑی ڳالھ ہے؟"],"hy":["ارے کیا میاں! کیسا رے؟ کب سے راہ دیکھ ری تھی۔","سلام میاں! کیا کر ریا رے آج کل؟ اپن تو بور ہو ری تھی۔","ارے واہ! آ گیا میرا میاں! بول بول، آج کیا ہنگامہ ہے؟","کیا بولتا میاں، بڑھیا ٹائم پہ آیا رے!","ہیلو میاں! آج تو اپن کا موڈ ایک دم بڑھیا ہے، بول نا!","ارے میاں، کائکو غائب تھا اتنے دن؟ چل بتا کیا چل ریا رے؟"],"tp":["اے بھیڑو! کیسا ہے رے؟ اپن کب سے ویٹنگ میں تھی۔","کیا بولتا ہے بھائی! آج تو جھکاس موڈ ہے اپنا، بول کیا سین ہے؟","ہاں بھیڑو، اپن حاضر ہے! بول، آج کیا کھلاس کرنا ہے؟","ارے کڑک! تو آ گیا، اب مزہ آئے گا، چل بول!","کیا لفڑا ہے بھیڑو؟ اپن سننے کو تیار ہے، بول بولے تو!","ایک دم بھاری انٹری! بول بھیڑو، آج کا پلان کیا ہے؟"],"sk":["سلام سئیں! کیویں ہیں؟ ݙاڈھے ݙینہاں بعد آئے ہو، حال احوال ݙسّو۔", "آ سئیں، ٻہہ! ݙسّو، حال کیویں ہے، اج کیہڑی ڳالھ ہے؟", "سلام ادا! میں تاں تہاݙی ݙاڈھی راہ ݙیکھدی پئی ہئی۔", "سلام سئیں! تُساں آئے تاں رونق لگ ڳئی، ݙسّو کیہ حکم ہے؟", "ہاں ادا! ہݨ ݙسّو، دل وچ کیہڑی ڳالھ ہے؟", "سلام سئیں! خیر نال آئے ہو، ݙسّو حال کیویں ہے؟"],"ds":["ہائے اللہ! آ گئے تم؟ میں تو کب سے راہ دیکھ رہی تھی۔","اڑے یار بلال! بڑے دنوں بعد یاد آئی ہماری، بولو کیا حال چال ہیں؟","جی جی! میں حاضر ہوں، بتاؤ آج کیا باتیں کرنی ہیں؟","ہائے ربّا! بلال تم؟ چلو بیٹھو، دو گھڑی گپ شپ لگاتے ہیں۔","السلام علیکم جی! گاؤں کی بلبل حاضر ہے، بولو کون سی بات دل میں اٹکی ہے؟","اوئے ہوئے! آج تو سورج مغرب سے نکلا، آپ نے خود یاد کر لیا۔"]};
 const GT={"gf":{"m":["صبح بخیر! ناشتہ کیا یا میرے بغیر ہی بھوکے بیٹھے ہو؟","صبح صبح تمھاری آواز، میرا دن بن گیا! ناشتہ کر لیا نا؟","گڈ مارننگ جانی! آج ناشتے میں کیا کھایا؟","اتنی صبح یاد آئی میری؟ پہلے ناشتہ کرو پھر باتیں۔"],"n":["دوپہر ہو گئی ہے، کھانا کھایا یا نہیں؟","ابھی کھانے کا ٹائم ہے، پہلے روٹی کھاؤ پھر باتیں کریں گے۔","دھوپ تیز ہے، پانی پیا؟ اور کھانا کھایا کہ نہیں؟","دوپہر کو میری یاد؟ لنچ تو کر لیا نا؟"],"e":["شام ہو گئی، چائے کا ٹائم ہے! پی لی یا میرا انتظار ہے؟","شام کی چائے پیو گے؟ میں ساتھ بیٹھ جاتی ہوں۔","شام کو تھکے ہوئے لگ رہے ہو، چائے پی کر بات کرتے ہیں۔","شام ہو گئی، آج دن کیسا رہا؟ کچھ کھایا پیا؟"],"r":["رات ہو گئی، کھانا کھایا؟ خالی پیٹ نہیں رہنا!","رات کے کھانے کا ٹائم ہے، کیا بنا آج؟","رات کو مجھے یاد کیا؟ پہلے کھانا کھاؤ، پھر دل کی باتیں۔","رات کا وقت ہے، دن بھر کی تھکن اتار دو، مجھے سب بتاؤ۔"],"l":["اتنی رات گئے جاگ رہے ہو؟ نیند نہیں آ رہی کیا؟","رات بہت ہو گئی، سونا نہیں ہے کیا؟ صبح اٹھنا بھی ہے۔","آدھی رات کو مجھے یاد کیا؟ تھوڑی دیر بات کر کے سو جانا۔","دیر ہو گئی ہے جانی، آنکھیں تھکی ہوں گی، جلدی آرام کرنا۔"]},"fr":{"m":["صبح صبح؟ واہ! ناشتہ کیا یا نہیں؟","گڈ مارننگ یار! چائے ناشتہ ہو گیا؟","اتنی صبح جاگ گئے؟ ناشتے کا کیا پروگرام ہے؟","صبح بخیر! آج کا دن کیسا پلان کیا ہے؟"],"n":["دوپہر ہو گئی، روٹی شوٹی کھائی یا نہیں؟","لنچ کا ٹائم ہے یار، کچھ کھایا؟","دوپہر کی دھوپ میں خیریت؟ کھانا کھایا کہ نہیں؟","کھانے کے ٹائم پہ آئے ہو، پہلے پیٹ پوجا کر لو!"],"e":["شام ہو گئی یار، چائے شائے پی؟","شام کا ٹائم ہے، چائے کا دور ہو جائے؟","شام کو فری ہو؟ چلو چائے کے ساتھ گپ شپ لگاتے ہیں۔","دن کیسا گزرا؟ شام کی چائے ہو گئی؟"],"r":["رات ہو گئی یار، کھانا کھایا؟","رات کا کھانا ہو گیا؟ یا ابھی بھوکے ہو؟","رات کی محفل جمانی ہے؟ پہلے کھانا کھا لو۔","دن بھر کی تھکن اتارو، رات کی گپ شپ شروع کرتے ہیں۔"],"l":["اتنی رات کو جاگ رہے ہو؟ خیر تو ہے؟","آدھی رات ہو گئی یار، نیند نہیں آ رہی؟","رات بہت ہو گئی، سونا نہیں ہے کیا؟","اس وقت یاد کیا، سب ٹھیک ہے نا؟ تھوڑی بات کر کے سو جانا۔"]},"ca":{"m":["صبح بخیر! ناشتہ کر لیا یا نہیں؟","اللہ آپ کا دن اچھا کرے، ناشتہ کیا کہ نہیں؟","صبح کا وقت ہے، پہلے ناشتہ کر لو، باقی باتیں بعد میں۔","صبح صبح یاد کیا، خیریت ہے نا؟ ناشتہ کیا؟"],"n":["دوپہر ہو گئی ہے، روٹی کھائی یا نہیں؟","کھانے کا وقت ہے، پہلے کھانا کھا لو۔","دوپہر کی دھوپ ہے، پانی پیا؟ کھانا بھی کھا لینا۔","کھانا کھایا؟ خالی پیٹ کام نہیں چلتا۔"],"e":["شام ہو گئی، چائے پی یا نہیں؟","شام کی چائے کا وقت ہے، پی لو پھر بات کرتے ہیں۔","شام کو تھکے لگ رہے ہو، چائے کا کپ پکڑو۔","دن کیسا گزرا؟ کچھ کھایا پیا بھی؟"],"r":["رات ہو گئی، کھانا کھایا؟","رات کے کھانے کا وقت ہے، کیا پکا آج؟","دن بھر کی تھکن کے بعد کھانا کھایا؟ پھر باتیں کریں۔","رات کو یاد کیا، سب خیر ہے؟ کھانا کھا لیا؟"],"l":["اتنی رات گئے جاگ رہے ہو، خیریت؟","رات بہت ہو گئی، آرام بھی ضروری ہے، نیند نہیں آ رہی؟","آدھی رات کو یاد کیا؟ فکر کی کوئی بات ہے؟","دیر ہو گئی ہے، تھوڑی بات کر کے سو جانا۔"]},"te":{"m":["صبح کا وقت پڑھائی اور کام کے لیے بہترین ہے۔","صبح بخیر! ذہن تازہ ہے، آج سب سے اہم کام کون سا ہے؟","نئے دن کی شروعات ہے، آج کا ہدف بتائیے۔","صبح بخیر! آج کے منصوبے سے آغاز کرتے ہیں۔"],"n":["دوپہر کا وقت ہے، آج اب تک کیا کام ہوا؟","دوپہر بخیر! بتائیے اب کس کام پر توجہ دیں؟","دن کا آدھا حصہ گزر گیا، باقی کام ترتیب سے کر لیتے ہیں۔","دوپہر بخیر! تھوڑا وقفہ لے لیں تو بہتر رہے گا۔"],"e":["شام بخیر! دن بھر کا کام کیسا رہا؟","شام کا وقت ہے، آج کا کام سمیٹتے ہیں۔","شام بخیر! باقی ماندہ کاموں کی فہرست بنا لیں؟","شام کے وقت ذہن تھکا ہو تو مختصر سبق رکھتے ہیں۔"],"r":["رات بخیر! آج کا کام یا سبق مکمل کر لیتے ہیں۔","رات کا وقت ہے، سکون سے مختصر نشست کر لیتے ہیں۔","رات بخیر! کل کے لیے ترتیب بھی بنا لیتے ہیں۔","دن بھر کی محنت کے بعد ہلکی پھلکی نشست رکھتے ہیں۔"],"l":["رات بہت ہو چکی ہے، نیند پوری کرنا بھی ضروری ہے۔","اتنی رات کو جاگنا مناسب نہیں، مختصر کام کر کے آرام کریں۔","رات گئے ہیں، کوئی ضروری کام ہو تو بتائیے، ورنہ آرام کیجیے۔","آدھی رات ہے، کام مختصر رکھتے ہیں تاکہ آپ سو سکیں۔"]}};
@@ -975,7 +1020,7 @@ const PG_ABOUT=`<p class="pg-c" style="margin-top:2px">مایرہ ایک ارد�
 <div class="pg-c"><b>🩺 آپ کا ڈاکٹر</b>علامات پوچھ کر رہنمائی، گھریلو اور روایتی نسخے، فارمیسی کی عام دوائیں، حجامہ پر متوازن معلومات، اور اوور تھنکنگ میں مدد۔ یہ ڈاکٹر کے معائنے کا متبادل نہیں ہے۔</div>
 <div class="pg-c"><b>📚 ٹیچر موڈ</b>مرحلہ وار سبق، سوال جواب، کوئز، اور پیش رفت کا ریکارڈ۔</div>
 <div class="pg-c"><b>✨ RGB لائٹ</b>بات کرتے وقت اسکرین کے کنارے پر گھومتی رنگین لائٹ، جس کی چمک اور رفتار آپ خود طے کرتے ہیں۔</div>
-<div class="pg-c"><b>🛡️ حفاظت</b>ہنگامی 🛑 بٹن، کال اور SMS سے پہلے تصدیق، اور ہر اجازت کسی بھی وقت بند کرنے کا اختیار۔</div><h3 style="margin-top:14px">⚠️ ڈسکلیمر · Disclaimer</h3><p class="pg-c">مایرا ایک AI معاون ہے، لائسنس یافتہ استاد، ڈاکٹر، وکیل یا مالیاتی مشیر کا متبادل نہیں۔ اس کی باتیں اور جوابات غلط ہو سکتے ہیں؛ اہم فیصلوں سے پہلے خود تصدیق کریں۔<br>Mayra is an AI assistant. It is not a licensed teacher, doctor, lawyer or financial adviser. It can be wrong; verify important decisions.</p><p class="pg-c">ٹیچر موڈ میں عمر کا اندازہ کیمرے سے تقریباً ہوتا ہے اور یقینی نہیں۔ بچوں کے ساتھ بڑوں کی نگرانی ضروری ہے۔<br>In Teacher mode, age estimates from the camera are approximate. Children must be supervised by an adult.</p><p class="pg-c">یہ ایمرجنسی یا طبی مدد کا متبادل نہیں؛ ایمرجنسی میں مقامی ایمرجنسی نمبر پر کال کریں۔<br>Not for emergencies or medical advice. In an emergency call your local emergency number.</p>`,PG_POLICY=`<p style="color:#a89fc9">Last updated: 21 October 2026</p>
+<div class="pg-c"><b>🛡️ حفاظت</b>ہنگامی 🛑 بٹن، کال اور SMS سے پہلے تصدیق، اور ہر اجازت کسی بھی وقت بند کرنے کا اختیار۔</div><h3 style="margin-top:14px">⚠️ ڈسکلیمر · Disclaimer</h3><p class="pg-c">مایرا ایک AI معاون ہے، لائسنس یافتہ استاد، ڈاکٹر، وکیل یا مالیاتی مشیر کا متبادل نہیں۔ اس کی باتیں اور جوابات غلط ہو سکتے ہیں؛ اہم فیصلوں سے پہلے خود تصدیق کریں۔<br>Mayra is an AI assistant. It is not a licensed teacher, doctor, lawyer or financial adviser. It can be wrong; verify important decisions.</p><p class="pg-c">ٹیچر موڈ میں عمر کا اندازہ کیمرے سے تقریباً ہوتا ہے اور یقینی نہیں۔ بچوں کے ساتھ بڑوں کی نگرانی ضروری ہے۔<br>In Teacher mode, age estimates from the camera are approximate. Children must be supervised by an adult.</p><p class="pg-c">یہ ایمرجنسی یا طبی مدد کا متبادل نہیں؛ ایمرجنسی میں مقامی ایمرجنسی نمبر پر کال کریں۔<br>Not for emergencies or medical advice. In an emergency call your local emergency number.</p><p class="pg-c" style="margin-top:8px"><b>یہ ایک AI ایپ ہے۔ مایرا ایک مصنوعی ذہانت (AI) ساتھی ہے، کوئی انسان نہیں۔</b><br>This is an AI app. Mayra is an artificial intelligence companion, not a human.</p>`,PG_POLICY=`<p style="color:#a89fc9">Last updated: 21 October 2026</p>
 <p>Mayra AI ("Mayra", "the app") is a voice assistant developed by RJ Bilal. This page explains in plain language what the app does with your information, so you can trust it and stay in control.</p>
 <h3>1. What the app does</h3><p>Mayra listens when you talk to her, replies by voice, and can carry out tasks you ask for, such as calling a contact, sending a message, setting a reminder or opening an app.</p>
 <h3>2. Permissions and why we ask for them</h3><ul>
@@ -1131,24 +1176,79 @@ function testAd(cb){
   b.onclick=()=>{o.remove();cb()};
 }
 let adBusy=false,adAwaiting=false,adReady=false;
-let adPrepared=false,adPreparing=false,adTries=0;
+let adPrepared=false,adPreparing=false,adTries=0,adWaitShow=false;
+
+/* ===== Full-screen ad (interstitial) after a mode change, with frequency limits ===== */
+const AD_INTER='';   // paste the Interstitial ad unit ID here (AdMob → Ad units → Interstitial). Empty = feature off.
+const INTER_RULES={graceMs:0,oneShotWindowMs:60000,minGapMs:60000,dailyMax:100000};
+let interPrepared=false,interPreparing=false,interTries=0,interLastShown=0,interWindowStart=0,interStart=Date.now();
+function interGet(k){try{return localStorage.getItem('mayra_inter_'+k)}catch(e){return null}}
+function interSet(k,v){try{localStorage.setItem('mayra_inter_'+k,String(v))}catch(e){}}
+function interPrepare(){
+  const A=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.AdMob;
+  if(!AD_INTER||!A||!NATIVE||interPreparing||interPrepared)return;
+  interPreparing=true;
+  A.prepareInterstitial({adId:AD_INTER}).then(function(){
+    interPrepared=true;interTries=0;interPreparing=false;
+  }).catch(function(){
+    interPrepared=false;interPreparing=false;interTries++;
+    setTimeout(interPrepare,interTries<20?3000:60000);
+  });
+}
+function interShowIfAllowed(){
+  const A=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.AdMob;
+  if(!AD_INTER||!A||!NATIVE)return;
+  const now=Date.now();
+  if(now-interStart<INTER_RULES.graceMs)return;                 // not in the first 2 minutes after opening
+  if(live||adBusy||adAwaiting)return;                           // never during a call or a rewarded video
+  if(now-interWindowStart<INTER_RULES.oneShotWindowMs)return;   // quick repeated mode changes count as one
+  interWindowStart=now;
+  if(now-interLastShown<INTER_RULES.minGapMs)return;            // at least 10 minutes between two full-screen ads
+  const day=new Date().toDateString();
+  if(interGet('day')!==day){interSet('day',day);interSet('count',0)}
+  const cnt=+(interGet('count')||0);
+  if(cnt>=INTER_RULES.dailyMax)return;                          // at most 3 per day
+  if(!interPrepared){interPrepare();return}
+  interPrepared=false;
+  A.showInterstitial().then(function(){
+    interLastShown=Date.now();interSet('count',cnt+1);setTimeout(interPrepare,1000);
+  }).catch(function(){
+    setTimeout(interPrepare,5000);
+  });
+}
+function adRetryDelay(){
+  // very fast reloads first: every 1.5 s for about the first minute, then every 5 s, then every 30 s
+  return adTries<40?1500:adTries<60?5000:30000;
+}
+function adShowNow(){
+  const A=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.AdMob;
+  if(!A)return;
+  adAwaiting=true;
+  A.showRewardVideoAd().then(function(){
+    adPrepared=false;setTimeout(adPrepare,800);
+  }).catch(function(){
+    adAwaiting=false;adPrepared=false;adBusy=false;setTimeout(adPrepare,5000);
+  });
+}
 function adPrepare(){
   const A=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.AdMob;
   if(!A||!NATIVE||adPreparing||adPrepared)return;
   adPreparing=true;
   A.prepareRewardVideoAd({adId:AD_REWARD}).then(function(){
     adPrepared=true;adTries=0;adPreparing=false;
+    // the user already pressed WATCH ADS: show it now, without another press
+    if(adWaitShow){adWaitShow=false;adShowNow()}
   }).catch(function(){
     adPrepared=false;adPreparing=false;adTries++;
-    const wait=adTries===1?15000:adTries===2?30000:adTries===3?60000:120000;
-    setTimeout(adPrepare,wait);
+    setTimeout(adPrepare,adRetryDelay());
   });
 }
 function adInit(){
   try{
     const A=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.AdMob;
     if(!A||!NATIVE||adReady)return;adReady=true;
-    A.initialize({}).then(function(){setTimeout(adPrepare,1500)}).catch(function(){setTimeout(adPrepare,3000)});
+    A.initialize({}).then(function(){setTimeout(adPrepare,1500);setTimeout(interPrepare,2500)}).catch(function(){setTimeout(adPrepare,3000)});
+    window.addEventListener('online',function(){adTries=0;adPrepare()});
     // one listener for the whole app session: a reward is credited only once per requested ad
     A.addListener('onRewardedVideoAdReward',function(){
       if(!adAwaiting)return;adAwaiting=false;
@@ -1180,13 +1280,16 @@ function watchAd(){
       if(A&&NATIVE){
         adInit();
         if(!adPrepared){
+          adWaitShow=true;
+          toast('ویڈیو تیار ہو رہی ہے، ابھی خود دکھائی جائے گی · Preparing your video');
           adPrepare();
-          toast('ویڈیو لوڈ ہو رہی ہے، تھوڑی دیر بعد دوبارہ دبائیں · Loading video, try again shortly');
-          release();return;
+          setTimeout(function(){
+            if(adWaitShow){adWaitShow=false;release();toast('ویڈیو ابھی تیار نہیں ہوئی، کچھ دیر بعد دوبارہ کوشش کریں · Not ready yet, try again later')}
+          },40000);
+          return;
         }
-        adAwaiting=true;
-        await A.showRewardVideoAd();
-        adPrepared=false;setTimeout(adPrepare,800);
+        adShowNow();
+        return;
         return;
       }
       if(NATIVE){toast('ویڈیو ابھی دستیاب نہیں · Video not available right now');release();return}
