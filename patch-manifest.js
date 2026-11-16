@@ -62,6 +62,11 @@ if (mode === 'native' || mode === 'access') {
 }
 x = x.replace('</manifest>', '<uses-permission android:name="android.permission.FOREGROUND_SERVICE"/><uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE"/><uses-permission android:name="android.permission.POST_NOTIFICATIONS"/><uses-permission android:name="android.permission.RECORD_AUDIO"/></manifest>');
 
+// Native advanced ad: only when the ads library was added to the build (marker written by add_native_ad.sh)
+if (fs.existsSync('android/.native_ad_ok')) {
+  javaFiles.push('MayraNativeAd.java');
+  reg += '        registerPlugin(MayraNativeAd.class);\n';
+}
 for (const jf of javaFiles) {
   if (!fs.existsSync(jf)) throw new Error('MISSING FILE in the repository root: ' + jf);
   const src = fs.readFileSync(jf, 'utf8').replace(/^package\s+[\w.]+;/m, 'package ' + pkg + ';');
