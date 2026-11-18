@@ -1,0 +1,10 @@
+# never commit signing keys
+*.p12
+*.jks
+*.keystore
+# generated during the build
+android/
+node_modules/
+www/
+signed.apk
+aligned.apk
