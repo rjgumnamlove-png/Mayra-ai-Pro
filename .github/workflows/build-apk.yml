@@ -25,6 +25,7 @@ jobs:
           mkdir -p www
           cp index.html www/index.html
           if [ -d themes ]; then cp -r themes www/themes; fi
+          if [ -d guide ]; then cp -r guide www/guide; fi
       - name: Install Capacitor
         run: npm install --legacy-peer-deps
       - name: Install plugins (each one optional)
@@ -107,3 +108,4 @@ jobs:
         with:
           name: Mayra-APK
           path: android/app/build/outputs/apk/debug/app-debug.apk
+          
