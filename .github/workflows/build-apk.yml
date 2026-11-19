@@ -37,11 +37,53 @@ jobs:
         run: |
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null 2>&1 || true
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" || echo "sdkmanager failed"
+      - name: Check the Maven repositories from this machine (diagnostic only)
+        run: |
+          # A quick check, from this build machine, that the Android and Maven libraries can be reached.
+          # This step only reports; it never stops the build.
+          for u in \
+            "https://dl.google.com/dl/android/maven2/com/android/tools/build/gradle/8.7.2/gradle-8.7.2.pom" \
+            "https://dl.google.com/dl/android/maven2/org/jdom/jdom2/2.0.6/jdom2-2.0.6.pom" \
+            "https://repo.maven.apache.org/maven2/org/jdom/jdom2/2.0.6/jdom2-2.0.6.pom" \
+            "https://maven-central.storage-download.googleapis.com/maven2/org/jdom/jdom2/2.0.6/jdom2-2.0.6.pom"; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$u" || echo "no-connection")
+            echo "$code  $u"
+          done
       - name: Build APK (tries native Accessibility first, then falls back)
         run: |
+          # Gradle downloads its build libraries from Google and Maven Central. If a download fails, the build
+          # waits and tries again (up to three times, with fresh downloads), and prints the first errors each time.
+          gradle_build() {
+            export GRADLE_OPTS="-Dorg.gradle.internal.http.connectionTimeout=180000 -Dorg.gradle.internal.http.socketTimeout=180000"
+            ./gradlew assembleDebug --no-daemon > ../gradle-debug.log 2>&1 && return 0
+            echo "GRADLE: try 1 failed. The first errors are:"
+            grep -m 12 -i -B1 -A2 "could not\|failed\|error:" ../gradle-debug.log || true
+            sleep 45
+            ./gradlew assembleDebug --no-daemon --refresh-dependencies > ../gradle-debug2.log 2>&1 && return 0
+            echo "GRADLE: try 2 failed. The first errors are:"
+            grep -m 12 -i -B1 -A2 "could not\|failed\|error:" ../gradle-debug2.log || true
+            sleep 90
+            ./gradlew assembleDebug --no-daemon --refresh-dependencies > ../gradle-debug3.log 2>&1 && return 0
+            echo "GRADLE: try 3 failed. The last lines are:"
+            tail -80 ../gradle-debug3.log
+            return 1
+          }
           attempt() {
             rm -rf android
             npx cap add android &&
+            python3 - <<'PYEOF' &&
+          import os
+          MIRROR = "maven { url 'https://maven-central.storage-download.googleapis.com/maven2/' }"
+          for f in ['android/build.gradle', 'android/settings.gradle']:
+              if not os.path.exists(f):
+                  continue
+              s = open(f, encoding='utf-8').read()
+              if MIRROR in s:
+                  continue
+              s = s.replace('google()', 'google()\n        ' + MIRROR)
+              open(f, 'w', encoding='utf-8').write(s)
+              print('mirror repository added to ' + f)
+          PYEOF
             (bash add_native_ad.sh || echo "NATIVE AD SKIPPED (build continues without it)") &&
             sed -i -E "s/compileSdkVersion = [0-9]+/compileSdkVersion = 36/; s/targetSdkVersion = [0-9]+/targetSdkVersion = 36/" android/variables.gradle &&
             grep -E "compileSdkVersion|targetSdkVersion" android/variables.gradle &&
@@ -50,7 +92,10 @@ jobs:
             node patch-manifest.js "$1" &&
             python3 make_icons.py &&
             npx cap sync android &&
-            (cd android && chmod +x gradlew && ./gradlew assembleDebug --no-daemon)
+            touch android/gradle.properties &&
+            sed -i '/org.gradle.offline/d' android/gradle.properties &&
+            echo "org.gradle.offline=false" >> android/gradle.properties &&
+            (cd android && chmod +x gradlew && gradle_build)
           }
           built=0
           for mode in native access plain; do
@@ -108,4 +153,3 @@ jobs:
         with:
           name: Mayra-APK
           path: android/app/build/outputs/apk/debug/app-debug.apk
-          
