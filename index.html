@@ -164,7 +164,7 @@ const LICENSE_URL='https://script.google.com/macros/s/AKfycbyoMGu-DjeSoWexUeR7yf
 (()=>{
 const $=x=>document.getElementById(x);
 const URL_='wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=';
-let connTimer=null,connTry=0,resumeHandle='',noExtras=false,lastImg=null,screenOn=false,screenH=null,outG,an,ws,stream,ctx,src,node,sink,live=false,stopping=false,next=0,nodes=[],cur=null,tries=0,q=Promise.resolve();
+let connTimer=null,connTry=0,connModelOverride=null,resumeHandle='',noExtras=false,lastImg=null,screenOn=false,screenH=null,outG,an,ws,stream,ctx,src,node,sink,live=false,stopping=false,next=0,nodes=[],cur=null,tries=0,q=Promise.resolve();
 
 const WORKLET=`class M extends AudioWorkletProcessor{constructor(){super();this.b=new Float32Array(2048);this.n=0}process(i){const c=i[0]&&i[0][0];if(c){for(let k=0;k<c.length;k++){this.b[this.n++]=c[k];if(this.n===2048){this.port.postMessage(this.b.slice(0));this.n=0}}}return true}}registerProcessor('mic-proc',M)`;
 
@@ -233,7 +233,7 @@ function cleanup(){
   $('start').disabled=false;$('start').classList.remove('endcall');$('stop').disabled=true;
 }
 
-function modelName(){return ($('modelSel').value==='custom'?$('model').value.trim():$('modelSel').value)||'gemini-3.1-flash-live-preview'}
+function modelName(){if(connModelOverride)return connModelOverride;return ($('modelSel').value==='custom'?$('model').value.trim():$('modelSel').value)||'gemini-3.1-flash-live-preview'}
 
 async function handle(d){
   let t=typeof d==='string'?d:(d instanceof Blob?await d.text():new TextDecoder().decode(d));
@@ -243,7 +243,7 @@ async function handle(d){
   if(m.toolCall){dbg('tool call: '+(m.toolCall.functionCalls||[]).map(c=>c.name).join(',')+' hidden='+document.hidden);runTools(m.toolCall.functionCalls||[]);return}
   if(m.error){dbg('server error: '+JSON.stringify(m.error).slice(0,300));status('⚠ '+((m.error.message)||'Gemini نے خرابی بھیجی · Gemini error'));return}
   if(m.setupComplete){
-    clearTimeout(connTimer);connTry=0;
+    clearTimeout(connTimer);connTry=0;connModelOverride=null;
     try{await Promise.race([startMic(),new Promise(function(_,rej){setTimeout(function(){rej(new Error('مائیک کی اجازت کا جواب نہیں آیا · microphone permission timed out'))},12000)})])}catch(e){err('مائیک شروع نہیں ہوا: '+(e.message||e));stopping=true;cleanup();status('شروع نہیں ہو سکا');return}
     live=true;tries=0;if(pendingText){send({realtimeInput:{text:pendingText}});pendingText=''}else greetNow();if($('bgm').checked)bgOn();try{navigator.wakeLock&&navigator.wakeLock.request('screen').then(l=>{wl=l}).catch(()=>{})}catch(e){}$('stop').disabled=false;$('start').disabled=false;$('start').classList.add('endcall');status('لائیو ہے — اب بات کریں',true);return}
   const s=m.serverContent;if(!s)return;
@@ -266,7 +266,7 @@ async function start(){
     status('Gemini سے جڑ رہا ہے…');
     const w=ws=new WebSocket(URL_+encodeURIComponent(key));
     w.addEventListener('open',function(){if(w===ws)status('Gemini سے کنکشن ہو گیا، سیٹ اپ ہو رہا ہے…')});
-    clearTimeout(connTimer);connTimer=setTimeout(function(){if(w===ws&&!live){status('⚠ Gemini سے 15 سیکنڈ میں جواب نہیں آیا۔ انٹرنیٹ، API key اور ماڈل چیک کریں · No reply in 15 s');try{w.close()}catch(e){}}},15000);
+    clearTimeout(connTimer);connTimer=setTimeout(function(){if(w===ws&&!live){status('Gemini کا جواب ابھی تک نہیں آیا، انتظار جاری ہے · still waiting for Gemini')}},15000);
     w.onopen=()=>send({setup:{
       model:'models/'+modelName(),
       generationConfig:{responseModalities:['AUDIO'],speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:$('voice').value}}}},
@@ -279,7 +279,7 @@ async function start(){
       if(w!==ws)return;
       const was=live;cleanup();
       if(!was&&!stopping&&!noExtras&&/1007|1008|unknown|invalid/i.test(e.code+' '+e.reason)){noExtras=true;setTimeout(()=>{if(!stopping)start()},300);return}
-       if(!was&&!stopping&&connTry<1&&$('modelSel').value!=='custom'){connTry++;const sel=$('modelSel');sel.value=sel.value.indexOf('3.1')>=0?'gemini-2.5-flash-native-audio-preview-12-2025':'gemini-3.1-flash-live-preview';status('ماڈل بدل کر دوبارہ کوشش ہو رہی ہے · trying the other model');setTimeout(()=>{if(!stopping)start()},600);return}
+
       if(e.reason){if(/quota/i.test(e.reason)){err('Quota exceeded for your Gemini API key. Fixes: 1) turn OFF Google Search research in the menu (it has no free quota), 2) try the model gemini-2.5-flash-native-audio-preview-12-2025, 3) check usage and billing in Google AI Studio.');status('Quota exceeded — see Menu > Gemini API')}else err('Connection closed ('+e.code+'): '+e.reason)}
       if(!stopping&&was&&tries<3){tries++;status('دوبارہ جڑ رہا ہے ('+tries+'/3)…');setTimeout(()=>{if(!stopping)start()},1200)}
       else if(!stopping){bgOff();status('کنکشن بند ہوگیا ('+e.code+')')}
@@ -950,7 +950,7 @@ async function mediaTick(){
   }catch(e){}}
 setInterval(mediaTick,1500);
 
-$('stop').onclick=()=>{want=false;stopping=true;freeReport();cleanup();status('گفتگو بند ہوگئی')};
+$('stop').onclick=()=>{connTry=0;connModelOverride=null;want=false;stopping=true;freeReport();cleanup();status('گفتگو بند ہوگئی')};
 $('bExit').onclick=async()=>{
   if(!(await confirmAct('کیا ایپ مکمل بند کریں؟\nExit Mayra completely')))return;
   want=false;stopping=true;try{cleanup()}catch(e){}try{await bgOff()}catch(e){}try{if(screenOn)await stopScreenNative()}catch(e){}
@@ -968,6 +968,7 @@ $('menu').onclick=openSide;$('shade').onclick=closeSide;$('closeSide').onclick=c
 $('saveBtn').onclick=()=>{saveAll();const b=$('saveBtn');b.textContent='✓ Saved';setTimeout(()=>{b.textContent='💾 Save settings'},1600)};
 function showV(){document.querySelectorAll('#side input[type=range]').forEach(r=>{const v=$('v_'+r.id);if(v)v.textContent=r.id==='vol'?Math.round(r.value*100)+'%':r.value})}
 function saveAll(){const o={v:10};SET.forEach(k=>{const e=$(k);o[k]=e.type==='checkbox'?e.checked:e.value});try{localStorage.setItem('mayra_cfg',JSON.stringify(o))}catch(e){}}
+try{if(!localStorage.getItem('mayra_model_mig')){const c0=JSON.parse(localStorage.getItem('mayra_cfg')||'null');if(c0){c0.modelSel='gemini-3.1-flash-live-preview';localStorage.setItem('mayra_cfg',JSON.stringify(c0))}localStorage.setItem('mayra_model_mig','1')}}catch(e){}
 try{const o=JSON.parse(localStorage.getItem('mayra_cfg')||'null');if(o&&o.v!==10)o.gs=false;if(o)SET.forEach(k=>{if(k in o){const e=$(k);if(e.type==='checkbox')e.checked=!!o[k];else e.value=o[k]}})}catch(e){}
 $('modelSel').onchange=()=>{$('model').style.display=$('modelSel').value==='custom'?'block':'none'};$('modelSel').onchange();showV();
 $('side').addEventListener('input',()=>{showV();saveAll();if(outG)outG.gain.value=+$('vol').value});$('side').addEventListener('change',()=>{saveAll()});
