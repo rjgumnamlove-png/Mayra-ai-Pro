@@ -62,7 +62,7 @@ jobs:
             # drop only that network (the app and the other ads keep working) and build again at once
             dropped=0
             for net in chartboost inmobi unity; do
-              if grep -qi "could not find com\.$net\|could not find .*mediation:$net\|> com\.google\.ads\.mediation:$net" ../gradle-debug.log; then
+              if grep -qi "could not find com\.$net\|could not find .*mediation:$net\|> com\.google\.ads\.mediation:$net\|library \[com\.google\.ads\.mediation:$net\|library \[com\.$net" ../gradle-debug.log; then
                 sed -i -E "/com\.$net|mediation:$net/Id" app/build.gradle; dropped=1
                 echo "AD NETWORK SKIPPED: $net (its library could not be downloaded)"
               fi
@@ -100,8 +100,8 @@ jobs:
               print('mirror + Chartboost repositories added to ' + f)
           PYEOF
             (bash add_native_ad.sh || echo "NATIVE AD SKIPPED (build continues without it)") &&
-            sed -i -E "s/compileSdkVersion = [0-9]+/compileSdkVersion = 36/; s/targetSdkVersion = [0-9]+/targetSdkVersion = 36/" android/variables.gradle &&
-            grep -E "compileSdkVersion|targetSdkVersion" android/variables.gradle &&
+            sed -i -E "s/minSdkVersion = [0-9]+/minSdkVersion = 24/; s/compileSdkVersion = [0-9]+/compileSdkVersion = 36/; s/targetSdkVersion = [0-9]+/targetSdkVersion = 36/" android/variables.gradle &&
+            grep -E "minSdkVersion|compileSdkVersion|targetSdkVersion" android/variables.gradle &&
             sed -i "s/versionCode 1/versionCode $((GITHUB_RUN_NUMBER+100))/" android/app/build.gradle &&
             sed -i "s/versionName \"1.0\"/versionName \"${APP_VERSION}\"/" android/app/build.gradle &&
             node patch-manifest.js "$1" &&
