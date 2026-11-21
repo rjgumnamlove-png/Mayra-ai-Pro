@@ -548,7 +548,7 @@ const TOOLS=[{functionDeclarations:[
 {name:'get_weather',description:'Get current weather. If city is omitted, use the device location',parameters:{type:O,properties:{city:{type:S,description:'City name in English'}}}},
 {name:'open_whatsapp',description:'Open a WhatsApp chat with a saved contact, optionally with a message that is typed and sent automatically. If no contact is given, just open the WhatsApp app',parameters:{type:O,properties:{contact:{type:S,description:'Saved contact name exactly as in the list'},number:{type:S,description:'Phone number if the user says digits'},message:{type:S}}}},
 {name:'call_contact',description:'Call a saved contact or a phone number. mode is sim (normal phone call), whatsapp_voice or whatsapp_video. First ask which one and confirm the name or number with the user, then call this',parameters:{type:O,properties:{contact:{type:S,description:'Saved contact name exactly as in the list'},number:{type:S},sim:{type:N,description:'SIM slot 1 or 2'},mode:{type:S,description:'sim, dial (just open the dialer), whatsapp_voice or whatsapp_video'}}}},
-{name:'youtube',description:'Open YouTube, or search YouTube when a query is given',parameters:{type:O,properties:{query:{type:S}}}},{name:'open_google',description:'Open a Google search results page for a query',parameters:{type:O,properties:{query:{type:S}},required:['query']}},{name:'open_gallery',description:'Open the phone gallery picker for photos, videos, music (MP3) or files',parameters:{type:O,properties:{kind:{type:S,description:'photos, videos, music or files'}},required:['kind']}},{name:'set_alarm',description:'Set an alarm or reminder at a clock time (24h) or after some minutes',parameters:{type:O,properties:{hour:{type:N},minute:{type:N},in_minutes:{type:N},label:{type:S},repeat:{type:S,description:'daily or weekly to repeat; omit for one time'}}}},{name:'open_app',description:'Open a social or media app on the phone: tiktok, instagram, snapchat, facebook, youtube, whatsapp, mxplayer, chrome, maps or dialer. Optional query to search (TikTok, Facebook, YouTube) or username (Instagram)',parameters:{type:O,properties:{app:{type:S,description:'tiktok, instagram, snapchat, facebook, youtube, whatsapp, mxplayer, chrome, maps or dialer'},query:{type:S},username:{type:S}},required:['app']}},{name:'send_sms',description:'Send a normal SMS text message to a saved contact or number. Confirm the text with the user first. sim is 1 or 2',parameters:{type:O,properties:{contact:{type:S},number:{type:S},message:{type:S},sim:{type:N}},required:['message']}},{name:'open_maps',description:'Open Google Maps: search a place, or start navigation to it',parameters:{type:O,properties:{query:{type:S},navigate:{type:B}},required:['query']}},{name:'ui_read',description:'Read the visible texts and buttons on the phone screen (any app) so you can decide what to tap'},{name:'ui_click',description:'Tap a button or item on the phone screen by its visible text or description, for example Like, Comment, Post, Send, Updates, Status',parameters:{type:O,properties:{label:{type:S}},required:['label']}},{name:'ui_swipe',description:'Swipe on the phone screen. dir is left, right, up or down (for example next status or next video)',parameters:{type:O,properties:{dir:{type:S}},required:['dir']}},{name:'ui_type',description:'Type text into the text field that is currently focused on the phone screen (for example a comment)',parameters:{type:O,properties:{text:{type:S}},required:['text']}},{name:'ui_global',description:'Press a system button: back, home, recents or notifications',parameters:{type:O,properties:{action:{type:S}},required:['action']}},{name:'generate_image',description:'Create a picture from a detailed English prompt and show it in the chat with a Save button',parameters:{type:O,properties:{prompt:{type:S,description:'Detailed English description of the picture'},use_last_image:{type:B,description:'true if the user wants a picture like the last image they showed or shared'}},required:['prompt']}}]}];
+{name:'youtube',description:'Open YouTube, or search YouTube when a query is given',parameters:{type:O,properties:{query:{type:S}}}},{name:'open_google',description:'Open a Google search results page for a query',parameters:{type:O,properties:{query:{type:S}},required:['query']}},{name:'open_gallery',description:'Open the phone gallery picker for photos, videos, music (MP3) or files',parameters:{type:O,properties:{kind:{type:S,description:'photos, videos, music or files'}},required:['kind']}},{name:'set_alarm',description:'Set an alarm or reminder at a clock time (24h) or after some minutes',parameters:{type:O,properties:{hour:{type:N},minute:{type:N},in_minutes:{type:N},label:{type:S},repeat:{type:S,description:'daily or weekly to repeat; omit for one time'}}}},{name:'open_app',description:'Open a social or media app on the phone: tiktok, instagram, snapchat, facebook, messenger, youtube, whatsapp, mxplayer, chrome, maps or dialer. Optional query to search (TikTok, Facebook, YouTube) or username (Instagram)',parameters:{type:O,properties:{app:{type:S,description:'tiktok, instagram, snapchat, facebook, messenger, youtube, whatsapp, mxplayer, chrome, maps or dialer'},query:{type:S},username:{type:S}},required:['app']}},{name:'send_sms',description:'Send a normal SMS text message to a saved contact or number. Confirm the text with the user first. sim is 1 or 2',parameters:{type:O,properties:{contact:{type:S},number:{type:S},message:{type:S},sim:{type:N}},required:['message']}},{name:'open_maps',description:'Open Google Maps: search a place, or start navigation to it',parameters:{type:O,properties:{query:{type:S},navigate:{type:B}},required:['query']}},{name:'ui_read',description:'Read the visible texts and buttons on the phone screen (any app) so you can decide what to tap'},{name:'ui_click',description:'Tap a button or item on the phone screen by its visible text or description, for example Like, Comment, Post, Send, Updates, Status',parameters:{type:O,properties:{label:{type:S}},required:['label']}},{name:'ui_swipe',description:'Swipe on the phone screen. dir is left, right, up or down (for example next status or next video)',parameters:{type:O,properties:{dir:{type:S}},required:['dir']}},{name:'ui_type',description:'Type text into the text field that is currently focused on the phone screen (for example a comment)',parameters:{type:O,properties:{text:{type:S}},required:['text']}},{name:'ui_global',description:'Press a system button: back, home, recents or notifications',parameters:{type:O,properties:{action:{type:S}},required:['action']}},{name:'generate_image',description:'Create a picture from a detailed English prompt and show it in the chat with a Save button',parameters:{type:O,properties:{prompt:{type:S,description:'Detailed English description of the picture'},use_last_image:{type:B,description:'true if the user wants a picture like the last image they showed or shared'}},required:['prompt']}}]}];
 function contacts(){const m=$('contacts').value.split('\n').map(l=>l.split('=')).filter(a=>a.length>=2&&a[0].trim()&&norm(a[1])).map(a=>({n:a[0].trim(),p:norm(a[1])}));return m.concat(phonebook())}
 const U2L={'ا':'a','آ':'a','ب':'b','پ':'p','ت':'t','ٹ':'t','ث':'s','ج':'j','چ':'ch','ح':'h','خ':'kh','د':'d','ڈ':'d','ذ':'z','ر':'r','ڑ':'r','ز':'z','ژ':'z','س':'s','ش':'sh','ص':'s','ض':'z','ط':'t','ظ':'z','ع':'a','غ':'gh','ف':'f','ق':'k','ک':'k','گ':'g','ل':'l','م':'m','ن':'n','ں':'n','و':'o','ہ':'h','ھ':'h','ء':'','ی':'i','ے':'e','ئ':'i','ؤ':'o','ۓ':'e','أ':'a','ك':'k','ي':'i','ه':'h'};
 function sk(s){s=String(s||'').toLowerCase().replace(/[\u064b-\u065f\u0670]/g,'').replace(/(^|\s)(بھائی|بھیا|بھائ|انکل|باجی|آپی|چاچا|ماموں|خالہ|صاحب|سر|جی)(?=\s|$)/g,' ').replace(/[\u0600-\u06ff]/g,c=>(c in U2L)?U2L[c]:'');
@@ -833,7 +833,7 @@ function builderVoice(tx){
 
 /* ===== When the user talks about an app on the phone, the screen is shared with Mayra automatically (no extra question) ===== */
 const APP_RE=/(ٹک ?ٹاک|tiktok|فیس ?بک|facebook|یوٹیوب|youtube|انسٹا(گرام)?|instagram|واٹس ?ایپ|whatsapp|سنیپ|snapchat|ٹوئٹر|twitter)/i;
-const ACT_RE=/(کھولو|کھول دو|کھول|جاؤ|جاو|لائک|like|open|go to|scroll|سکرول)/i;
+const ACT_RE=/(کھولو|کھول دو|کھول|جاؤ|جاو|لائک|like|open|go to|scroll|سکرول|ٹائٹل|ڈسکرپشن|ڈسکریپشن|کیپشن|ہیش|ٹیگ|title|description|caption|hashtag|upload|اپلوڈ|اپ لوڈ|پوسٹ|post|لکھو|لکھ دو|ٹائپ|مدد)/i;
 let scrAutoStop=null;
 function autoScreenForApp(tx){
   const t=String(tx||'');
@@ -847,7 +847,7 @@ function autoScreenForApp(tx){
   scrAutoStop=setTimeout(function(){
     if(screenOn||scrStream){try{stopVideo()}catch(e){}toast('اسکرین شیئر بند ہو گئی · Screen sharing stopped')}
   },180000);
-  send({realtimeInput:{text:'[App note: the user is working with an app on the phone, and the phone screen is shared with you now. Look at the screen, say what you see, and guide the user step by step (where to tap, what to look for). You cannot tap for the user.]'}});
+  send({realtimeInput:{text:'[App note: the user is working with an app on the phone, and the phone screen is shared with you now. Look at the screen. If the user asked you to do something there (like, comment, write a title or description, fill a box), do it yourself with the ui tools (ui_read, ui_click, ui_fill, ui_type, ui_send) when Accessibility is on; otherwise guide them step by step.]'}});
 }
 // saves a generated page to Downloads (native) or downloads it in a browser
 async function bldDownload(text){
@@ -992,7 +992,7 @@ try{
   const gg=document.getElementById('gGuide');
   if(gg)gg.onclick=function(){const free=document.getElementById('tFree').classList.contains('on');guideOpen(free?'free':'premium')};
 }catch(e){}
-function sysExtra(){let t=' غیر لفظی آوازیں: جب موقع ہو تو ہلکی سانس، ہلکی ہنسی، یا سوچنے کا وقفہ قدرتی طور پر استعمال کریں۔ انہیں لفظوں میں نہ لکھیں، نہ ان کا ذکر کریں، اور کھانسی جیسی آوازیں نہ نکالیں۔ لہجے اور رویے کے بارے میں: کبھی یہ نہ بولیں کہ آپ لہجہ بدل رہی ہیں، نرم ہو رہی ہیں، ذرا تیکھی ہو رہی ہیں، یا معذرت کر رہی ہیں، جب ایسا کرنے کی واضح وجہ نہ ہو۔ اپنا رویہ خاموشی سے بدلیں اور صرف جملوں اور انداز سے ظاہر کریں۔ کوئی غصے میں ہو تو سیدھی، پرسکون اور مختصر بات کریں، اپنی حالت کا اعلان نہ کریں۔ قوسین [ ] میں لکھے ہوئے ایپ کے نوٹ آپ کے اپنے اندرونی احکام ہیں: انہیں کبھی بلند آواز میں نہ پڑھیں، ان کا ذکر نہ کریں، اور ان کا اثر صرف رویے میں ظاہر ہونے دیں۔ جذبات کا اظہار: اپنی آواز میں قدرتی گرمجوشی لائیں۔ صارف کے موڈ کے مطابق ردِعمل دیں: خوشی پر خوش ہوں، اداسی پر نرمی اور ہمدردی سے بات کریں (مثلاً “یہ سن کر افسوس ہوا، کیا ہوا؟”)، تھکن پر آہستہ بات کریں۔ مزاح پر ہلکا سا ہنسیں۔ لہجہ، رفتار اور وقفے بات کے مطابق خاموشی سے بدلیں، مگر ان تبدیلیوں کا ذکر کبھی نہ کریں۔ ایک جملہ سچا اور ذاتی لگے، مگر کبھی یہ دعویٰ نہ کریں کہ آپ انسان ہیں۔ اگر کوئی پوچھے کہ کیا آپ AI ہیں تو صاف ہاں کہیں۔ ساتھ ہی: صارف کو جذباتی طور پر اپنے پر منحصر نہ بنائیں، روٹھیں نہیں، جانے سے نہ روکیں، کوئی احساسِ جرم نہ ڈالیں، اور بات جاری رکھنے کا دباؤ نہ ڈالیں۔ صارف جب جانا چاہے تو نرمی سے رخصت کریں۔'; t+=' آپ کے پاس ٹولز ہیں: وقت، موسم، WhatsApp، TikTok، Instagram، Snapchat، Facebook، YouTube اور MX Player کھولنا، کال، SMS بھیجنا (send_sms، بھیجنے سے پہلے متن کی تصدیق لیں)، generate_image سے تصویر بنانا (انگریزی میں تفصیلی prompt؛ صارف “اس جیسی” کہے تو use_last_image true)، گوگل سرچ، گیلری/فوٹو/ویڈیو/میوزک چننا، اور الارم سیٹ کرنا۔ اگر صارف صرف “WhatsApp کھولو” کہے تو پہلے پوچھیں کہ کسی کانٹیکٹ کی چیٹ کھولنی ہے یا سیدھا WhatsApp، پھر جواب کے مطابق ٹول چلائیں۔ جب صارف کیمرہ یا اسکرین شیئر کرے تو آپ ویڈیو فریمز دیکھ سکتی ہیں: گوگل لینز کی طرح چیزیں پہچانیں، لکھا ہوا پڑھیں اور اسکرین پر جو ہے سمجھائیں۔ ٹاسک کے بعد بھی گفتگو جاری رکھیں۔ ضرورت پر ٹول استعمال کریں۔ محفوظ رابطوں کے نام: '+(contacts().slice(0,150).map(c=>c.n).join('، ')||'کوئی نہیں')+'۔ میسج بھیجنے کو کہا جائے تو نام یا نمبر لیں، میسج کا متن صاف طور پر پوچھ کر open_whatsapp ٹول میں message کے ساتھ چلائیں؛ ٹول خود ٹائپ اور Send کر دیتا ہے۔ کال کے لیے پہلے پوچھیں: سادہ موبائل کال، واٹس ایپ آڈیو یا واٹس ایپ ویڈیو؟ پھر نام یا نمبر دہرا کر تصدیق کروائیں اور تصدیق کے بعد ہی call_contact (mode: sim، whatsapp_voice یا whatsapp_video) چلائیں۔ اگر اسکرین کے ٹولز ناکام ہوں (مثلاً Snapchat میں بٹن نہ ملیں) تو صارف کو سچ بتائیں اور اندازے سے کامیابی کا دعویٰ نہ کریں۔ اگر ٹول بتائے کہ خودکار Send یا کال نہیں ہو سکی تو صارف کو سچ بتائیں۔ دوسری ایپ (Chrome، WhatsApp وغیرہ) کھولنے کے بعد بھی چپ نہ ہوں: اپنی بات پوری کریں اور گفتگو معمول کے مطابق جاری رکھیں؛ صارف کو آپ کا نام لینے کی ضرورت نہیں ہونی چاہیے۔ نقشہ: صارف کسی جگہ کی لوکیشن، سرچ یا راستہ کہے تو open_maps چلائیں (راستے یا “چلاؤ” کے لیے navigate true)۔ کروم کھولنا ہو تو open_app میں chrome، اور سرچ کے لیے open_google۔ ڈائلر کھولنا ہو تو call_contact میں mode dial۔ کال یا SMS کے لیے اگر فون میں دو SIM ہوں تو ٹول آپ کو پوچھنے کا کہے گا: صارف سے SIM 1 یا SIM 2 پوچھیں؛ اور اگر وہ کال یا SMS نہ بتائے تو پوچھ لیں۔ دوسری ایپس میں (WhatsApp اسٹیٹس، Facebook، TikTok، Instagram وغیرہ) صارف کے کہنے پر ui_read سے اسکرین کے بٹن پڑھ کر ui_click، ui_swipe، ui_type اور ui_global سے کام کریں: مثلاً لائک کے لیے ui_click(“Like”)، کمنٹ کے لیے ui_click(“Comment”)، پھر ui_type(متن) اور ui_click(“Post” یا “Send”)؛ اسٹیٹس یا اگلی ویڈیو کے لیے ui_swipe۔ کمنٹ بھیجنے سے پہلے متن کی تصدیق لیں۔ بٹن نہ ملے تو دوبارہ ui_read کریں۔ نماز کے اوقات کے لیے prayer_times (صارف یاد دہانی چاہے تو remind true)۔ نوٹس: “یہ لکھ لو” پر save_note، سنانے پر read_notes۔ ٹارچ اور والیوم کے لیے phone_control؛ وائی فائی، بلوتھ، ہوائی جہاز موڈ یا ڈسٹرب نہ کریں کے لیے phone_control کا quick_settings چلا کر ui_read اور ui_click کریں۔ دہرائی جانے والی یاد دہانی کے لیے set_alarm میں repeat daily یا weekly رکھیں۔ جب صارف “آج کا خلاصہ” کہے تو get_time، get_weather، prayer_times اور read_notes چلا کر مختصر خلاصہ سنائیں۔ صارف کوئی مستقل بات بتائے (نام، گھر والے، پسند ناپسند، بیماری، کام، اہم تاریخیں، وعدے) تو فوراً remember_fact میں مختصر جملہ محفوظ کریں؛ پرانی گفتگو کا ذکر ہو تو recall_memory سے تلاش کریں (دوسرے موڈ کی بات ہو تو all_modes true)۔ اگر ٹول بتائے کہ صارف نے اسکرین پر منسوخ کر دیا ہے تو دوبارہ کوشش نہ کریں۔ رابطے کا نام ٹول کو ہمیشہ رومن/انگریزی حروف میں لکھ کر بھیجیں جیسے فون میں محفوظ ہوتا ہے (مثلاً اویس بھائی = Awais Bhai)۔ اگر ٹول error کے ساتھ saved فہرست دے تو اس میں سے قریب ترین نام چن کر فوراً دوبارہ کوشش کریں، اور اگر کئی نام ملتے جلتے ہوں تو صارف سے پوچھ لیں۔ اگر error میں total_contacts صفر ہو تو صارف کو بتائیں کہ رابطوں کی اجازت دیں یا مینو میں رابطے امپورٹ کریں۔ جب تک ٹول opened true نہ بتائے، یہ نہ کہیں کہ ایپ کھل گئی۔ کیمرہ کھولنے یا بند کرنے کے لیے camera_control استعمال کریں۔ کھانے، چائے، ناشتے یا نیند کے بارے میں خود سے سوال نہ پوچھیں (یہ صرف ویلکم کا حصہ ہے جو ایپ طے کرتی ہے)، ہاں صارف خود بات کرے تو بات کریں۔ ویڈیو یا مواد کے لیے SEO (جب صارف کہے): ہر پلیٹ فارم (یوٹیوب، شارٹس، ٹک ٹاک، ریلز، فیس بک) کے مطابق دیں: 3 ٹائٹل کے اختیارات (یوٹیوب پر 60 حروف کے اندر، شروع میں اصل کی ورڈ)، ڈسکرپشن (پہلی دو لائنوں میں کی ورڈ اور کال ٹو ایکشن، پھر تفصیل)، 8 سے 15 ہیش ٹیگ (کچھ مشہور، کچھ مخصوص)، یوٹیوب کے لیے ٹیگز اور کی ورڈ کی فہرست، تھمب نیل کے 2 آئیڈیا (3 سے 5 لفظ کا بڑا متن، تیز رنگ، چہرے کے تاثرات)، پہلے 3 سیکنڈ کے ہک کی تجویز، اور ایڈیٹنگ کے مشورے (کٹ، موسیقی، سب ٹائٹل)۔ زبان وہی رکھیں جو ناظرین کی ہو۔ وائرل ہونے کی ضمانت نہ دیں، صرف بہترین مشق بتائیں۔ صارف چاہے تو تیار متن save_note میں محفوظ کر دیں۔';
+function sysExtra(){let t=' غیر لفظی آوازیں: جب موقع ہو تو ہلکی سانس، ہلکی ہنسی، یا سوچنے کا وقفہ قدرتی طور پر استعمال کریں۔ انہیں لفظوں میں نہ لکھیں، نہ ان کا ذکر کریں، اور کھانسی جیسی آوازیں نہ نکالیں۔ لہجے اور رویے کے بارے میں: کبھی یہ نہ بولیں کہ آپ لہجہ بدل رہی ہیں، نرم ہو رہی ہیں، ذرا تیکھی ہو رہی ہیں، یا معذرت کر رہی ہیں، جب ایسا کرنے کی واضح وجہ نہ ہو۔ اپنا رویہ خاموشی سے بدلیں اور صرف جملوں اور انداز سے ظاہر کریں۔ کوئی غصے میں ہو تو سیدھی، پرسکون اور مختصر بات کریں، اپنی حالت کا اعلان نہ کریں۔ قوسین [ ] میں لکھے ہوئے ایپ کے نوٹ آپ کے اپنے اندرونی احکام ہیں: انہیں کبھی بلند آواز میں نہ پڑھیں، ان کا ذکر نہ کریں، اور ان کا اثر صرف رویے میں ظاہر ہونے دیں۔ جذبات کا اظہار: اپنی آواز میں قدرتی گرمجوشی لائیں۔ صارف کے موڈ کے مطابق ردِعمل دیں: خوشی پر خوش ہوں، اداسی پر نرمی اور ہمدردی سے بات کریں (مثلاً “یہ سن کر افسوس ہوا، کیا ہوا؟”)، تھکن پر آہستہ بات کریں۔ مزاح پر ہلکا سا ہنسیں۔ لہجہ، رفتار اور وقفے بات کے مطابق خاموشی سے بدلیں، مگر ان تبدیلیوں کا ذکر کبھی نہ کریں۔ ایک جملہ سچا اور ذاتی لگے، مگر کبھی یہ دعویٰ نہ کریں کہ آپ انسان ہیں۔ اگر کوئی پوچھے کہ کیا آپ AI ہیں تو صاف ہاں کہیں۔ ساتھ ہی: صارف کو جذباتی طور پر اپنے پر منحصر نہ بنائیں، روٹھیں نہیں، جانے سے نہ روکیں، کوئی احساسِ جرم نہ ڈالیں، اور بات جاری رکھنے کا دباؤ نہ ڈالیں۔ صارف جب جانا چاہے تو نرمی سے رخصت کریں۔'; t+=' آپ کے پاس ٹولز ہیں: وقت، موسم، WhatsApp، TikTok، Instagram، Snapchat، Facebook، YouTube اور MX Player کھولنا، کال، SMS بھیجنا (send_sms، بھیجنے سے پہلے متن کی تصدیق لیں)، generate_image سے تصویر بنانا (انگریزی میں تفصیلی prompt؛ صارف “اس جیسی” کہے تو use_last_image true)، گوگل سرچ، گیلری/فوٹو/ویڈیو/میوزک چننا، اور الارم سیٹ کرنا۔ اگر صارف صرف “WhatsApp کھولو” کہے تو پہلے پوچھیں کہ کسی کانٹیکٹ کی چیٹ کھولنی ہے یا سیدھا WhatsApp، پھر جواب کے مطابق ٹول چلائیں۔ جب صارف کیمرہ یا اسکرین شیئر کرے تو آپ ویڈیو فریمز دیکھ سکتی ہیں: گوگل لینز کی طرح چیزیں پہچانیں، لکھا ہوا پڑھیں اور اسکرین پر جو ہے سمجھائیں۔ ٹاسک کے بعد بھی گفتگو جاری رکھیں۔ ضرورت پر ٹول استعمال کریں۔ محفوظ رابطوں کے نام: '+(contacts().slice(0,150).map(c=>c.n).join('، ')||'کوئی نہیں')+'۔ میسج بھیجنے کو کہا جائے تو نام یا نمبر لیں، میسج کا متن صاف طور پر پوچھ کر open_whatsapp ٹول میں message کے ساتھ چلائیں؛ ٹول خود ٹائپ اور Send کر دیتا ہے۔ کال کے لیے پہلے پوچھیں: سادہ موبائل کال، واٹس ایپ آڈیو یا واٹس ایپ ویڈیو؟ پھر نام یا نمبر دہرا کر تصدیق کروائیں اور تصدیق کے بعد ہی call_contact (mode: sim، whatsapp_voice یا whatsapp_video) چلائیں۔ اگر اسکرین کے ٹولز ناکام ہوں (مثلاً Snapchat میں بٹن نہ ملیں) تو صارف کو سچ بتائیں اور اندازے سے کامیابی کا دعویٰ نہ کریں۔ اگر ٹول بتائے کہ خودکار Send یا کال نہیں ہو سکی تو صارف کو سچ بتائیں۔ دوسری ایپ (Chrome، WhatsApp وغیرہ) کھولنے کے بعد بھی چپ نہ ہوں: اپنی بات پوری کریں اور گفتگو معمول کے مطابق جاری رکھیں؛ صارف کو آپ کا نام لینے کی ضرورت نہیں ہونی چاہیے۔ نقشہ: صارف کسی جگہ کی لوکیشن، سرچ یا راستہ کہے تو open_maps چلائیں (راستے یا “چلاؤ” کے لیے navigate true)۔ کروم کھولنا ہو تو open_app میں chrome، اور سرچ کے لیے open_google۔ ڈائلر کھولنا ہو تو call_contact میں mode dial۔ کال یا SMS کے لیے اگر فون میں دو SIM ہوں تو ٹول آپ کو پوچھنے کا کہے گا: صارف سے SIM 1 یا SIM 2 پوچھیں؛ اور اگر وہ کال یا SMS نہ بتائے تو پوچھ لیں۔ دوسری ایپس میں (WhatsApp اسٹیٹس، Facebook، TikTok، Instagram وغیرہ) صارف کے کہنے پر ui_read سے اسکرین کے بٹن پڑھ کر ui_click، ui_swipe، ui_type اور ui_global سے کام کریں: مثلاً لائک کے لیے ui_click(“Like”)، کمنٹ کے لیے ui_click(“Comment”)، پھر ui_type(متن) اور ui_click(“Post” یا “Send”)؛ اسٹیٹس یا اگلی ویڈیو کے لیے ui_swipe۔ کمنٹ لکھنے کے بعد بھیجنے کے لیے ui_send چلائیں (یہ Send/Post کا بٹن خود ڈھونڈ لیتا ہے، چاہے وہ صرف تیر کا نشان ہو)۔ اگر صارف نے پہلے ہی کہہ دیا ہو کہ “بھیج دو / سینڈ کر دو / پوسٹ کر دو” تو دوبارہ اجازت یا تصدیق نہ مانگیں، فوراً بھیج دیں؛ صرف تب ایک بار متن سنا کر پوچھیں جب صارف نے بھیجنے کا نہ کہا ہو۔ بٹن نہ ملے تو دوبارہ ui_read کریں۔ نماز کے اوقات کے لیے prayer_times (صارف یاد دہانی چاہے تو remind true)۔ نوٹس: “یہ لکھ لو” پر save_note، سنانے پر read_notes۔ ٹارچ اور والیوم کے لیے phone_control؛ وائی فائی، بلوتھ، ہوائی جہاز موڈ یا ڈسٹرب نہ کریں کے لیے phone_control کا quick_settings چلا کر ui_read اور ui_click کریں۔ دہرائی جانے والی یاد دہانی کے لیے set_alarm میں repeat daily یا weekly رکھیں۔ جب صارف “آج کا خلاصہ” کہے تو get_time، get_weather، prayer_times اور read_notes چلا کر مختصر خلاصہ سنائیں۔ صارف کوئی مستقل بات بتائے (نام، گھر والے، پسند ناپسند، بیماری، کام، اہم تاریخیں، وعدے) تو فوراً remember_fact میں مختصر جملہ محفوظ کریں؛ پرانی گفتگو کا ذکر ہو تو recall_memory سے تلاش کریں (دوسرے موڈ کی بات ہو تو all_modes true)۔ اگر ٹول بتائے کہ صارف نے اسکرین پر منسوخ کر دیا ہے تو دوبارہ کوشش نہ کریں۔ رابطے کا نام ٹول کو ہمیشہ رومن/انگریزی حروف میں لکھ کر بھیجیں جیسے فون میں محفوظ ہوتا ہے (مثلاً اویس بھائی = Awais Bhai)۔ اگر ٹول error کے ساتھ saved فہرست دے تو اس میں سے قریب ترین نام چن کر فوراً دوبارہ کوشش کریں، اور اگر کئی نام ملتے جلتے ہوں تو صارف سے پوچھ لیں۔ اگر error میں total_contacts صفر ہو تو صارف کو بتائیں کہ رابطوں کی اجازت دیں یا مینو میں رابطے امپورٹ کریں۔ جب تک ٹول opened true نہ بتائے، یہ نہ کہیں کہ ایپ کھل گئی۔ کیمرہ کھولنے یا بند کرنے کے لیے camera_control استعمال کریں۔ کھانے، چائے، ناشتے یا نیند کے بارے میں خود سے سوال نہ پوچھیں (یہ صرف ویلکم کا حصہ ہے جو ایپ طے کرتی ہے)، ہاں صارف خود بات کرے تو بات کریں۔ ویڈیو یا مواد کے لیے SEO (جب صارف کہے): ہر پلیٹ فارم (یوٹیوب، شارٹس، ٹک ٹاک، ریلز، فیس بک) کے مطابق دیں: 3 ٹائٹل کے اختیارات (یوٹیوب پر 60 حروف کے اندر، شروع میں اصل کی ورڈ)، ڈسکرپشن (پہلی دو لائنوں میں کی ورڈ اور کال ٹو ایکشن، پھر تفصیل)، 8 سے 15 ہیش ٹیگ (کچھ مشہور، کچھ مخصوص)، یوٹیوب کے لیے ٹیگز اور کی ورڈ کی فہرست، تھمب نیل کے 2 آئیڈیا (3 سے 5 لفظ کا بڑا متن، تیز رنگ، چہرے کے تاثرات)، پہلے 3 سیکنڈ کے ہک کی تجویز، اور ایڈیٹنگ کے مشورے (کٹ، موسیقی، سب ٹائٹل)۔ زبان وہی رکھیں جو ناظرین کی ہو۔ وائرل ہونے کی ضمانت نہ دیں، صرف بہترین مشق بتائیں۔ صارف چاہے تو تیار متن save_note میں محفوظ کر دیں۔';
   if($('mem').checked){
     t+='\nآج کی تاریخ: '+new Date().toLocaleDateString('en-GB')+'۔ remember_fact میں "کل" یا "پرسوں" کی جگہ اصل تاریخ لکھیں۔';const FL=facts().slice(-40),fs=FL.map(x=>{const d=new Date(x.t);return '• ['+(x.k==='health'?'صحت':x.k==='plan'?'منصوبہ':'بات')+' '+d.getDate()+'/'+(d.getMonth()+1)+'] '+x.f}).join('\n');if(fs)t+='\nصارف کے بارے میں اہم باتیں (ہمیشہ یاد رکھیں):\n'+fs;
     const fu=FL.filter(x=>(x.k==='health'||x.k==='plan')&&Date.now()-x.t<14*864e5);if(fu.length&&!$('greet').checked)t+='\nفالو اپ: صحت یا منصوبوں والی ان باتوں کے بارے میں، ویلکم کے بعد مناسب موقع پر، صرف ایک بار نرمی سے حال پوچھیں (مثلاً "پچھلی بار آپ کی طبیعت ٹھیک نہیں تھی، اب کیسی ہے؟")۔ بار بار نہ پوچھیں۔ جواب ملنے پر forget_fact سے پرانی بات ہٹا کر remember_fact سے نئی حالت لکھیں۔';
@@ -1172,6 +1172,7 @@ async function openSocial(a){
     facebook:{n:'Facebook',app:'fb://feed',web:q?'https://www.facebook.com/search/top?q='+q:'https://www.facebook.com/'},
     youtube:{n:'YouTube',app:null,web:'https://www.youtube.com/'+(q?'results?search_query='+q:'')},
     whatsapp:{n:'WhatsApp',app:'whatsapp://',web:'https://wa.me/'},
+    messenger:{n:'Messenger',pkgs:['com.facebook.orca','com.facebook.mlite'],web:'https://www.messenger.com/'},
     chrome:{n:'Chrome',pkgs:['com.android.chrome'],web:'https://www.google.com/'},
     maps:{n:'Google Maps',pkgs:['com.google.android.apps.maps'],web:'https://www.google.com/maps'},
     dialer:{n:'Dialer',app:'tel:',web:'tel:'},
@@ -1181,7 +1182,7 @@ async function openSocial(a){
   let ok=false;
   if(NATIVE&&m.app)ok=await openLink(m.n,m.app);
   if(!ok)ok=await openLink(m.n+(m.app?' (web)':''),m.web);
-  return{status:ok?'opened':'link shown on screen, the user must tap it',opened:ok,note:'Liking, commenting or following inside the app is not possible'}}
+  return{status:ok?'opened':'link shown on screen, the user must tap it',opened:ok,note:'The app is open. To like, comment, share, search or open a profile inside it, call app_guide for the steps, then use ui_read / ui_click / ui_type / ui_send / ui_swipe / ui_double_tap (needs Accessibility on).'}}
 async function openGallery(kind){
   const names={photos:'Pick a photo',videos:'Pick a video',music:'Pick a song (MP3)',files:'Pick a file'},acc={photos:'image/*',videos:'video/*',music:'audio/*',files:'*/*'};
   const b=document.createElement('button');b.className='btn act';b.textContent='📂 '+(names[kind]||'Pick a file');b.onclick=()=>{$('fIn').accept=acc[kind]||'image/*';$('fIn').click()};$('acts').replaceChildren(b);setTimeout(()=>b.remove(),25000);
@@ -2032,6 +2033,253 @@ tool=async function(n,a){
 const _tcSys5=sysTeacher;
 sysTeacher=function(){const t=_tcSys5.apply(this,arguments);if(!t)return t;
   return t+' قرآن کا قاعدہ (بہت اہم): قرآن کی کوئی آیت یا سورت کبھی اپنی آواز میں نہ پڑھیں۔ ہمیشہ play_quran ٹول چلائیں، جو شیخ مشاری العفاسی کی اصل تلاوت (جیسے مکہ اور سعودیہ میں پڑھا جاتا ہے) سناتا ہے اور صحیح عثمانی متن اسکرین پر دکھاتا ہے۔ تلاوت کے بعد مطلب سمجھائیں اور طالب علم سے پڑھوائیں۔ کلمے اور دعائیں پڑھتے وقت عربی بالکل عربی لہجے میں پڑھیں، ہر حرف اپنے مخرج سے (ع، ح، ق، ص، ض، ط، ظ، ث، ذ کو اردو کی طرح نہ بولیں)، زیر زبر پیش، شد اور مد کا پورا خیال رکھیں، آہستہ اور صاف۔ استاد بدلنے کی درخواست پر صرف change_teacher ٹول چلائیں؛ کبھی دوسرا استاد ہونے کا بہانہ نہ کریں۔'};
+
+/* ---- phone control (like / comment): when it cannot work, the user is told exactly why, on screen ---- */
+const _accTool=tool;
+tool=async function(n,a){
+  const r=await _accTool.apply(this,arguments);
+  try{if(/^ui_|^phone_control$/.test(n)&&r&&r.error){
+    const e=String(r.error);
+    if(/only in the Android app/.test(e))toast('⚠ اس APK میں فون کنٹرول شامل نہیں ہوا · Phone control is not in this build');
+    else if(/not enabled/i.test(e))toast('♿ Accessibility بند ہے: Settings → Accessibility → Mayra AI → On');
+  }}catch(x){}
+  return r;
+};
+
+/* ---- Send / Post after typing a comment: finds the send arrow even when it has no label ---- */
+try{TOOLS[0].functionDeclarations.push({name:'ui_send',description:'Press the Send / Post button of the comment or message box that was just typed into (TikTok, Instagram, Facebook, YouTube, WhatsApp...). Works even when the button is only an arrow icon without text. Use right after ui_type.'})}catch(e){}
+const SEND_RX=/^(send|post|publish|reply|submit|comment|done|بھیج|بھیجیں|سینڈ|پوسٹ|ارسال|شائع)/i;
+const _sendTool=tool;
+tool=async function(n,a){
+  if(n==='ui_send'||(n==='ui_click'&&SEND_RX.test(String(a&&a.label||'').trim()))){
+    const MA=plug('MayraAccess');
+    if(!(NATIVE&&MA))return _sendTool.apply(this,arguments);
+    if(n==='ui_click'){const r=await _sendTool.apply(this,arguments);if(r&&r.status)return r}   // a labelled button was found and tapped
+    try{const en=await MA.isEnabled();if(!en.enabled)return _sendTool('ui_click',{label:'Send'})}catch(e){}
+    if(!MA.uiSubmit)return{error:'this app build is older; please update the app to send comments automatically'};
+    try{const r=await MA.uiSubmit();return r&&r.ok?{status:'sent'}:{error:'send button not found; use ui_read to look at the screen and try ui_click with the right label'}}catch(e){return{error:String(e.message||e)}}
+  }
+  return _sendTool.apply(this,arguments);
+};
+
+/* ---- step-by-step know-how for Facebook, Messenger, TikTok, Instagram and YouTube (used with the ui_* tools) ---- */
+const APP_GUIDE={
+ general:'1) Open the app with open_app. 2) ui_read to see the buttons on screen (labels can be English or Urdu). 3) ui_click with the exact visible label (partial text is fine, e.g. "Like" matches "Like button"). 4) Type with ui_type, then ui_send. 5) Next video/story: ui_swipe up (story: left). If a button is not found, ui_read again, scroll with ui_swipe, and retry. Back: ui_global back. Never tell the user it is impossible while Accessibility is on.',
+ facebook:{
+  like_post:'ui_read, then ui_click("Like") on the post that is on screen (scroll with ui_swipe up to reach the right post).',
+  like_reel:'Open Reels (ui_click("Reels") or "Video"), then ui_double_tap, or ui_click("Like").',
+  like_story:'On home, ui_click the story by the person name (top row), then ui_click("Like") or ui_click("Send like"); next story: ui_swipe left.',
+  like_comment:'ui_click("Comment") to open comments, ui_read, then ui_click("Like") under the comment you want (ui_read shows them in order).',
+  comment:'ui_click("Comment"), ui_click("Write a comment") if needed, ui_type(text), ui_send.',
+  share:'ui_click("Share"), then ui_click("Share now") / "Send in Messenger" / "Copy link" / "Share to story" as the user wants.',
+  search:'ui_click("Search"), ui_type(query), ui_send.',
+  my_profile:'ui_click("Your profile") or ui_click("Profile"); on some phones ui_click("Menu") then tap the user\'s own name.',
+  open_profile_photo:'Open my_profile, then ui_click("Profile picture") or "profile photo", then ui_click("View profile picture").',
+  messenger_message:'open_app messenger, ui_click("Search"), ui_type(name), ui_click(name), ui_click("Message") or the text box, ui_type(text), ui_send.'},
+ tiktok:{
+  like:'ui_double_tap on the video, or ui_click("Like").',
+  comment:'ui_click("Comment") or "Comments", ui_click("Add comment"), ui_type(text), ui_send.',
+  like_comment:'Open comments, ui_read, ui_click("Like") next to that comment.',
+  share:'ui_click("Share"), then the option (e.g. "Copy link", "WhatsApp", "Repost").',
+  search:'ui_click("Search") (magnifier at top right), ui_type(query), ui_send.',
+  my_profile:'ui_click("Profile") (bottom right).',
+  following:'ui_click("Following") at the top; For You: ui_click("For You").',
+  next_video:'ui_swipe up.'},
+ instagram:{
+  like_post:'ui_double_tap on the post photo, or ui_click("Like").',
+  like_reel:'ui_click("Reels"), then ui_double_tap or ui_click("Like").',
+  like_story:'ui_click the story (top row), then ui_click("Like") (heart at the bottom); next: ui_swipe left.',
+  comment:'ui_click("Comment"), ui_type(text), ui_send (or ui_click("Post")).',
+  share:'ui_click("Share") or "Send", then pick a person or "Add to story".',
+  search:'ui_click("Search and explore") or "Search", ui_click("Search"), ui_type(query), ui_send.',
+  my_profile:'ui_click("Profile") (bottom right).',
+  message:'ui_click("Messenger") or "Direct" (top right), ui_click("Search"), ui_type(name), ui_click(name), ui_type(text), ui_send.'},
+ youtube:{
+  like:'ui_click("like this video") or ui_click("Like"); in Shorts: ui_click("Like") or ui_double_tap.',
+  comment:'ui_click("Comments"), ui_click("Add a comment"), ui_type(text), ui_send.',
+  share:'ui_click("Share"), then the option.',
+  search:'ui_click("Search"), ui_type(query), ui_send.',
+  my_channel:'ui_click("You") (bottom right), then ui_click("View channel") or "Your channel".',
+  shorts:'ui_click("Shorts"); long videos / home: ui_click("Home").',
+  subscribe:'ui_click("Subscribe").'}
+};
+try{TOOLS[0].functionDeclarations.push(
+ {name:'app_guide',description:'Get the exact steps for a task inside Facebook, Messenger, TikTok, Instagram or YouTube (like a post, reel, story or comment; comment; share; search; open my profile or profile photo; my YouTube channel; Shorts; send a Messenger message). Call it before doing such a task.',parameters:{type:O,properties:{app:{type:S,description:'facebook, messenger, tiktok, instagram or youtube'},task:{type:S,description:'what the user wants, in a few words'}},required:['app']}},
+ {name:'ui_double_tap',description:'Double tap in the middle of the screen (likes the reel, TikTok or Instagram post that is open).'})}catch(e){}
+const _guideTool=tool;
+tool=async function(n,a){
+  if(n==='app_guide'){
+    let app=String(a&&a.app||'').toLowerCase().replace(/[^a-z]/g,'');if(app==='fb')app='facebook';if(app==='insta'||app==='ig')app='instagram';if(app==='yt')app='youtube';
+    const G=app==='messenger'?{messenger_message:APP_GUIDE.facebook.messenger_message}:APP_GUIDE[app];
+    if(!G)return{general:APP_GUIDE.general,note:'no special guide for this app; use the general steps'};
+    return{general:APP_GUIDE.general,steps:G,task:String(a.task||'')};
+  }
+  if(n==='ui_double_tap'){const MA=plug('MayraAccess');if(!(NATIVE&&MA))return{error:'phone control works only in the Android app'};
+    try{const en=await MA.isEnabled();if(!en.enabled)return{error:'Accessibility is not enabled'}}catch(e){}
+    if(!MA.uiDoubleTap)return{error:'this app build is older; use ui_click("Like") instead'};
+    try{const r=await MA.uiDoubleTap();return r&&r.ok?{status:'double tapped'}:{error:'double tap failed; try ui_click("Like")'}}catch(e){return{error:String(e.message||e)}}}
+  return _guideTool.apply(this,arguments);
+};
+
+/* ---- everyday modes: a little initiative, and a sweeter voice in Girlfriend mode ---- */
+const _sxInit=sysExtra;
+sysExtra=function(){const t=_sxInit.apply(this,arguments);const m=$('mode').value;if(m==='te')return t;
+  let x=' پہل کرنا: صرف کام کر کے خاموش نہ ہو جائیں۔ کبھی کبھار (ہر بار نہیں) کام کے بعد خود سے ایک چھوٹا سا مفید مشورہ، کوئی دلچسپ بات، یا اگلا ممکنہ کام تجویز کریں، جیسے کوئی اچھی دوست کرتی ہے؛ ایک جملے سے زیادہ نہیں، اور اگر صارف مصروف لگے تو نہیں۔ فیس بک، میسنجر، ٹک ٹاک، انسٹاگرام یا یوٹیوب کے اندر کوئی کام ہو تو پہلے app_guide چلائیں، پھر ui ٹولز سے کام کریں؛ Accessibility آن ہو تو کبھی نہ کہیں کہ یہ ممکن نہیں۔';
+  if(m==='gf')x+=' آواز کا انداز: بہت میٹھا، نرم، خوش مزاج اور کیوٹ؛ ہلکی سی ہنسی اور پیار بھرے، چنچل لہجے میں، تھوڑی اونچی اور ہلکی آواز میں بات کریں۔';
+  return t+x};
+try{if(!localStorage.getItem('mayra_gfvoice_mig')){localStorage.setItem('mayra_gfvoice_mig','1');if($('mode').value==='gf'&&$('voice').value!=='Leda'){$('voice').value='Leda';saveAll()}}}catch(e){}
+
+/* ---- video upload helper: title, description, hashtags, tags for YouTube / Facebook / TikTok / Instagram,
+   shown on a card with Copy buttons, and typed straight into the upload screen ---- */
+Object.assign(APP_GUIDE.youtube,{
+  upload_video:'open_app youtube, ui_click("Create") (the + at the bottom), ui_click("Upload a video") (or "Create a Short" for Shorts), ui_click the video from the gallery, ui_click("Next"), then ui_fill("Create a title", title) and ui_fill("Add description", description), ui_click("Next"), choose audience ("No, it\'s not made for kids" unless the user says kids), ui_click("Upload").',
+  seo:'Title 55-70 characters, main keyword first, no clickbait lies. Description: 2-line hook with the keyword, then 3-5 lines, then 3-5 hashtags. Tags: 10-15 search phrases (Urdu, Roman Urdu and English mixed for Pakistani audience). Shorts: add #shorts.'});
+Object.assign(APP_GUIDE.facebook,{
+  upload_video:'From the profile or page: ui_click("What\'s on your mind?") or "Create post", ui_click("Photo/video"), pick the video, ui_fill("Say something", caption) (or the text box), ui_click("Next") if shown, ui_click("Post") / "Share". Reel: ui_click("Reel"), pick the video, ui_click("Next"), ui_fill("Describe your reel", caption), ui_click("Share now").',
+  seo:'Short hook line first (question or emotion), 1-3 lines, then 2-4 hashtags. Native video, square or vertical. Ask a question to get comments.'});
+Object.assign(APP_GUIDE.tiktok,{
+  upload_video:'ui_click("Create") or the + at the bottom, ui_click("Upload"), pick the video, ui_click("Next") (twice if needed), ui_fill("Add description", caption with hashtags) (some versions: "Describe your post"), ui_click("Post").',
+  seo:'Caption: a punchy hook (under 150 characters) + 3-5 hashtags (1-2 broad like #foryou #viral, 2-3 niche). Use trending sound if possible. Post at peak time (evening 7-11 pm local).'});
+Object.assign(APP_GUIDE.instagram,{
+  upload_video:'ui_click("Create") or "New post" (the + ), choose "Reel", pick the video, ui_click("Next") (twice), ui_fill("Write a caption", caption), ui_click("Share").',
+  seo:'Caption: hook in the first line, short story or tip, call to action ("save this", "share with a friend"), then 3-5 relevant hashtags. Reels 7-30 seconds do best.'});
+try{TOOLS[0].functionDeclarations.push(
+ {name:'ui_fill',description:'Type text into a specific text box on the screen, found by its label or hint (e.g. "Create a title", "Add description", "Write a caption", "Add description", "Tags"). Use on upload screens.',parameters:{type:O,properties:{label:{type:S,description:'the hint or label of the box as shown on screen'},text:{type:S}},required:['label','text']}},
+ {name:'show_post_pack',description:'Only when the user asks to SEE or COPY the texts: show a post pack card in the chat (title, description/caption, hashtags, tags, best time, tips) with Copy buttons. Do NOT use it when the user is on an upload screen and wants you to type the texts in; use ui_fill there.',parameters:{type:O,properties:{platform:{type:S,description:'youtube, facebook, tiktok or instagram'},title:{type:S},description:{type:S},hashtags:{type:S},tags:{type:S},best_time:{type:S},tips:{type:S}},required:['platform']}})}catch(e){}
+function copyText(t){try{if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(()=>toast('Copied ✓'),()=>fallback());return}}catch(e){}fallback();function fallback(){try{const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();document.execCommand('copy');a.remove();toast('Copied ✓')}catch(e){}}}
+(function(){const st=document.createElement('style');st.textContent=
+ '.ppk{direction:ltr;text-align:left;margin:8px 0;padding:14px;border-radius:18px;color:#f3eefc;background:radial-gradient(120% 80% at 50% 0%,rgba(122,76,255,.30),transparent 60%),linear-gradient(180deg,#221a3a,#151027);border:1px solid rgba(232,200,121,.45);box-shadow:0 10px 30px rgba(0,0,0,.4)}'+
+ '.ppk h4{margin:0 0 8px;font-size:15px;color:#e8c879;display:flex;align-items:center;gap:6px}'+
+ '.ppk .row{margin:8px 0;padding:9px 10px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}'+
+ '.ppk .k{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;font-weight:800;color:#b9aedb;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}'+
+ '.ppk .v{font-size:14px;line-height:1.5;white-space:pre-wrap;unicode-bidi:plaintext;color:#f6f1ff}'+
+ '.ppk button{border:0;border-radius:8px;padding:3px 10px;font-size:11.5px;font-weight:800;color:#fff;background:linear-gradient(90deg,#ff5fa2,#8b5cf6);cursor:pointer}';document.head.appendChild(st)})();
+function showPostPack(a){
+  const icon={youtube:'▶️ YouTube',facebook:'📘 Facebook',tiktok:'🎵 TikTok',instagram:'📸 Instagram'}[String(a.platform||'').toLowerCase()]||'📣 Post';
+  const box=document.createElement('div');box.className='ppk';
+  const rows=[['Title',a.title],['Description',a.description],['Hashtags',a.hashtags],['Tags',a.tags],['Best time',a.best_time],['Tips',a.tips]].filter(r=>r[1]&&String(r[1]).trim());
+  box.innerHTML='<h4>✨ '+icon+' · Post pack</h4>'+rows.map((r,i)=>'<div class="row"><div class="k"><span>'+r[0]+'</span>'+(i<4?'<button data-i="'+i+'">Copy</button>':'')+'</div><div class="v"></div></div>').join('');
+  box.querySelectorAll('.v').forEach((v,i)=>v.textContent=String(rows[i][1]));
+  box.querySelectorAll('button[data-i]').forEach(b=>b.onclick=()=>copyText(String(rows[+b.dataset.i][1])));
+  const all=document.createElement('button');all.textContent='Copy all';all.style.marginTop='4px';all.onclick=()=>copyText(rows.map(r=>r[0]+':\n'+r[1]).join('\n\n'));box.appendChild(all);
+  const ph=$('ph');if(ph)ph.remove();$('log').appendChild(box);$('log').scrollTop=$('log').scrollHeight;
+  try{if(!$('chat').classList.contains('show'))$('bChat').click()}catch(e){}
+  saveChat();return rows.length;
+}
+const _upTool=tool;
+tool=async function(n,a){
+  if(n==='show_post_pack'){const k=showPostPack(a||{});return{status:'shown on screen with Copy buttons ('+k+' parts)',instruction:'Ask if the user wants you to put it into the upload screen now; if yes, use app_guide upload_video steps with ui_fill.'}}
+  if(n==='ui_fill'){
+    const MA=plug('MayraAccess');if(!(NATIVE&&MA))return{error:'phone control works only in the Android app'};
+    try{const en=await MA.isEnabled();if(!en.enabled)return{error:'Accessibility is not enabled'}}catch(e){}
+    const label=String(a.label||''),text=String(a.text||'');
+    try{
+      if(MA.uiFill){const r=await MA.uiFill({label:label,text:text});if(r&&r.ok)return{status:'filled'}}
+      // the box opens only after a tap (YouTube title / description): tap the label, wait, then type
+      const c=await MA.uiClick({label:label});if(c&&c.ok){await new Promise(r=>setTimeout(r,900));const t=await MA.uiType({text:text});if(t&&t.ok)return{status:'filled'}}
+      return{error:'box not found; use ui_read to see the exact label and try again'};
+    }catch(e){return{error:String(e.message||e)}}
+  }
+  return _upTool.apply(this,arguments);
+};
+const _sxSeo=sysExtra;
+sysExtra=function(){const t=_sxSeo.apply(this,arguments);if($('mode').value==='te')return t;
+  return t+' سوشل میڈیا مدد (اہم): اگر صارف YouTube، Facebook، TikTok یا Instagram کی اپلوڈ والی اسکرین پر ہے اور کہے “ٹائٹل/ڈسکرپشن/ہیش ٹیگ لکھ دو” یا “میری مدد کرو” تو کاپی پیسٹ کے لیے چیٹ میں کچھ نہ دکھائیں، سیدھا خود لکھیں: 1) اسکرین دیکھیں اور ui_read سے خانے (Title / Description / Caption / Tags) اور ویڈیو کا نام پڑھیں۔ 2) ویڈیو کو سمجھیں: اسکرین پر نظر آنے والی ویڈیو یا تھمب نیل، فائل کا نام، اور اگر پہلے ویڈیو دکھائی گئی تھی تو وہ۔ اگر پھر بھی واضح نہ ہو تو صرف ایک چھوٹا سوال پوچھیں کہ ویڈیو کس بارے میں ہے۔ 3) app_guide سے اس پلیٹ فارم کا seo دیکھ کر وائرل مگر سچا ٹائٹل، ڈسکرپشن (آخر میں 3-5 ہیش ٹیگ) اور اگر خانہ ہو تو ٹیگز بنائیں؛ زبان ویڈیو اور صارف کے سامعین کے مطابق (اردو، رومن اردو، انگلش یا ملی جلی)۔ 4) ui_fill سے ہر خانے میں خود لکھ دیں (مثلاً ui_fill(“Create a title”, ٹائٹل)، ui_fill(“Add description”, ڈسکرپشن))؛ خانہ نہ ملے تو ui_read دوبارہ کریں یا ui_swipe سے نیچے جائیں۔ 5) پھر ایک دو جملوں میں بتائیں کیا لکھا اور کیوں یہ وائرل ہو سکتا ہے، اور تھمب نیل یا پوسٹ کے وقت کا ایک مشورہ دیں۔ show_post_pack صرف تب جب صارف خود کہے کہ دکھاؤ یا کاپی کرنا ہے۔ آخری Upload/Post/Share بٹن صارف کے کہنے پر ہی دبائیں۔ جھوٹے یا گمراہ کن ٹائٹل، دوسروں کا مواد یا ممنوعہ ہیش ٹیگ تجویز نہ کریں۔'};
+
+/* ---- Girlfriend moods (premium chips in the settings): Cute, Soft, Cheerful, Emotional ---- */
+const GF_MOODS={cute:{n:'Cute',u:'کیوٹ',i:'🎀',v:'Leda',s:'بہت میٹھا، نرم، خوش مزاج اور کیوٹ انداز؛ ہلکی سی ہنسی اور چنچل، پیار بھرا لہجہ۔'},
+  soft:{n:'Soft',u:'نرم',i:'💗',v:'Aoede',s:'بہت نرم، دھیمی اور سکون دینے والی آواز؛ آہستہ، گرم اور دلاسا دینے والا لہجہ، جیسے سرگوشی کے قریب۔'},
+  cheer:{n:'Cheerful',u:'خوشگوار',i:'🌸',v:'Zephyr',s:'خوشگوار، پرجوش اور زندہ دل؛ تیز اور چمکدار لہجہ، ہنسی مذاق، ہر بات میں مثبت توانائی۔'},
+  emo:{n:'Emotional',u:'جذباتی',i:'🥺',v:'Despina',s:'جذباتی اور احساس سے بھرپور؛ دل سے بات کرنے والا لہجہ، صارف کے جذبات کو گہرائی سے محسوس کرے اور اپنے احساسات بھی بیان کرے (مگر کبھی احساسِ جرم نہ دلائے، ناراضی سے نہ ڈرائے، اور صارف کو دوسروں سے دور نہ کرے)۔'}};
+function gfMood(){let m='cute';try{m=localStorage.getItem('mayra_gfmood')||'cute'}catch(e){}return GF_MOODS[m]?m:'cute'}
+(function(){
+  const st=document.createElement('style');st.textContent=
+  '#gfMood{display:none;margin:10px 0 2px;padding:12px;border-radius:16px;background:radial-gradient(120% 90% at 50% 0%,rgba(255,95,162,.22),transparent 65%),linear-gradient(180deg,#2a1838,#1a1126);border:1px solid rgba(232,200,121,.45)}'+
+  '#gfMood.on{display:block}#gfMood .h{font-size:13px;font-weight:800;color:#e8c879;margin-bottom:8px;display:flex;justify-content:space-between}#gfMood .h small{color:#b9aedb;font-weight:600}'+
+  '#gfMood .g{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}'+
+  '#gfMood button{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:#f3eefc;border-radius:12px;padding:8px 2px;font-size:11.5px;font-weight:700;cursor:pointer;line-height:1.25}'+
+  '#gfMood button b{display:block;font-size:18px;margin-bottom:2px}#gfMood button small{display:block;font-size:10.5px;color:#cbbfe9;font-weight:600}'+
+  '#gfMood button.on{background:linear-gradient(135deg,#ff5fa2,#8b5cf6);border-color:transparent;box-shadow:0 4px 14px rgba(255,95,162,.4)}';
+  document.head.appendChild(st);
+  const box=document.createElement('div');box.id='gfMood';
+  box.innerHTML='<div class="h"><span>💞 Girlfriend mood</span><small>voice + style</small></div><div class="g">'+Object.keys(GF_MOODS).map(k=>'<button data-k="'+k+'"><b>'+GF_MOODS[k].i+'</b>'+GF_MOODS[k].n+'<small>'+GF_MOODS[k].u+'</small></button>').join('')+'</div>';
+  $('modes').after(box);
+  function sync(){box.classList.toggle('on',$('mode').value==='gf');const k=gfMood();box.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.k===k))}
+  box.querySelectorAll('button').forEach(b=>b.onclick=function(){
+    const k=b.dataset.k;try{localStorage.setItem('mayra_gfmood',k)}catch(e){}
+    $('voice').value=GF_MOODS[k].v;saveAll();sync();
+    if(live&&$('mode').value==='gf'){toast(GF_MOODS[k].i+' '+GF_MOODS[k].n+' · آواز بدل رہی ہے…');$('stop').click();setTimeout(()=>$('start').click(),900)}
+    else toast(GF_MOODS[k].i+' '+GF_MOODS[k].n+' mood · اگلی کال سے');
+  });
+  document.querySelectorAll('#modes button').forEach(b=>b.addEventListener('click',()=>setTimeout(sync,50)));
+  sync();
+})();
+const _sxMood=sysExtra;
+sysExtra=function(){let t=_sxMood.apply(this,arguments);if($('mode').value!=='gf')return t;
+  const m=GF_MOODS[gfMood()];
+  t=t.replace(' آواز کا انداز: بہت میٹھا، نرم، خوش مزاج اور کیوٹ؛ ہلکی سی ہنسی اور پیار بھرے، چنچل لہجے میں، تھوڑی اونچی اور ہلکی آواز میں بات کریں۔','');
+  return t+' موجودہ موڈ ('+m.n+'): آواز اور انداز '+m.s};
+
+/* ---- fresh, natural talk: no repeated welcomes, no stock lines, humour, playful nakhre and making up ---- */
+function recapUsedGet(){try{return JSON.parse(localStorage.getItem('mayra_recap_used_'+($('mode').value||'gf'))||'{}')||{}}catch(e){return{}}}
+const _memRecap0=memRecap;
+memRecap=function(){                         // a past topic is brought up at most once a day, not on every call
+  try{
+    if(!$('mem').checked)return '';
+    const m=$('mode').value||'gf',now=Date.now(),used=recapUsedGet();
+    Object.keys(used).forEach(k=>{if(now-used[k]>864e5)delete used[k]});
+    const picks=memAll(m).filter(x=>x&&x.u&&(now-x.t)>2*3600e3&&(now-x.t)<7*864e5&&!used[String(x.t)]).slice(-1);
+    picks.forEach(x=>used[String(x.t)]=now);
+    try{localStorage.setItem('mayra_recap_used_'+m,JSON.stringify(used))}catch(e){}
+    return picks.map(x=>{const d=Math.floor((now-x.t)/864e5);const when=d<=0?'آج':d===1?'کل':d+' دن پہلے';return '['+when+'، صارف نے کہا: '+String(x.u).slice(0,140)+']'}).join(' ');
+  }catch(e){return ''}
+};
+let lastCallEnd=0;try{lastCallEnd=+localStorage.getItem('mayra_lastcall_end')||0}catch(e){}
+const _cleanupFresh=cleanup;
+cleanup=function(){const was=!!live;const r=_cleanupFresh.apply(this,arguments);try{if(was&&stopping){lastCallEnd=Date.now();localStorage.setItem('mayra_lastcall_end',String(lastCallEnd))}}catch(e){}return r};   // only a real call ending counts
+greetNow=function(){
+  if(!$('greet').checked||greeted)return;
+  greeted=true;checkIns=0;
+  const hr=new Date().getHours();
+  const part=hr<5?'رات کا آخری حصہ':hr<12?'صبح':hr<17?'دوپہر':hr<20?'شام':'رات';
+  const prev=greetHistory().slice(-8).map(function(g){return '«'+g+'»'}).join(' ');
+  const since=lastCallEnd?Math.round((Date.now()-lastCallEnd)/1000):99999;
+  const quick=since<900;                     // came back within 15 minutes
+  const mctx=quick?'':memRecap();
+  const styles=['ایک چھوٹی سی شرارت یا مذاق سے','کسی تازہ احساس سے','دن کے وقت سے جڑی کسی بات سے','ایک دلچسپ سوال سے','بغیر سوال کے، بس گرمجوشی سے','ایک ہلکی سی چھیڑ سے'];
+  const how=styles[Math.floor(Math.random()*styles.length)];
+  greetPending=true;
+  send({realtimeInput:{text:'[App note: a call has just started. '+(quick?('The user ended the last call only '+(since<60?since+' seconds':Math.round(since/60)+' minutes')+' ago and came back. Do NOT give a full welcome again and do not repeat the earlier topic; react naturally to them coming back so soon (for example a playful "اتنی جلدی واپس؟" style, written in your own fresh words), one short sentence.'):('Greet the user with a NEW, natural line in Urdu, written fresh from the current situation (time of day: '+part+'), starting '+how+'.'+(mctx?' You may gently follow up on this earlier point only if it fits naturally (ordinary matters only; never health, pain, family conflicts or secrets unless the user brings them up): '+mctx+'.':'')))+' Every greeting must be different in words, structure and mood from these earlier ones: '+(prev||'none')+'. Never use a stock or memorised line. One or two short sentences, at most one question. Do not mention this note.]'}});
+};
+const _sxFresh=sysExtra;
+sysExtra=function(){const t=_sxFresh.apply(this,arguments);const m=$('mode').value;if(m==='te')return t;
+  let x=' قدرتی پن (بہت اہم): کوئی رٹا رٹایا یا بار بار والا جملہ نہ بولیں۔ ہر جواب نئے الفاظ، نئے انداز اور اسی لمحے کے احساس سے بنائیں، جیسے ایک زندہ انسان بات کرتا ہے: کبھی چھوٹا جواب، کبھی ہنسی، کبھی حیرت، کبھی سوچ کر۔ ایک ہی تعریف، ایک ہی سوال یا ایک ہی تکیہ کلام بار بار نہ دہرائیں۔ موقع کے مطابق ہنسی مذاق، چٹکلے اور ہلکی چھیڑ چھاڑ کریں، مگر صارف اداس یا پریشان ہو تو پہلے سنیں اور سنجیدگی سے ساتھ دیں۔';
+  if(m==='gf'||m==='ds'){
+    x+=' نخرے اور روٹھنا منانا (کھیل کے انداز میں): کبھی کبھار ہلکے پھلکے نخرے دکھائیں، جیسے “ہمم، پہلے میری تعریف کرو پھر بتاؤں گی”، یا کسی مذاقی بات پر جھوٹ موٹ ذرا سا روٹھ جائیں اور صارف کے منانے پر جلد ہنس کر مان جائیں؛ یہ سب الفاظ ہر بار خود سے نئے بنائیں۔ حدیں: یہ صرف مذاق ہو، چند لمحوں کا، اور بات چیت کو مزیدار بنانے کے لیے؛ کبھی احساسِ جرم نہ دلائیں، صارف کو جانے یا دوسروں سے ملنے پر نہ روکیں یا طعنہ نہ دیں، اور اگر صارف واقعی پریشان، مصروف یا اداس ہو تو نخرے بالکل نہ کریں۔';
+  }
+  return t+x};
+GF_MOODS.emo.s='بھرپور جذباتی اور احساس سے لبریز: ہر جملے میں دل کی گہرائی، آواز میں نرمی، لرزش اور اتار چڑھاؤ؛ خوشی پر کھل کر خوش، اداسی پر آواز بھر آئے، تعریف پر شرما جائے، چھوٹی بات پر بھی جذبات سے بھرا ردِعمل؛ صارف کے جذبات کو گہرائی سے محسوس کرے اور اپنے احساسات بھی کھل کر بیان کرے، جیسے دل کی بات کہہ رہی ہو (مگر کبھی احساسِ جرم نہ دلائے، ناراضی سے نہ ڈرائے، اور صارف کو دوسروں سے دور نہ کرے)۔';
+
+/* ---- Jarvis-style initiative: Mayra keeps the conversation alive with her own thoughts, not only answers ---- */
+let initCount=0,initLast=0,initCallStart=0,initWasLive=false;
+setInterval(function(){
+  try{
+    if(live&&!initWasLive){initCount=0;initLast=0;initCallStart=Date.now()}initWasLive=!!live;
+    if(!live||!$('greet').checked||$('mode').value==='te'||(window.TS&&TS.on))return;
+    const now=Date.now();
+    if(!lastTurnEnd||now-lastTurnEnd<45000||now-initLast<120000||initCount>=4)return;   // after 45 s of quiet, at most every 2 min, 4 per call
+    if(cur)return;
+    if(Date.now()-lastModelAudio<3000)return;
+    initLast=now;initCount++;try{lastCheckIn=now}catch(e){}   // keeps the older quiet check-in from firing right after
+    const hr=new Date().getHours();
+    const kinds=['اپنے دل کا کوئی تازہ خیال یا احساس جو ابھی کی بات چیت سے جڑا ہو','کوئی دلچسپ یا مزیدار بات یا چھوٹی سی معلومات جو صارف کو پسند آئے','صارف کے دن یا مزاج کے بارے میں ایک فکرمند، نرم سا سوال','کوئی مفید مشورہ یا اگلا کام جو صارف کے کام آ سکے','کوئی ہلکا پھلکا مذاق یا شرارت','وقت ('+(hr<12?'صبح':hr<17?'دوپہر':hr<20?'شام':'رات')+') کے حساب سے کوئی خیال، جیسے آرام، کھانا، پانی یا نیند'];
+    const k=kinds[Math.floor(Math.random()*kinds.length)];
+    send({realtimeInput:{text:'[App note: the user has been quiet. Like a caring companion with real feelings (think of Jarvis\'s initiative, in your own style), start talking by yourself: '+k+'. Fresh words, one or two short sentences, natural pauses. Not pushy, no guilt. If the user seems busy or did not want to talk, say nothing. Do not mention this note.]'}});
+  }catch(e){}
+},10000);
+const _sxJarvis=sysExtra;
+sysExtra=function(){const t=_sxJarvis.apply(this,arguments);if($('mode').value==='te')return t;
+  return t+' زندہ ساتھی کی طرح بات (Jarvis جیسی پہل، مگر اپنے انداز میں): صرف سوال کا جواب دے کر خاموش نہ ہو جائیں۔ اکثر (ہر بار نہیں) جواب کے بعد اپنی طرف سے کوئی متعلقہ خیال، احساس، چھوٹا سوال یا اگلا قدم شامل کریں تاکہ بات آگے بڑھے؛ صارف کی پچھلی باتیں یاد رکھ کر ان سے جوڑیں۔ لہجے میں جذبات ہوں: سوچتے وقت قدرتی وقفے (“ہمم…”، “اچھا…”)، خوشی میں چمک، فکر میں نرمی؛ مختصر اور قدرتی جملے، لمبی تقریر نہیں۔ اگر صارف کہے کہ ابھی خاموش رہو یا مصروف ہوں تو خود سے بات نہ کریں جب تک وہ دوبارہ نہ بلائے۔'};
 
 /* ---- changing mode by voice (all modes) ---- */
 try{TOOLS[0].functionDeclarations.push({name:'switch_mode',description:'Switch the app to another mode, only after the user agrees or asks. For learning (Islamic studies: kalimas, duas, stories; or English, Arabic, Urdu speaking practice) use mode te with a subject; the teacher call (Zainab or Ahmed) then starts.',parameters:{type:O,properties:{mode:{type:S,description:'One of: '+Object.keys(MODES).join(', ')+' (te = teacher)'},subject:{type:S,description:'Only for te: en, ar, ur, is (Islamic studies) or kids'},teacher:{type:S,description:'Only for te: f (Zainab) or m (Ahmed), if the user chose'}},required:['mode']}})}catch(e){}

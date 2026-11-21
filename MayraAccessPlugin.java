@@ -62,6 +62,27 @@ public class MayraAccessPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void uiFill(PluginCall call) {
+        JSObject o = new JSObject();
+        o.put("ok", MayraAccessService.fillField(call.getString("label", ""), call.getString("text", "")));
+        call.resolve(o);
+    }
+
+    @PluginMethod
+    public void uiDoubleTap(PluginCall call) {
+        JSObject o = new JSObject();
+        o.put("ok", MayraAccessService.doubleTap());
+        call.resolve(o);
+    }
+
+    @PluginMethod
+    public void uiSubmit(PluginCall call) {
+        JSObject o = new JSObject();
+        o.put("ok", MayraAccessService.submit());
+        call.resolve(o);
+    }
+
+    @PluginMethod
     public void uiSwipe(PluginCall call) {
         JSObject o = new JSObject();
         o.put("ok", MayraAccessService.swipe(call.getString("dir", "up")));

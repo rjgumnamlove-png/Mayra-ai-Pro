@@ -4,6 +4,7 @@ import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.GestureDescription;
 import android.content.Intent;
 import android.graphics.Path;
+import android.graphics.Rect;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
@@ -205,5 +206,139 @@ public class MayraAccessService extends AccessibilityService {
         else if ("back".equals(action)) a = GLOBAL_ACTION_BACK;
         else return false;
         return s.performGlobalAction(a);
+    }
+
+    // ---------- Send / Post the text that was just typed (comment boxes, chats) ----------
+    // 1) a button near the text box whose text or description means send/post
+    // 2) otherwise the tappable icon on the right side of the text box (most send arrows have no label)
+    // 3) otherwise the keyboard's own "send / done" key
+    private static final String[] SEND_WORDS = {"send", "post", "publish", "reply", "comment", "submit", "done", "share",
+            "بھیج", "ارسال", "شائع", "پوسٹ", "سینڈ", "إرسال", "نشر", "envoyer", "enviar", "gönder", "kirim"};
+
+    private static boolean sendLike(AccessibilityNodeInfo n) {
+        CharSequence t = n.getText(), d = n.getContentDescription();
+        String s = ((t == null ? "" : t.toString()) + " " + (d == null ? "" : d.toString())).toLowerCase();
+        if (s.trim().isEmpty()) return false;
+        if (s.length() > 40) return false;                       // long texts are other comments, not a button
+        for (String w : SEND_WORDS) if (s.contains(w)) return true;
+        return false;
+    }
+
+    private static void collect(AccessibilityNodeInfo n, List<AccessibilityNodeInfo> out, int depth) {
+        if (n == null || depth > 6 || out.size() > 200) return;
+        out.add(n);
+        for (int i = 0; i < n.getChildCount(); i++) collect(n.getChild(i), out, depth + 1);
+    }
+
+    static boolean submit() {
+        MayraAccessService s = instance;
+        if (s == null) return false;
+        AccessibilityNodeInfo root = s.getRootInActiveWindow();
+        if (root == null) return false;
+        AccessibilityNodeInfo edit = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
+        if (edit == null || !edit.isEditable()) edit = findEditable(root);
+        if (edit == null) return false;
+        Rect er = new Rect();
+        edit.getBoundsInScreen(er);
+
+        // look in the text box's surroundings: its parent, grandparent and great-grandparent
+        AccessibilityNodeInfo area = edit;
+        for (int up = 0; up < 3 && area.getParent() != null; up++) area = area.getParent();
+        List<AccessibilityNodeInfo> nodes = new ArrayList<>();
+        collect(area, nodes, 0);
+
+        // 1) labelled send / post button
+        for (AccessibilityNodeInfo n : nodes) {
+            if (n == null || n.isEditable() || !n.isEnabled()) continue;
+            if (sendLike(n) && clickNode(n)) return true;
+        }
+        // 2) icon button to the right of the text box, on the same line
+        AccessibilityNodeInfo best = null;
+        int bestLeft = Integer.MAX_VALUE;
+        for (AccessibilityNodeInfo n : nodes) {
+            if (n == null || n.isEditable() || !n.isClickable() || !n.isEnabled()) continue;
+            Rect r = new Rect();
+            n.getBoundsInScreen(r);
+            boolean sameLine = r.centerY() >= er.top - 40 && r.centerY() <= er.bottom + 40;
+            boolean right = r.left >= er.right - 30;
+            boolean small = r.width() < er.width();
+            if (sameLine && right && small && r.left < bestLeft) { best = n; bestLeft = r.left; }
+        }
+        if (best != null && best.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return true;
+        // 3) the keyboard's send / enter key (Android 11+)
+        if (Build.VERSION.SDK_INT >= 30) {
+            return edit.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.getId());
+        }
+        return false;
+    }
+
+    // ---------- double tap in the middle of the screen (like a reel / TikTok / Instagram video) ----------
+    static boolean doubleTap() {
+        MayraAccessService s = instance;
+        if (s == null || Build.VERSION.SDK_INT < 24) return false;
+        DisplayMetrics dm = s.getResources().getDisplayMetrics();
+        float x = dm.widthPixels / 2f, y = dm.heightPixels * 0.45f;
+        Path p1 = new Path();
+        p1.moveTo(x, y);
+        Path p2 = new Path();
+        p2.moveTo(x, y);
+        GestureDescription g = new GestureDescription.Builder()
+                .addStroke(new GestureDescription.StrokeDescription(p1, 0, 40))
+                .addStroke(new GestureDescription.StrokeDescription(p2, 140, 40)).build();
+        return s.dispatchGesture(g, null, null);
+    }
+
+    // ---------- fill a named text box (upload screens: title, description, caption, tags) ----------
+    private static void all(AccessibilityNodeInfo n, List<AccessibilityNodeInfo> out) {
+        if (n == null || out.size() > 600) return;
+        out.add(n);
+        for (int i = 0; i < n.getChildCount(); i++) all(n.getChild(i), out);
+    }
+
+    private static String words(AccessibilityNodeInfo n) {
+        StringBuilder b = new StringBuilder();
+        CharSequence t = n.getText(), d = n.getContentDescription();
+        if (t != null) b.append(t).append(' ');
+        if (d != null) b.append(d).append(' ');
+        if (Build.VERSION.SDK_INT >= 26) { CharSequence h = n.getHintText(); if (h != null) b.append(h); }
+        return b.toString().toLowerCase();
+    }
+
+    static boolean fillField(String label, String text) {
+        MayraAccessService s = instance;
+        if (s == null || text == null) return false;
+        AccessibilityNodeInfo root = s.getRootInActiveWindow();
+        if (root == null) return false;
+        String l = label == null ? "" : label.trim().toLowerCase();
+        List<AccessibilityNodeInfo> nodes = new ArrayList<>();
+        all(root, nodes);
+        AccessibilityNodeInfo target = null;
+        if (!l.isEmpty()) {
+            for (AccessibilityNodeInfo n : nodes) {                  // the box itself shows the label (hint)
+                if (n != null && n.isEditable() && words(n).contains(l)) { target = n; break; }
+            }
+            if (target == null) {                                     // a label written next to the box
+                for (AccessibilityNodeInfo n : nodes) {
+                    if (n == null || n.isEditable() || !words(n).contains(l)) continue;
+                    AccessibilityNodeInfo p = n.getParent();
+                    for (int up = 0; up < 2 && p != null && target == null; up++) {
+                        List<AccessibilityNodeInfo> near = new ArrayList<>();
+                        all(p, near);
+                        for (AccessibilityNodeInfo m : near) { if (m != null && m.isEditable()) { target = m; break; } }
+                        p = p.getParent();
+                    }
+                    if (target != null) break;
+                }
+            }
+        } else {
+            target = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
+            if (target == null || !target.isEditable()) target = findEditable(root);
+        }
+        if (target == null) return false;
+        target.performAction(AccessibilityNodeInfo.ACTION_FOCUS);
+        target.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+        Bundle b = new Bundle();
+        b.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text);
+        return target.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, b);
     }
 }
