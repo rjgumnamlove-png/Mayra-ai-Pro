@@ -170,7 +170,7 @@ window.hi2ur=(function(){
     'अल्लाह':'اللہ','ख़ुदा':'خدا','खुदा':'خدا','हाफ़िज़':'حافظ','हाफिज':'حافظ','शुक्रिया':'شکریہ','मसला':'مسئلہ','मस्ला':'مسئلہ','मसले':'مسئلے','मसअला':'مسئلہ',
     'माशाअल्लाह':'ماشاءاللہ','माशाल्लाह':'ماشاءاللہ','इंशाअल्लाह':'ان شاء اللہ','इंशाल्लाह':'ان شاء اللہ','सुब्हानअल्लाह':'سبحان اللہ','सुबहानअल्लाह':'سبحان اللہ',
     'अलहम्दुलिल्लाह':'الحمدللہ','अल्हम्दुलिल्लाह':'الحمدللہ','बिस्मिल्लाह':'بسم اللہ','अस्सलाम':'السلام','अस्सलामु':'السلام','अलैकुम':'علیکم','वालेकुम':'وعلیکم','वअलैकुम':'وعلیکم',
-    'दुआ':'دعا','कलमा':'کلمہ','सबक':'سبق','सबक़':'سبق','मुझे':'مجھے','तुम्हें':'تمہیں','तुम्हारे':'تمہارے','तुम्हारा':'تمہارا','तुम्हारी':'تمہاری','उन्होंने':'انہوں نے',
+    'दुआ':'دعا','कलमा':'کلمہ','कलिमा':'کلمہ','स्विच':'سوئچ','स्वीच':'سوئچ','फीमेल':'فیمیل','फ़ीमेल':'فیمیل','मेल':'میل','टीचर':'ٹیچر','चेंज':'چینج','करैक्टर':'کریکٹر','कैरेक्टर':'کریکٹر','ज़ैनब':'زینب','जैनब':'زینب','अहमद':'احمد','मैडम':'میڈم','उस्ताद':'استاد','उस्तानी':'استانی','क़ुरआन':'قرآن','कुरान':'قرآن','क़ुरान':'قرآن','सूरह':'سورۃ','सूरत':'سورت','सूरा':'سورۃ','आयत':'آیت','आयात':'آیات','तिलावत':'تلاوت','फ़ातिहा':'فاتحہ','फातिहा':'فاتحہ','इख़लास':'اخلاص','इखलास':'اخلاص','कल्मा':'کلمہ','कलमे':'کلمے','तैयब':'طیب','तय्यब':'طیب','तय्यिब':'طیب','तैय्यब':'طیب','शहादत':'شہادت','तमजीद':'تمجید','तौहीद':'توحید','तोहीद':'توحید','इस्तिग़फ़ार':'استغفار','इस्तिगफार':'استغفار','अस्तग़फ़ार':'استغفار','कुफ्र':'کفر','कुफ़्र':'کفر','ईमान':'ایمان','मुजमल':'مجمل','मुफ़स्सल':'مفصل','मुफस्सल':'مفصل','दुरूद':'درود','दरूद':'درود','इब्राहीमी':'ابراہیمی','इब्राहिमी':'ابراہیمی','मस्जिद':'مسجد','सवारी':'سواری','वालिदैन':'والدین','इल्म':'علم','रब्बना':'ربنا','बिस्मिल्लाह':'بسم اللہ','सुनाओ':'سناؤ','सुनाइए':'سنائیے','पढ़ाओ':'پڑھاؤ','सिखाओ':'سکھاؤ','सबक':'سبق','सबक़':'سبق','मुझे':'مجھے','तुम्हें':'تمہیں','तुम्हारे':'تمہارے','तुम्हारा':'تمہارا','तुम्हारी':'تمہاری','उन्होंने':'انہوں نے',
     'इंतज़ार':'انتظار','इंतजार':'انتظار','ग़लत':'غلط','गलत':'غلط','दोबारा':'دوبارہ','ख़त्म':'ختم','खत्म':'ختم','ज़्यादा':'زیادہ','ज्यादा':'زیادہ','सवाल':'سوال','जवाब':'جواب','ज़रूर':'ضرور','जरूर':'ضرور','शुरू':'شروع','फ़ीचर':'فیچر','फ्यूचर':'فیچر','ऐप':'ایپ','ओके':'اوکے','गूगल':'گوگل'};
   // pronoun + के/की/का/को/से/ने written as one word in Hindi, two words in Urdu
   ['आप','उस','इस','उन','इन','जिस','किस','जिन','किन'].forEach(function(a){['के','की','का','को','से','ने','में'].forEach(function(b){if(!WORDS[a+b])WORDS[a+b]=null})});
@@ -539,7 +539,7 @@ const TOOLS=[{functionDeclarations:[
 {name:'camera_control',description:'Turn the phone camera on or off so you can see something the user wants to show (a painful area, rash, wound, eye, throat, medicine strip, lab report). facing: back for body parts or papers, front for the face',parameters:{type:O,properties:{action:{type:S,description:'on or off'},facing:{type:S,description:'front or back'}},required:['action']}},
 {name:'remember_fact',description:'Save one short lasting fact about the user (name, family, likes, health, work, plans, important dates, promises) so it is remembered in every mode. kind: health, plan or other',parameters:{type:O,properties:{text:{type:S},kind:{type:S}},required:['text']}},
 {name:'forget_fact',description:'Remove saved facts that contain the given words (use when the situation has changed, e.g. the user got well, or when the user asks you to forget something)',parameters:{type:O,properties:{query:{type:S}},required:['query']}},
-{name:'recall_memory',description:'Search the saved conversations of the last 30 days for something the user mentions from the past. all_modes true also searches the other modes',parameters:{type:O,properties:{query:{type:S},all_modes:{type:B}}}},
+{name:'recall_memory',description:'Search the saved conversations of the last 30 days for something the user mentions from the past. each mode keeps its own memory, so only this mode is searched',parameters:{type:O,properties:{query:{type:S},all_modes:{type:B}}}},
 {name:'prayer_times',description:'Get today prayer (namaz) times for the device location or a city. Set remind true to schedule azan reminder notifications for the remaining prayers today',parameters:{type:O,properties:{city:{type:S},remind:{type:B}}}},
 {name:'save_note',description:'Save a short note or diary entry for the user',parameters:{type:O,properties:{text:{type:S}},required:['text']}},
 {name:'read_notes',description:'Read the latest saved notes'},
@@ -581,9 +581,9 @@ async function tool0(n,a){
   if(n==='camera_control'){if(!live)return{error:'chat is not live'};if(a.action==='off'){stopVideo();return{status:'camera off'}}
     facing=(a.facing==='back'||a.facing==='environment')?'environment':'user';await startVideo('cam');
     return camStream?{status:'camera on',note:'Live frames are now visible to you. Look carefully, describe what you see and continue asking questions.'}:{error:'camera could not start; ask the user to allow the camera permission'}}
-  if(n==='remember_fact'){const t=String(a.text||'').trim().slice(0,200);if(!t)return{error:'empty'};let l=facts();const ex=l.find(x=>x.f===t);if(ex){ex.t=Date.now()}else l.push({f:t,t:Date.now(),k:['health','plan'].includes(a.kind)?a.kind:'other'});l=l.slice(-60);try{localStorage.setItem('mayra_facts',JSON.stringify(l))}catch(e){return{error:'could not save'}}return{status:'saved',count:l.length}}
-  if(n==='forget_fact'){const q=String(a.query||'').toLowerCase().trim();if(!q)return{error:'empty'};const l=facts(),k=l.filter(x=>!x.f.toLowerCase().includes(q));try{localStorage.setItem('mayra_facts',JSON.stringify(k))}catch(e){}return{removed:l.length-k.length}}
-  if(n==='recall_memory'){const q=String(a.query||'').toLowerCase().split(/\s+/).filter(w=>w.length>1),ms=a.all_modes?Object.keys(MODES):[$('mode').value];let hits=[];
+  if(n==='remember_fact'){const t=String(a.text||'').trim().slice(0,200);if(!t)return{error:'empty'};let l=facts();const ex=l.find(x=>x.f===t);if(ex){ex.t=Date.now()}else l.push({f:t,t:Date.now(),k:['health','plan'].includes(a.kind)?a.kind:'other'});l=l.slice(-60);try{localStorage.setItem(factKey(),JSON.stringify(l))}catch(e){return{error:'could not save'}}return{status:'saved',count:l.length}}
+  if(n==='forget_fact'){const q=String(a.query||'').toLowerCase().trim();if(!q)return{error:'empty'};const l=facts(),k=l.filter(x=>!x.f.toLowerCase().includes(q));try{localStorage.setItem(factKey(),JSON.stringify(k))}catch(e){}return{removed:l.length-k.length}}
+  if(n==='recall_memory'){const q=String(a.query||'').toLowerCase().split(/\s+/).filter(w=>w.length>1),ms=[$('mode').value];   /* each mode keeps its own memory */let hits=[];
     for(const m of ms)for(const x of memAll(m)){const tx=((x.u||'')+' '+(x.m||'')).toLowerCase(),sc=q.reduce((z,w)=>z+(tx.includes(w)?1:0),0);if(sc>0||!q.length)hits.push({sc,t:x.t,m,u:x.u,r:x.m})}
     hits.sort((p,r)=>r.sc-p.sc||r.t-p.t);return{matches:hits.slice(0,8).map(h=>({date:new Date(h.t).toLocaleDateString('en-GB'),mode:(MODES[h.m]||{}).n||h.m,user:h.u,mayra:h.r})),searched_modes:ms.length}}
   if(n==='prayer_times'){let la,lo;
@@ -654,17 +654,18 @@ async function tool0(n,a){
   return{error:'unknown tool'}}
 async function runTools(calls){const out=[];for(const c of calls){let r;try{r=await tool(c.name,c.args||{})}catch(e){r={error:String(e.message||e)}}out.push({id:c.id,name:c.name,response:r})}dbg('tool response sent, hidden='+document.hidden);send({toolResponse:{functionResponses:out}})}
 const MONTH=30*864e5;
+function factKey(){const m=$('mode').value||'gf';try{const old=localStorage.getItem('mayra_facts');if(old!==null){Object.keys(MODES).filter(k=>k!=='te').forEach(k=>{if(localStorage.getItem('mayra_facts_'+k)===null)localStorage.setItem('mayra_facts_'+k,old)});localStorage.removeItem('mayra_facts')}}catch(e){}return 'mayra_facts_'+m}
 function mkey(m){return 'mayra_mem_'+(m||$('mode').value||'gf')}
 function memAll(m){try{const lg=localStorage.getItem('mayra_mem');if(lg&&!localStorage.getItem(mkey(m))){localStorage.setItem(mkey(m),lg);localStorage.removeItem('mayra_mem')}
   const a=JSON.parse(localStorage.getItem(mkey(m))||'[]');return Array.isArray(a)?a.filter(x=>Date.now()-x.t<3*MONTH):[]}catch(e){return[]}}
 function mem(){return memAll()}
-function facts(){try{const a=JSON.parse(localStorage.getItem('mayra_facts')||'[]');return Array.isArray(a)?a.filter(x=>Date.now()-x.t<MONTH):[]}catch(e){return[]}}
-function clearAllMem(){try{Object.keys(localStorage).filter(k=>k==='mayra_mem'||k.indexOf('mayra_mem_')===0||k==='mayra_facts'||k==='mayra_chat').forEach(k=>localStorage.removeItem(k))}catch(e){}}
+function facts(){try{const a=JSON.parse(localStorage.getItem(factKey())||'[]');return Array.isArray(a)?a.filter(x=>Date.now()-x.t<MONTH):[]}catch(e){return[]}}
+function clearAllMem(){try{Object.keys(localStorage).filter(k=>k==='mayra_mem'||k.indexOf('mayra_mem_')===0||k.indexOf('mayra_facts')===0||k==='mayra_chat').forEach(k=>localStorage.removeItem(k))}catch(e){}}
 const HEALTH_RX=/بیمار|طبیعت|بخار|درد|زخم|ہسپتال|اسپتال|آپریشن|کھانسی|الٹی|چوٹ|bimar|tabiyat|bukhar|dard|hospital|sick|fever|headache|pain/i;
 const PLAN_RX=/کل |پرسوں|اگلے ہفتے|انٹرویو|امتحان|پیپر|میٹنگ|جانا ہے|جانا تھا|سفر|شادی|kal |parson|interview|exam|imtihan|jana hai|tomorrow|meeting|trip/i;
 function autoFact(u){if(!u||u.length<12)return;const sents=u.split(/[۔.!؟?\n]+/).map(x=>x.trim()).filter(x=>x.length>=8);let l=facts();const day=l.filter(x=>x.auto&&Date.now()-x.t<864e5).length;let n=0,ch=false;
   for(const x of sents){const k=HEALTH_RX.test(x)?'health':PLAN_RX.test(x)?'plan':null;if(!k)continue;const f='صارف نے کہا: '+x.slice(0,140),ex=l.find(y=>y.f===f);if(ex){ex.t=Date.now();ch=true}else if(day+n<4){l.push({f,t:Date.now(),k,auto:1});n++;ch=true}if(n>=2)break}
-  if(ch){try{localStorage.setItem('mayra_facts',JSON.stringify(l.slice(-60)))}catch(e){}}}
+  if(ch){try{localStorage.setItem(factKey(),JSON.stringify(l.slice(-60)))}catch(e){}}}
 function followUp(){let asked={};try{asked=JSON.parse(localStorage.getItem('mayra_fu')||'{}')}catch(e){}const now=Date.now();
   const c=facts().filter(x=>(x.k==='health'&&now-x.t<14*864e5)||(x.k==='plan'&&now-x.t<7*864e5)).filter(x=>now-(asked[x.f]||0)>12*36e5).sort((a,b)=>b.t-a.t)[0];
   if(c){asked[c.f]=now;try{localStorage.setItem('mayra_fu',JSON.stringify(asked))}catch(e){}}return c||null}
@@ -1344,11 +1345,11 @@ function firstOrGreet(){let f=false;try{f=localStorage.getItem('mayra_first')===
   return pickGreeting()}
 // greetings and check-ins are written fresh by the model each time (no stock lines)
 let greetPending=false,lastTurnEnd=0,lastCheckIn=0,checkIns=0;
-function greetHistory(){try{return JSON.parse(localStorage.getItem('mayra_greets')||'[]')}catch(e){return []}}
+function greetHistory(){try{return JSON.parse(localStorage.getItem('mayra_greets_'+($('mode').value||'gf'))||'[]')}catch(e){return []}}
 function saveGreet(t){
   const x=String(t||'').trim();if(!x)return;
   const h=greetHistory();h.push(x.slice(0,160));
-  try{localStorage.setItem('mayra_greets',JSON.stringify(h.slice(-8)))}catch(e){}
+  try{localStorage.setItem('mayra_greets_'+($('mode').value||'gf'),JSON.stringify(h.slice(-8)))}catch(e){}
 }
 function memRecap(){
   try{
@@ -1883,6 +1884,155 @@ setTimeout(function(){try{let ch=false;document.querySelectorAll('#log .msg').fo
   document.head.appendChild(st);
 })();
 
+/* ---- the kalima / dua card always comes up, in every teacher subject, even if the model forgets the tool ---- */
+const TC_TEXT_KEYS=[
+  ['kalima_1',/(کلم(ہ|ۂ|ا|ے)\s*(طیب|طیّب|تیب|تییب|طییب)|پہلا\s*کلم|kalima\s*tayy?ib|first\s*kalima)/i],
+  ['kalima_2',/(کلمہ\s*شہادت|دوسرا\s*کلمہ|second\s*kalima|kalima\s*shahadat)/i],
+  ['kalima_3',/(کلمہ\s*تمجید|تیسرا\s*کلمہ|third\s*kalima|tamjeed)/i],
+  ['kalima_4',/(کلمہ\s*توحید|چوتھا\s*کلمہ|fourth\s*kalima|tauheed|tawheed)/i],
+  ['kalima_5',/(کلمہ\s*استغفار|پانچواں\s*کلمہ|fifth\s*kalima|astaghfar)/i],
+  ['kalima_6',/(رد\s*کفر|ردِ\s*کفر|چھٹا\s*کلمہ|sixth\s*kalima|radd?\s*e?\s*kufr)/i],
+  ['iman_mujmal',/(ایمان\s*مجمل|ایمانِ\s*مجمل|iman\s*e?\s*mujmal)/i],
+  ['iman_mufassal',/(ایمان\s*مفصل|ایمانِ\s*مفصل|iman\s*e?\s*mufassal)/i],
+  ['durood_ibrahimi',/(درود\s*ابراہیمی|درودِ\s*ابراہیمی|durood\s*e?\s*ibrahimi|درود\s*شریف)/i],
+  ['dua_before_eating',/(کھانے\s*سے\s*پہلے|کھانا\s*شروع)/i],
+  ['dua_after_eating',/(کھانے\s*کے\s*بعد|کھانا\s*کھانے\s*کے\s*بعد)/i],
+  ['dua_before_sleep',/(سونے\s*(سے\s*پہلے|کی\s*دعا))/i],
+  ['dua_waking_up',/(جاگنے|اٹھنے\s*کی\s*دعا|نیند\s*سے\s*اٹھ)/i],
+  ['dua_leaving_home',/(گھر\s*سے\s*(نکلنے|باہر))/i],
+  ['dua_entering_mosque',/(مسجد\s*میں\s*(داخل|جانے))/i],
+  ['dua_leaving_mosque',/(مسجد\s*سے\s*(نکلنے|باہر))/i],
+  ['dua_entering_toilet',/(بیت\s*الخلا(ء)?\s*(میں\s*)?(جانے|داخل)|واش\s*روم\s*جانے)/i],
+  ['dua_leaving_toilet',/(بیت\s*الخلا(ء)?\s*سے\s*(نکلنے|باہر))/i],
+  ['dua_riding',/(سواری|گاڑی\s*میں\s*بیٹھ|سفر\s*کی\s*دعا)/i],
+  ['dua_parents',/(والدین\s*(کے\s*لیے|کی\s*دعا)|رب\s*ارحمہما)/i],
+  ['dua_knowledge',/(علم\s*(کے\s*لیے|میں\s*اضافے)|رب\s*زدنی)/i],
+  ['dua_rabbana_atina',/(ربنا\s*آتنا|ربنا\s*اتنا)/i],
+  ['taawwuz',/(تعوذ|اعوذ\s*باللہ)/i],
+  ['tasmiya',/(تسمیہ|بسم\s*اللہ\s*الرحمن)/i]
+];
+let tcAutoBuf={u:'',t:''},tcAutoAt=0;
+function tcAutoCard(text,who){
+  try{
+    if(!TS.on||!$('tc').classList.contains('on'))return;
+    tcAutoBuf[who]=(tcAutoBuf[who]+' '+String(text||'')).slice(-220);
+    let best=null,bestAt=-1;
+    for(const b of ['u','t']){const src=tcAutoBuf[b];
+      for(const [id,rx] of TC_TEXT_KEYS){if(!ISLAMIC_TEXTS[id])continue;const g=new RegExp(rx.source,'gi');let m,last=-1;while((m=g.exec(src))){last=m.index;if(g.lastIndex===m.index)g.lastIndex++}
+        const at=last<0?-1:last+(b===who?1000:0);   // the newest mention, in the line being spoken now, wins
+        if(at>bestAt){bestAt=at;best=id}}}
+    if(!best)return;
+    const c=$('tcCard');if(c&&c.classList.contains('on')&&tcCardId===best)return;
+    if(Date.now()-tcAutoAt<1500)return;
+    tcAutoAt=Date.now();tcCardId=best;tcShowText(ISLAMIC_TEXTS[best]);tcAutoBuf={u:'',t:''};
+  }catch(e){}
+}
+const _tcCap3=cap;
+cap=function(role,text){_tcCap3.apply(this,arguments);if(role==='You')tcAutoCard(text,'u');else if(role==='Mayra')tcAutoCard(text,'t')};
+const _tcScan2=scanTurnDone;
+scanTurnDone=function(){tcAutoBuf={u:'',t:''};return _tcScan2.apply(this,arguments)};
+const _tcSys4=sysTeacher;
+sysTeacher=function(){const t=_tcSys4.apply(this,arguments);if(!t)return t;
+  return t+' ہر مضمون میں (انگلش، عربی، اردو بھی): جب بھی کوئی کلمہ، ایمانِ مجمل یا مفصل، درود یا روزمرہ کی دعا پڑھنی یا سکھانی ہو تو پہلے get_islamic_text ٹول ضرور چلائیں تاکہ متن اسکرین پر کارڈ میں آ جائے، پھر وہی متن پڑھیں۔'};
+
+/* ---- change the teacher (Zainab <-> Ahmed) by voice: the call really restarts with the other teacher ---- */
+let tcSwapPending=null,tcSwapAskedAt=0,tcSwapAskT='';
+function tcSwapDo(t){
+  if(!TS.on||!$('tc').classList.contains('on'))return;
+  const subj=TS.subj,wasLive=live;
+  TS.t=t;try{localStorage.setItem('mayra_ts',JSON.stringify({t:TS.t,subj:subj}))}catch(e){}
+  TS.on=false;tcClose();if(wasLive)$('stop').click();
+  setTimeout(function(){TS.subj=subj;TS.on=TS.subj!=='kids'&&tcCanStart();if(TS.on)tcOpen();tcGo=true;$('start').click()},900);
+}
+function tcSwapRun(){
+  const p=tcSwapPending;if(!p)return;
+  if(live&&Date.now()-lastModelAudio<1500&&Date.now()-p.at<12000){setTimeout(tcSwapRun,500);return}   // let the goodbye line finish
+  tcSwapPending=null;tcSwapDo(p.t);
+}
+try{TOOLS[0].functionDeclarations.push({name:'change_teacher',description:'Change the teacher in this video call: f = Zainab (female), m = Ahmed (male). Call it whenever the student asks for the other teacher; never just pretend to be the other teacher. The call restarts with the new teacher and the same subject.',parameters:{type:O,properties:{teacher:{type:S,description:'f or m'}},required:['teacher']}})}catch(e){}
+const _tcTool5=tool;
+tool=async function(n,a){
+  if(n==='change_teacher'){
+    const t=String(a&&a.teacher||'').toLowerCase().charAt(0)==='m'?'m':'f';
+    if(!TS.on)return{error:'not in a teacher call'};
+    if(TS.t===t)return{status:'already this teacher',teacher:TS_NAMES[t]};
+    tcSwapPending={t:t,at:Date.now()};setTimeout(tcSwapRun,600);
+    return{status:'switching',new_teacher:TS_NAMES[t]+' ('+TS_EN[t]+')',instruction:'Say one short goodbye line only; the new teacher will greet the student.'};
+  }
+  if(n==='switch_mode'&&TS.on&&String(a&&a.mode||'')==='te'&&!a.subject&&(a.teacher==='f'||a.teacher==='m')){   // same subject, only the teacher changes
+    return tool('change_teacher',{teacher:a.teacher});
+  }
+  return _tcTool5.apply(this,arguments);
+};
+// safety net: the student clearly asked for the other teacher, but no switch happened in that turn
+const TC_SWAP_VERB=/(بدل|سوئچ|سویچ|سوچ\s*کر|switch|change|چینج|بلاؤ|بلائیں|لاؤ|لے\s*آؤ|کر\s*دو|کریں|کرو|chahiye|چاہیے)/i;
+const TC_TO_F=/(زینب|فیمیل|فی\s*میل|female|لیڈی|خاتون|میڈم|استانی|لڑکی|zainab|madam)/i,TC_TO_M=/(احمد|\bمیل\b|male|مرد|لڑکا|ahmed|sir\b|استاد\s*صاحب)/i;
+const _tcCap4=cap;
+cap=function(role,text){_tcCap4.apply(this,arguments);
+  try{if(role!=='You'||!TS.on)return;tcSwapAskT=(tcSwapAskT+' '+text).slice(-200);
+    if(!TC_SWAP_VERB.test(tcSwapAskT))return;
+    const want=TS.t==='m'&&TC_TO_F.test(tcSwapAskT)?'f':(TS.t==='f'&&TC_TO_M.test(tcSwapAskT)?'m':'');
+    if(want){tcSwapAskedAt=Date.now();tcSwapAskT='';tcSwapAskWant=want}}catch(e){}};
+let tcSwapAskWant='';
+const _tcScan3=scanTurnDone;
+scanTurnDone=function(){
+  try{if(tcSwapAskWant&&!tcSwapPending&&TS.on&&TS.t!==tcSwapAskWant&&Date.now()-tcSwapAskedAt<25000){tcSwapPending={t:tcSwapAskWant,at:Date.now()};setTimeout(tcSwapRun,800)}tcSwapAskWant=''}catch(e){}
+  return _tcScan3.apply(this,arguments)};
+
+/* ---- the Quran is never recited by the AI voice: a real recitation (Sheikh Mishary Alafasy, as in Makkah) plays,
+   and the exact Uthmani text comes up on the card ---- */
+const SURAH_UR=['','الفاتحہ','البقرہ','آل عمران','النساء','المائدہ','الانعام','الاعراف','الانفال','التوبہ','یونس','ہود','یوسف','الرعد','ابراہیم','الحجر','النحل','الاسراء','الکہف','مریم','طٰہٰ','الانبیاء','الحج','المؤمنون','النور','الفرقان','الشعراء','النمل','القصص','العنکبوت','الروم','لقمان','السجدہ','الاحزاب','سبا','فاطر','یٰس','الصافات','ص','الزمر','غافر','فصلت','الشوریٰ','الزخرف','الدخان','الجاثیہ','الاحقاف','محمد','الفتح','الحجرات','ق','الذاریات','الطور','النجم','القمر','الرحمٰن','الواقعہ','الحدید','المجادلہ','الحشر','الممتحنہ','الصف','الجمعہ','المنافقون','التغابن','الطلاق','التحریم','الملک','القلم','الحاقہ','المعارج','نوح','الجن','المزمل','المدثر','القیامہ','الدہر','المرسلات','النبا','النازعات','عبس','التکویر','الانفطار','المطففین','الانشقاق','البروج','الطارق','الاعلیٰ','الغاشیہ','الفجر','البلد','الشمس','اللیل','الضحیٰ','الانشراح','التین','العلق','القدر','البینہ','الزلزال','العادیات','القارعہ','التکاثر','العصر','الہمزہ','الفیل','قریش','الماعون','الکوثر','الکافرون','النصر','اللہب','الاخلاص','الفلق','الناس'];
+const AYAH_COUNT=[0,7,286,200,176,120,165,206,75,129,109,123,111,43,52,99,128,111,110,98,135,112,78,118,64,77,227,93,88,69,60,34,30,73,54,45,83,182,88,75,85,54,53,89,59,37,35,38,29,18,45,60,49,62,55,78,96,29,22,24,13,14,11,11,18,12,12,30,52,52,44,28,28,20,56,40,31,50,40,46,42,29,19,36,25,22,17,19,26,30,20,15,21,11,8,8,19,5,8,8,11,11,8,3,9,5,4,7,3,6,3,5,4,5,6];
+let tcQAudio=null,tcQLast=null;
+function p3(n){return String(n).padStart(3,'0')}
+function tcQPlayOne(su,ay){
+  return new Promise(function(res){
+    const urls=['https://everyayah.com/data/Alafasy_128kbps/'+p3(su)+p3(ay)+'.mp3','https://verses.quran.com/Alafasy/mp3/'+p3(su)+p3(ay)+'.mp3'];
+    let k=0,done=false,started=false;const a=new Audio();tcQAudio=a;a.preload='auto';
+    try{a.volume=tcSpkMuted?0:Math.min(1,Math.max(0.2,+$('vol').value||1))}catch(e){}
+    const fin=function(v){if(done)return;done=true;try{a.onended=a.onerror=a.onplaying=null;if(!v)a.pause()}catch(e){}res(v)};
+    const next=function(){if(done||started)return;if(k>=urls.length){fin(false);return}a.src=urls[k++];a.play().catch(function(){if(!started)next()})};
+    a.onplaying=function(){started=true};
+    a.onended=function(){fin(true)};
+    a.onerror=function(){if(!started)next();else fin(false)};
+    setTimeout(function(){fin(started)},60000);
+    next();
+  });
+}
+async function tcQText(su,from,to){
+  try{const r=await fetch('https://api.alquran.cloud/v1/surah/'+su+'/editions/quran-uthmani,ur.jalandhry');const j=await r.json();
+    const ar=j.data[0].ayahs.slice(from-1,to),ur=j.data[1].ayahs.slice(from-1,to);
+    return{ar:ar.map(x=>{let t=x.text;if(su!==1&&su!==9&&x.numberInSurah===1)t=t.replace(/^بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ\s*/,'');return t+' ﴿'+String(x.numberInSurah).replace(/\d/g,d=>'٠١٢٣٤٥٦٧٨٩'[d])+'﴾'}).join(' '),ur:ur.map(x=>x.text+' ('+x.numberInSurah+')').join(' ')}}catch(e){return null}
+}
+async function tcQuran(su,from,to){
+  const title='سورۃ '+(SURAH_UR[su]||su)+' · '+(from===to?'آیت '+from:'آیات '+from+' تا '+to);
+  tcCardId='q'+su+':'+from;tcShowText({title:title,ar:'',ur:'تلاوت: شیخ مشاری راشد العفاسی · Recitation loading…'});
+  const t=await tcQText(su,from,to);
+  if(t)tcShowText({title:title,ar:t.ar,ur:t.ur});
+  const wasMuted=tcMicMuted;tcMicMuted=true;                 // the student's mic waits while the Qari recites
+  let ok=0;
+  try{for(let ay=from;ay<=to;ay++){if(!TS.on)break;if(await tcQPlayOne(su,ay))ok++}}finally{tcMicMuted=wasMuted;tcQAudio=null}
+  tcQLast={su:su,from:from,to:to};
+  return{t:t,ok:ok};
+}
+try{TOOLS[0].functionDeclarations.push({name:'play_quran',description:'Play the real recitation of Quran verses by Sheikh Mishary Alafasy (as recited in Makkah) and show the exact Uthmani text. ALWAYS use this for any Quran verse or surah; never recite Quran with your own voice. Up to 10 verses per call. Al-Fatiha = 1, Al-Ikhlas = 112, Al-Falaq = 113, An-Nas = 114, Al-Kawthar = 108, Al-Asr = 103.',parameters:{type:O,properties:{surah:{type:S,description:'Surah number 1-114'},from_ayah:{type:S,description:'First verse number (default 1)'},to_ayah:{type:S,description:'Last verse number (default: end of a short surah, at most 10 verses)'}},required:['surah']}})}catch(e){}
+const _tcTool6=tool;
+tool=async function(n,a){
+  if(n==='play_quran'){
+    const su=Math.round(+a.surah||0);if(!(su>=1&&su<=114))return{error:'surah must be 1-114'};
+    const max=AYAH_COUNT[su];let from=Math.max(1,Math.round(+a.from_ayah||1));if(from>max)from=1;
+    let to=Math.round(+a.to_ayah||0);if(!to||to<from)to=Math.min(max,from+9);to=Math.min(to,max,from+9);
+    if(!TS.on||!$('tc').classList.contains('on')){return{error:'Quran recitation plays only in the teacher video call'}}
+    const r=await tcQuran(su,from,to);
+    return{status:r.ok?'recited by Sheikh Mishary Alafasy ('+r.ok+' verse'+(r.ok>1?'s':'')+')':'audio could not play (no internet?)',surah:SURAH_UR[su],verses:from+'-'+to,arabic:r.t?r.t.ar:undefined,urdu_meaning:r.t?r.t.ur:undefined,
+      instruction:'The recitation has finished playing. Do NOT recite these verses yourself. Explain the meaning simply in Urdu, then ask the student to recite; listen and correct gently by pointing to the exact word. To let them hear it again, call play_quran again.'};
+  }
+  return _tcTool6.apply(this,arguments);
+};
+const _tcSys5=sysTeacher;
+sysTeacher=function(){const t=_tcSys5.apply(this,arguments);if(!t)return t;
+  return t+' قرآن کا قاعدہ (بہت اہم): قرآن کی کوئی آیت یا سورت کبھی اپنی آواز میں نہ پڑھیں۔ ہمیشہ play_quran ٹول چلائیں، جو شیخ مشاری العفاسی کی اصل تلاوت (جیسے مکہ اور سعودیہ میں پڑھا جاتا ہے) سناتا ہے اور صحیح عثمانی متن اسکرین پر دکھاتا ہے۔ تلاوت کے بعد مطلب سمجھائیں اور طالب علم سے پڑھوائیں۔ کلمے اور دعائیں پڑھتے وقت عربی بالکل عربی لہجے میں پڑھیں، ہر حرف اپنے مخرج سے (ع، ح، ق، ص، ض، ط، ظ، ث، ذ کو اردو کی طرح نہ بولیں)، زیر زبر پیش، شد اور مد کا پورا خیال رکھیں، آہستہ اور صاف۔ استاد بدلنے کی درخواست پر صرف change_teacher ٹول چلائیں؛ کبھی دوسرا استاد ہونے کا بہانہ نہ کریں۔'};
+
 /* ---- changing mode by voice (all modes) ---- */
 try{TOOLS[0].functionDeclarations.push({name:'switch_mode',description:'Switch the app to another mode, only after the user agrees or asks. For learning (Islamic studies: kalimas, duas, stories; or English, Arabic, Urdu speaking practice) use mode te with a subject; the teacher call (Zainab or Ahmed) then starts.',parameters:{type:O,properties:{mode:{type:S,description:'One of: '+Object.keys(MODES).join(', ')+' (te = teacher)'},subject:{type:S,description:'Only for te: en, ar, ur, is (Islamic studies) or kids'},teacher:{type:S,description:'Only for te: f (Zainab) or m (Ahmed), if the user chose'}},required:['mode']}})}catch(e){}
 let swPending=null;
@@ -2063,7 +2213,7 @@ function tcPickSync(){
   document.querySelectorAll('#tcSubj .ch').forEach(c=>c.classList.toggle('on',c.dataset.s===TS.subj));
   try{$('tcSrch').checked=$('gs').checked}catch(e){}
   const m=tsMem(),st=tsStreak(m),today=Math.floor(tsToday(m)/60);
-  $('tcProg').textContent=TS.subj==='kids'?'بچوں کے لیے پہلے والا ٹیچر انداز (کیمرہ اور کہانیاں)':('🔥 مسلسل '+st+' دن · آج '+today+'/10 منٹ'+(m.words.length?' · '+m.words.length+' الفاظ سیکھے':''));
+  $('tcProg').textContent=TS.subj==='kids'?'بچوں کے لیے پہلے والا ٹیچر انداز (کیمرہ اور کہانیاں)':((st>0?'🔥 مسلسل '+st+' دن':'🔥 آج پہلا دن')+((m.done||[]).length?' · ✅ '+m.done.length+' سبق مکمل':'')+(m.words.length?' · '+m.words.length+' الفاظ سیکھے':''));
 }
 function tcOpenPick(){tcPickSync();$('tcPick').classList.add('on')}
 document.querySelectorAll('#tcPick .tcc').forEach(c=>c.onclick=()=>{TS.t=c.dataset.t;tcPickSync()});
@@ -2149,7 +2299,8 @@ cleanup=function(){const r=_tcCleanup.apply(this,arguments);if($('tc').classList
 /* ---- subtitles ---- */
 let tcSubLines={t:null,u:null},tcLastRole='';
 function tcLine(cls,text,small){const d=document.createElement('div');d.className='ln '+cls;d.textContent=text;if(small){const s=document.createElement('small');s.textContent=small;d.appendChild(s)}return d}
-function tcRender(){const b=$('tcSubs');b.innerHTML='';if(tcSubLines.u)b.appendChild(tcSubLines.u);if(tcSubLines.t)b.appendChild(tcSubLines.t)}
+function tcRender(){const b=$('tcSubs');const want=[tcSubLines.u,tcSubLines.t].filter(Boolean);if(b.children.length===want.length&&want.every((n,i)=>b.children[i]===n))return;   /* same lines: only their text changed, so nothing is re-added (re-adding made the words blink) */
+  [...b.children].forEach(c=>{if(want.indexOf(c)<0)c.remove()});want.forEach((n,i)=>{if(b.children[i]!==n)b.insertBefore(n,b.children[i]||null)})}
 const _tcCap=cap;
 cap=function(role,text,cls){
   _tcCap.apply(this,arguments);
