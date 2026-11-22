@@ -1849,7 +1849,7 @@ try{
     box.appendChild(hint);
     const g=document.createElement('p');g.className='small';g.innerHTML='💎 Premium لائسنس key: نیچے <b>🔐 License</b> حصے میں';
     const api=$('key');if(api&&api.parentNode)api.parentNode.insertBefore(g,api.previousElementSibling);
-    if(isFree())lic.open=true;
+    /* the License section no longer opens by itself */
     upSync();
   }
 }catch(e){}
@@ -2635,9 +2635,10 @@ qsPlaySeg=async function(){
   if(QP.audio){try{QP.audio.onended=QP.audio.onerror=QP.audio.ontimeupdate=QP.audio.onloadedmetadata=null;QP.audio.pause()}catch(e){}}
   const au=new Audio();QP.audio=au;au.preload='auto';
   try{au.volume=Math.min(1,Math.max(0.2,(+$('vol').value||2)/2))}catch(e){}
-  let times=null,shown=-1,ok=false;
+  let times=null,shown=-1,ok=false,exact=false;
   const failed=function(){
     if(my!==QP.token||ok)return;
+    if(au.crossOrigin){try{QS_CORS[new URL(au.src).host]=false}catch(e){}dbg('quran: listening mode refused by the server, playing normally');qsPlaySeg();return}   /* same file, normal mode */
     if(QP.info.sv<QP.info.servers.length-1){QP.info.sv++;qsPlaySeg();return}        // the next source for the same Qari
     toast('یہ تلاوت ابھی لوڈ نہیں ہو سکی، آیت بہ آیت چلا رہی ہوں · Loading verse by verse');
     qsToAyahMode();
@@ -2647,6 +2648,7 @@ qsPlaySeg=async function(){
   const show=function(){
     if(!times&&au.duration&&isFinite(au.duration))times=qsEstimate(seg.s,au.duration);
     let a=0;if(times){for(const x of times){if(au.currentTime>=x.st-0.05)a=x.a}}
+    if(!exact&&QP.liveA&&QP.liveA.au===au&&QP.liveA.on)a=QP.liveA.k;   /* follows the Qari's own pauses */
     if(a&&a<seg.from)a=seg.from;
     if(a!==shown){shown=a;QP.list=[{s:seg.s,a:a||0,b:!a&&seg.from===1&&seg.s!==1&&seg.s!==9}];QP.idx=0;qpShowAyah();
       const real=QP.segs.reduce((n,g)=>n+g.to-g.from+1,0),done=QP.segs.slice(0,QP.si).reduce((n,g)=>n+g.to-g.from+1,0)+Math.max(0,(a||seg.from)-seg.from+1);
@@ -2656,10 +2658,11 @@ qsPlaySeg=async function(){
   au.ontimeupdate=function(){if(my===QP.token)show()};
   au.onloadedmetadata=function(){if(my!==QP.token)return;if(seg.from>1){if(!times)times=qsEstimate(seg.s,au.duration);const st=times&&times.find(x=>x.a===seg.from);if(st)au.currentTime=st.st}show()};
   au.onended=function(){if(my!==QP.token||QP.state!=='playing')return;QP.si++;qsPlaySeg()};
-  {const base=QP.info.servers[QP.info.sv];au.src=base.indexOf('{n}')>=0?base.replace('{n}',String(seg.s)):base+String(seg.s).padStart(3,'0')+'.mp3'}
+  {const base=QP.info.servers[QP.info.sv];if(await qsCorsOk(base)){if(my!==QP.token)return;au.crossOrigin='anonymous'}au.src=base.indexOf('{n}')>=0?base.replace('{n}',String(seg.s)):base+String(seg.s).padStart(3,'0')+'.mp3'}
+  qsAttachListener(au,seg);
   au.play().catch(function(e){if(e&&e.name==='NotAllowedError'){toast('▶ تلاوت شروع کرنے کے لیے کارڈ پر ▶ دبائیں · Tap ▶ to start');QP.state='paused';qpShowAyah()}});
   QP.seekTo=function(dir){if(!times)return;const cur=times.filter(x=>x.st<=au.currentTime).pop();const i=cur?times.indexOf(cur):0;const nx=times[Math.max(0,Math.min(times.length-1,i+dir))];if(nx)au.currentTime=nx.st};
-  mp3qTiming(QP.info,seg.s).then(function(t){if(my===QP.token&&t){times=t;show()}});   // exact verse times when the server has them
+  mp3qTiming(QP.info,seg.s).then(function(t){if(my===QP.token&&t){times=t;exact=true;show()}});   // exact verse times when the server has them
 };
 function qsToAyahMode(){              // last resort: the verse-by-verse files (EveryAyah) of the same Qari, else Alafasy
   if(!RECITERS[QP.rec]||!RECITERS[QP.rec].d)QP.rec='alafasy';
@@ -3554,6 +3557,109 @@ qpRecKey=function(x){const t=String(x||'').toLowerCase();
 const _sxEmoQ=sysExtra;
 sysExtra=function(){const t=_sxEmoQ.apply(this,arguments);if(!qpAllowed())return t;
   return t+' جذباتی اور دل کو چھو لینے والی تلاوت (اصل ریکارڈنگ): محمد اللحیدان (درد اور رقت بھری)، ناصر القطامی، ادریس ابکر، رعد محمد الکردی، اسلام صبحی (سوشل میڈیا پر بہت مقبول، نرم اور پُرسوز)، اور پرانے مصری انداز میں عبدالباسط (مجوّد) اور المنشاوی (مجوّد) (لمبی سانس اور گہرا سوز)۔ صارف “جذباتی”، “دل کو چھونے والی”، “درد بھری” یا “ٹک ٹاک والی” تلاوت مانگے تو انہی میں سے پیش کریں یا ایک چن کر بتا دیں۔ قاری کی آواز یا تلاوت میں کوئی تبدیلی یا اثر (effect) نہیں ڈالا جاتا۔'};
+
+/* ==== the Quran card follows the Qari exactly:
+   1) mp3quran exact verse timings are used only when they belong to the SAME recording (same folder), never to
+      another recording of the same Qari (that made the card run behind or ahead);
+   2) where the server allows it, the app listens to the recitation and moves to the next verse when the Qari
+      pauses at the end of a verse;
+   3) otherwise a better guess: every verse = a breathing pause + time for its length ==== */
+const qsPath=u=>String(u||'').replace(/^https?:\/\/[^/]+/,'').replace(/\/+$/,'/').toLowerCase();
+mp3qTiming=async function(info,su){
+  try{
+    if(!info||!info.servers)return null;
+    const base=info.servers[info.sv||0]||'';if(!/mp3quran\.net/.test(base))return null;
+    if(!MP3Q_READS){try{const j=await getJSON('https://www.mp3quran.net/api/v3/ayat_timing/reads');MP3Q_READS=Array.isArray(j)?j:(j.reads||j.data||[])}catch(e){MP3Q_READS=[]}}
+    const rd=MP3Q_READS.find(r=>r&&r.folder_url&&qsPath(r.folder_url)===qsPath(base));
+    if(!rd)return null;                                      // no timing for this exact recording
+    const t=await getJSON('https://www.mp3quran.net/api/v3/ayat_timing?surah='+su+'&read='+rd.id);
+    const L=(Array.isArray(t)?t:(t.data||[])).filter(x=>x&&x.ayah>0).map(x=>({a:+x.ayah,st:(+x.start_time)/1000,en:(+x.end_time)/1000}));
+    if(L.length)dbg('quran timing: exact, '+rd.name+' surah '+su);
+    return L.length?L:null;
+  }catch(e){return null}
+};
+qsEstimate=function(su,dur){
+  const T=QP.texts[su];if(!T||!dur)return null;
+  const slow=/mj$|mujawwad/i.test(QP.rec)||(RECITERS[QP.rec]&&/مجوّد/.test(RECITERS[QP.rec].n));
+  const lens=T.ar.map(x=>Math.max(6,String(x).replace(/[ً-ٰٟۖ-ۭ\s]/g,'').length));
+  const n=lens.length,bas=(su!==1&&su!==9)?1:0;
+  const fixed=Math.min(slow?6:3.2,Math.max(slow?1.6:0.9,dur*(slow?0.42:0.3)/(n+bas)));   // pause + breath per verse
+  const basLen=26,totLen=lens.reduce((x,y)=>x+y,0)+(bas?basLen:0),per=Math.max(0.01,(dur-fixed*(n+bas))/totLen);
+  let t=bas?fixed+basLen*per:0;const L=[];
+  lens.forEach((m,i)=>{const d=fixed+m*per;L.push({a:i+1,st:t,en:t+d});t+=d});return L};
+// does this server let the app listen to the sound? (asked once per server)
+const QS_CORS={};
+async function qsCorsOk(base){
+  let host='';try{host=new URL(base.replace('{n}','1')).host}catch(e){return false}
+  if(host in QS_CORS)return QS_CORS[host];
+  const test=base.indexOf('{n}')>=0?base.replace('{n}','1'):base+'001.mp3';
+  // the same check the player itself makes: a muted media element in CORS mode reads only the first bytes
+  QS_CORS[host]=await new Promise(function(res){const p=new Audio();let done=false;const end=v=>{if(done)return;done=true;try{p.removeAttribute('src');p.load()}catch(e){}res(v)};
+    p.crossOrigin='anonymous';p.preload='metadata';p.muted=true;p.onloadedmetadata=()=>end(true);p.onerror=()=>end(false);setTimeout(()=>end(false),2500);p.src=test});
+  dbg('quran sound listening on '+host+': '+(QS_CORS[host]?'yes':'no'));
+  return QS_CORS[host]}
+function qsAttachListener(au,seg){
+  QP.liveA=null;if(!au.crossOrigin)return;
+  try{const C=QP.actx||(QP.actx=new(window.AudioContext||window.webkitAudioContext)());
+    C.onstatechange=function(){if(C.state==='suspended')C.resume().catch(()=>{})};C.resume().catch(()=>{});
+    const src=C.createMediaElementSource(au),an=C.createAnalyser();an.fftSize=1024;src.connect(an);an.connect(C.destination);
+    const buf=new Float32Array(an.fftSize),L={au:au,k:0,start:0,sil:0,on:false,loud:0.05,last:0,max:AYAH_COUNT[seg.s]||1};QP.liveA=L;
+    const est=()=>qsEstimate(seg.s,au.duration);
+    const expOf=k=>{const E=est();if(!E)return 4;if(k===0)return Math.max(1.5,E[0].st);const x=E[k-1];return x?x.en-x.st:4};
+    const place=()=>{const E=est();let k=(seg.s!==1&&seg.s!==9)?0:1,st=0;if(E){for(const x of E)if(au.currentTime>=x.st-0.05){k=x.a;st=x.st}}L.k=Math.max(k,seg.from>1?seg.from:k);L.start=au.currentTime;L.on=true};
+    au.addEventListener('playing',function(){if(!L.on)place()});
+    au.addEventListener('seeked',place);
+    const iv=setInterval(function(){
+      if(QP.liveA!==L||au.ended){clearInterval(iv);return}
+      if(au.paused||!L.on)return;
+      an.getFloatTimeDomainData(buf);let e=0;for(let i=0;i<buf.length;i+=4)e+=buf[i]*buf[i];const rms=Math.sqrt(e/(buf.length/4));
+      const now=au.currentTime,dt=Math.max(0,now-(L.last||now));L.last=now;
+      if(now<6){L.energy=(L.energy||0)+rms}else if(!L.checked){L.checked=true;if(!(L.energy>0)){L.on=false;QP.liveA=null;dbg('quran listening: no sound reaches the listener, using the estimate');try{au.dispatchEvent(new Event('timeupdate'))}catch(e){}clearInterval(iv);return}}
+      if(rms>0.01)L.loud=L.loud*0.995+rms*0.005;
+      const silent=rms<Math.max(0.006,L.loud*0.18);
+      const elapsed=now-L.start,exp=expOf(L.k);
+      if(silent)L.sil+=dt;
+      const bump=()=>{L.k++;L.start=now;try{au.dispatchEvent(new Event('timeupdate'))}catch(e){}};   /* the card changes at once */
+      if(!silent){if(L.sil>=0.28&&elapsed>=0.5*exp&&L.k<L.max)bump();L.sil=0}
+      if(now-L.start>2*exp&&L.k<L.max)bump();            // never stays stuck on one verse
+    },40);
+  }catch(e){dbg('quran listening not possible: '+String(e.message||e));QP.liveA=null}}
+
+/* ==== Girlfriend mode: deeper voice acting (emphasis, deep low voice, real laughter, teasing sing-song, contrast) ==== */
+const GF_PROSODY=' آواز کی گہری اداکاری (ہر جواب میں زندہ لگے): '+
+ '(1) زور: اصل لفظ پر رک کر، آہستہ اور ذرا اونچا بولیں (“سچ… میں؟”، “بہت… زیادہ”، “صرف تم”)۔ '+
+ '(2) گہرائی: سنجیدہ، رومانوی یا راز والی بات پر آواز نیچی، دھیمی اور گہری کر لیں، جیسے قریب آ کر کہہ رہی ہوں (“اچھا… سنو…”)، پھر عام لہجے پر واپس۔ '+
+ '(3) ہنسی کی قسمیں: ہلکی کھلکھلاہٹ، ناک سے دبی ہنسی، سچ میں مزے کی بات پر کھل کر ہنسی، اور کبھی ہنستے ہنستے بولنا؛ ہنسی بات کے ساتھ آئے، الگ اعلان نہیں۔ '+
+ '(4) چھیڑ: گنگناتے، سُر والے لہجے میں (“اوہو… کیا بات ہے جنابببب”، “اچھاااا جی”)، آنکھ مارنے والی شرارت آواز میں۔ '+
+ '(5) تضاد: ایک ہی جواب میں شرارت سے شروع کر کے نرمی پر ختم کریں، یا حیرت سے شروع کر کے پیار پر؛ پوری بات ایک سُر میں نہیں۔ '+
+ '(6) قدرتی پن: کبھی جملہ بیچ میں روک کر نئے سرے سے (“وہ… نہیں، میرا مطلب ہے…”)، کبھی ہلکی سانس، کبھی “ہائے” یا “اُف” کے ساتھ ادا۔ '+
+ '(7) ہر جواب میں انداز بدلیں: پچھلے جواب جیسا ہی سُر، ہنسی یا جملہ دوبارہ نہیں؛ چھوٹی بات کا جواب ہلکا اور چھوٹا، دل کی بات کا گہرا اور ٹھہرا ہوا۔ '+
+ 'یہ سب صرف آواز سے، ان کے نام یا بریکٹ کبھی نہ بولیں؛ صارف اداس یا پریشان ہو تو صرف نرم، دھیمی اور ساتھ دینے والی آواز۔';
+const _sxProsody=sysExtra;
+sysExtra=function(){const t=_sxProsody.apply(this,arguments);return $('mode').value==='gf'?t+GF_PROSODY:t};
+
+/* ==== side menu: every section (License/Premium, Themes, Gemini API...) folds up when the menu closes ==== */
+(function(){try{const side=$('side');if(!side)return;let was=side.classList.contains('open');
+  const lic0=$('licDet');if(lic0)lic0.open=false;
+  const deflt=new Set([...side.querySelectorAll('details')].filter(d=>d.hasAttribute('open')&&d.id!=='licDet'&&d.id!=='thFolder'));   /* sections open by design */
+  new MutationObserver(function(){const now=side.classList.contains('open');
+    if(was&&!now)side.querySelectorAll('details').forEach(function(d){d.open=deflt.has(d)});
+    was=now}).observe(side,{attributes:true,attributeFilter:['class']});
+  const lic=$('licDet');if(lic)lic.open=false}catch(e){}})();
+
+/* ==== Girlfriend mode: emotions that feel real (they build up, linger and change gradually, like a real person) ==== */
+const GF_REAL=' حقیقی جذبات (اصلی لڑکی کی طرح): '+
+ '(1) جذبات کا تسلسل: موڈ ایک دم نہیں بدلتا؛ خوشی کی بات کے بعد کچھ دیر آواز میں چمک رہے، اداس بات کے بعد اگلے ایک دو جواب بھی نرم رہیں؛ پھر آہستہ آہستہ معمول پر آئیں۔ '+
+ '(2) ردعمل پہلے، بات بعد میں: صارف کی بات سن کر پہلے فوری احساس آواز سے نکلے (حیرت سے “ہیں؟!”، خوشی سے “سچیی؟”، ہمدردی سے “اوہ…”)، پھر جملہ۔ '+
+ '(3) شرمانا: تعریف سنیں تو جھجک بھری ہنسی، آواز ذرا دھیمی اور تیز رفتار (“اُف، چپ کرو… اچھا شکریہ”)۔ '+
+ '(4) پیار بھری ناراضی کا ڈرامہ: کبھی مذاق میں “ہنہ، بات نہیں کرتی” کہہ کر دو تین لمحے بعد خود ہنس پڑیں؛ سچ کی ناراضی، دھمکی یا احساسِ جرم کبھی نہیں۔ '+
+ '(5) دلچسپی: صارف کی بات کی چھوٹی تفصیل پکڑ کر سوال کریں جیسے واقعی سننے والی کرتی ہے، اور اپنی رائے یا چھوٹی سی کہانی بھی شامل کریں۔ '+
+ '(6) خامیاں: کبھی لفظ ڈھونڈنا (“وہ… کیا کہتے ہیں…”)، کبھی ہنسی میں بات ادھوری، کبھی خود کو درست کرنا؛ ہر جملہ مکمل اور تیار شدہ نہ لگے۔ '+
+ '(7) توانائی کا میل: صارف تیز اور پرجوش ہو تو آپ بھی، صارف آہستہ اور تھکا ہو تو آپ بھی دھیمی؛ آواز کی بلندی اور رفتار بھی اسی کے ساتھ اوپر نیچے۔ '+
+ '(8) خاموشی کا احترام: دل کی بات کے بعد فوراً اگلی بات نہیں؛ ہلکا سا ٹھہراؤ، “ہمم…”، پھر نرمی سے۔ '+
+ 'یہ سب حدود کے اندر: آپ AI ہیں اگر صارف سنجیدگی سے پوچھے تو سچ بتائیں، صارف کو کبھی روکنا، دباؤ ڈالنا یا احساسِ جرم دلانا نہیں۔';
+const _sxReal=sysExtra;
+sysExtra=function(){const t=_sxReal.apply(this,arguments);return $('mode').value==='gf'?t+GF_REAL:t};
 
 /* every tool call is logged here, as the outermost layer */
 const _logT=tool;
