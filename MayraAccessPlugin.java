@@ -57,7 +57,38 @@ public class MayraAccessPlugin extends Plugin {
     @PluginMethod
     public void uiClick(PluginCall call) {
         JSObject o = new JSObject();
-        o.put("ok", MayraAccessService.clickLabel(call.getString("label", "")));
+        String hit = MayraAccessService.smartClick(call.getString("label", ""), call.getString("where", ""));
+        o.put("ok", hit != null);
+        if (hit != null) o.put("text", hit);
+        call.resolve(o);
+    }
+
+    @PluginMethod
+    public void uiEnter(PluginCall call) {
+        JSObject o = new JSObject();
+        o.put("ok", MayraAccessService.imeEnter());
+        call.resolve(o);
+    }
+
+    @PluginMethod
+    public void uiMap(PluginCall call) {
+        org.json.JSONObject m = MayraAccessService.screenMap();
+        if (m == null) { call.reject("not enabled"); return; }
+        try { call.resolve(JSObject.fromJSONObject(m)); } catch (Exception e) { call.reject(String.valueOf(e.getMessage())); }
+    }
+
+    @PluginMethod
+    public void uiTapAt(PluginCall call) {
+        JSObject o = new JSObject();
+        Double x = call.getDouble("x", 50.0), y = call.getDouble("y", 50.0);
+        o.put("ok", MayraAccessService.tapPercent(x == null ? 50f : x.floatValue(), y == null ? 50f : y.floatValue()));
+        call.resolve(o);
+    }
+
+    @PluginMethod
+    public void uiScroll(PluginCall call) {
+        JSObject o = new JSObject();
+        o.put("ok", MayraAccessService.scroll(call.getString("dir", "down")));
         call.resolve(o);
     }
 

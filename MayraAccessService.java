@@ -120,20 +120,25 @@ public class MayraAccessService extends AccessibilityService {
         ArrayList<AccessibilityNodeInfo> queue = new ArrayList<>();
         queue.add(root);
         int i = 0;
-        while (i < queue.size() && out.length() < 70) {
+        while (i < queue.size() && out.length() < 90) {
             AccessibilityNodeInfo n = queue.get(i++);
             if (n == null) continue;
             CharSequence t = n.getText();
             CharSequence d = n.getContentDescription();
             boolean hasT = t != null && t.length() > 0;
             boolean hasD = d != null && d.length() > 0;
-            if (hasT || hasD) {
+            if ((hasT || hasD) && n.isVisibleToUser()) {
                 try {
                     JSONObject o = new JSONObject();
                     if (hasT) o.put("text", cut(t));
                     if (hasD) o.put("desc", cut(d));
                     o.put("clickable", n.isClickable());
                     o.put("editable", n.isEditable());
+                    Rect r = new Rect();
+                    n.getBoundsInScreen(r);
+                    int hh = Math.max(1, s.getResources().getDisplayMetrics().heightPixels);
+                    float cy = r.centerY() / (float) hh;
+                    o.put("at", cy < 0.15f ? "top" : (cy > 0.85f ? "bottom" : "middle"));
                     out.put(o);
                 } catch (Exception ignored) {}
             }
@@ -142,15 +147,109 @@ public class MayraAccessService extends AccessibilityService {
         return out;
     }
 
-    static boolean clickLabel(String label) {
+    static boolean clickLabel(String label) { return smartClick(label, "") != null; }
+
+    // ---------- smart tap: the best match wins, not the first one ----------
+    // exact text > starts with > whole word > part of a word; long texts (other people's names,
+    // captions) lose points; "where" = bottom / top prefers the bottom navigation bar or the top bar.
+    private static final String[] NAV_WORDS = {"profile", "home", "you", "shorts", "subscriptions", "library",
+            "inbox", "friends", "reels", "create", "me", "search", "discover", "notifications", "menu", "video", "watch"};
+
+    private static int score(String s, String l) {
+        if (s == null || s.isEmpty()) return 0;
+        if (s.equals(l)) return 100;
+        int extra = Math.max(0, s.length() - l.length());
+        if (s.startsWith(l)) {
+            boolean wordEnd = l.length() >= s.length() || !Character.isLetterOrDigit(s.charAt(l.length()));
+            return (wordEnd ? 80 : 50) - Math.min(30, extra);
+        }
+        int i = s.indexOf(l);
+        if (i < 0) return 0;
+        boolean wordStart = i == 0 || !Character.isLetterOrDigit(s.charAt(i - 1));
+        boolean wordEnd = i + l.length() >= s.length() || !Character.isLetterOrDigit(s.charAt(i + l.length()));
+        int base = (wordStart && wordEnd) ? 55 : 25;
+        return Math.max(4, base - Math.min(40, extra));
+    }
+
+    static String smartClick(String label, String where) {
         MayraAccessService s = instance;
-        if (s == null || label == null || label.isEmpty()) return false;
+        if (s == null || label == null) return null;
+        String l = label.trim().toLowerCase();
+        if (l.isEmpty()) return null;
+        AccessibilityNodeInfo root = s.getRootInActiveWindow();
+        if (root == null) return null;
+        int h = Math.max(1, s.getResources().getDisplayMetrics().heightPixels);
+        String w = where == null ? "" : where.trim().toLowerCase();
+        boolean nav = false;
+        for (String x : NAV_WORDS) if (x.equals(l)) { nav = true; break; }
+        List<AccessibilityNodeInfo> nodes = new ArrayList<>();
+        all(root, nodes);
+        AccessibilityNodeInfo best = null;
+        int bestScore = 0;
+        String bestText = null;
+        Rect bestR = null;
+        for (AccessibilityNodeInfo n : nodes) {
+            if (n == null || !n.isVisibleToUser()) continue;
+            String t = n.getText() == null ? "" : n.getText().toString().trim();
+            String d = n.getContentDescription() == null ? "" : n.getContentDescription().toString().trim();
+            int st = score(t.toLowerCase(), l), sd = score(d.toLowerCase(), l);
+            int sc = Math.max(st, sd);
+            if (sc <= 0) continue;
+            Rect r = new Rect();
+            n.getBoundsInScreen(r);
+            if (r.width() <= 0 || r.height() <= 0) continue;
+            float cy = r.centerY() / (float) h;
+            if ("bottom".equals(w)) sc += cy > 0.8f ? 45 : -25;
+            else if ("top".equals(w)) sc += cy < 0.2f ? 45 : -25;
+            else if (nav && cy > 0.85f) sc += 25;
+            if (n.isClickable()) sc += 5;
+            if (sc > bestScore) { bestScore = sc; best = n; bestR = r; bestText = st >= sd ? t : d; }
+        }
+        if (best == null) return null;
+        if (clickNode(best)) return bestText;
+        if (bestR != null && tapAt(bestR.exactCenterX(), bestR.exactCenterY())) return bestText;
+        return null;
+    }
+
+    static boolean tapAt(float x, float y) {
+        MayraAccessService s = instance;
+        if (s == null || Build.VERSION.SDK_INT < 24) return false;
+        Path p = new Path();
+        p.moveTo(x, y);
+        GestureDescription g = new GestureDescription.Builder()
+                .addStroke(new GestureDescription.StrokeDescription(p, 0, 60)).build();
+        return s.dispatchGesture(g, null, null);
+    }
+
+    // ---------- scroll the main list (forms, settings, upload screens) without changing a video ----------
+    static boolean scroll(String dir) {
+        MayraAccessService s = instance;
+        if (s == null) return false;
         AccessibilityNodeInfo root = s.getRootInActiveWindow();
         if (root == null) return false;
-        List<AccessibilityNodeInfo> list = root.findAccessibilityNodeInfosByText(label);
-        if (list == null) return false;
-        for (AccessibilityNodeInfo n : list) { if (clickNode(n)) return true; }
-        return false;
+        List<AccessibilityNodeInfo> nodes = new ArrayList<>();
+        all(root, nodes);
+        AccessibilityNodeInfo best = null;
+        long bestArea = 0;
+        for (AccessibilityNodeInfo n : nodes) {
+            if (n == null || !n.isScrollable() || !n.isVisibleToUser()) continue;
+            Rect r = new Rect();
+            n.getBoundsInScreen(r);
+            long a = (long) r.width() * r.height();
+            if (a > bestArea) { bestArea = a; best = n; }
+        }
+        boolean up = "up".equals(dir);
+        if (best != null && best.performAction(up ? AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD
+                : AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)) return true;
+        if (Build.VERSION.SDK_INT < 24) return false;
+        DisplayMetrics dm = s.getResources().getDisplayMetrics();
+        float x = dm.widthPixels / 2f, h = dm.heightPixels;
+        Path p = new Path();
+        p.moveTo(x, up ? h * 0.35f : h * 0.7f);
+        p.lineTo(x, up ? h * 0.7f : h * 0.35f);
+        GestureDescription g = new GestureDescription.Builder()
+                .addStroke(new GestureDescription.StrokeDescription(p, 0, 400)).build();
+        return s.dispatchGesture(g, null, null);
     }
 
     private static AccessibilityNodeInfo findEditable(AccessibilityNodeInfo n) {
@@ -340,5 +439,68 @@ public class MayraAccessService extends AccessibilityService {
         Bundle b = new Bundle();
         b.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text);
         return target.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, b);
+    }
+
+    // ---------- full screen map: every visible box, button and list with its hint, id and place ----------
+    // lets Mayra reason about any phone (any language, layout, browser or app version) instead of fixed labels
+    static JSONObject screenMap() {
+        MayraAccessService s = instance;
+        if (s == null) return null;
+        JSONObject res = new JSONObject();
+        AccessibilityNodeInfo root = s.getRootInActiveWindow();
+        if (root == null) return res;
+        DisplayMetrics dm = s.getResources().getDisplayMetrics();
+        float W = Math.max(1, dm.widthPixels), H = Math.max(1, dm.heightPixels);
+        JSONArray out = new JSONArray();
+        List<AccessibilityNodeInfo> nodes = new ArrayList<>();
+        all(root, nodes);
+        try {
+            res.put("app", root.getPackageName() == null ? "" : root.getPackageName().toString());
+            for (AccessibilityNodeInfo n : nodes) {
+                if (n == null || !n.isVisibleToUser() || out.length() >= 160) continue;
+                CharSequence t = n.getText(), d = n.getContentDescription();
+                CharSequence h = Build.VERSION.SDK_INT >= 26 ? n.getHintText() : null;
+                String id = n.getViewIdResourceName();
+                boolean edit = n.isEditable(), click = n.isClickable(), scr = n.isScrollable();
+                boolean words = (t != null && t.length() > 0) || (d != null && d.length() > 0) || (h != null && h.length() > 0);
+                if (!words && !edit && !scr) continue;
+                Rect r = new Rect();
+                n.getBoundsInScreen(r);
+                if (r.width() <= 0 || r.height() <= 0) continue;
+                JSONObject o = new JSONObject();
+                if (t != null && t.length() > 0) o.put("text", cut(t));
+                if (d != null && d.length() > 0) o.put("desc", cut(d));
+                if (h != null && h.length() > 0) o.put("hint", cut(h));
+                if (id != null) o.put("id", id.substring(id.indexOf('/') + 1));
+                if (edit) o.put("box", true);
+                if (click) o.put("tap", true);
+                if (scr) o.put("scroll", true);
+                if (n.isChecked()) o.put("on", true);
+                o.put("x", Math.round(r.centerX() * 100 / W));
+                o.put("y", Math.round(r.centerY() * 100 / H));
+                out.put(o);
+            }
+            res.put("items", out);
+        } catch (Exception ignored) {}
+        return res;
+    }
+
+    // tap a point given in percent of the screen (for icons that have no text at all)
+    static boolean tapPercent(float px, float py) {
+        MayraAccessService s = instance;
+        if (s == null) return false;
+        DisplayMetrics dm = s.getResources().getDisplayMetrics();
+        return tapAt(dm.widthPixels * px / 100f, dm.heightPixels * py / 100f);
+    }
+
+    // the keyboard's Enter on the box that has focus (turns a typed tag into a tag chip); never taps any button
+    static boolean imeEnter() {
+        MayraAccessService s = instance;
+        if (s == null || Build.VERSION.SDK_INT < 30) return false;
+        AccessibilityNodeInfo root = s.getRootInActiveWindow();
+        if (root == null) return false;
+        AccessibilityNodeInfo f = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
+        if (f == null || !f.isEditable()) return false;
+        return f.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.getId());
     }
 }

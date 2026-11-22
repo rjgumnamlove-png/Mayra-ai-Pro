@@ -75,7 +75,7 @@ public class ScreenCaptureService extends Service {
                     img = r.acquireLatestImage();
                     if (img == null) return;
                     long now = System.currentTimeMillis();
-                    if (now - lastFrame < 1000) return;
+                    if (now - lastFrame < 1500) return;   // a frame every 1.5 s: lighter for TikTok / video apps
                     lastFrame = now;
                     Image.Plane plane = img.getPlanes()[0];
                     ByteBuffer buf = plane.getBuffer();
@@ -86,7 +86,7 @@ public class ScreenCaptureService extends Service {
                     bmp.copyPixelsFromBuffer(buf);
                     Bitmap crop = Bitmap.createBitmap(bmp, 0, 0, img.getWidth(), img.getHeight());
                     ByteArrayOutputStream out = new ByteArrayOutputStream();
-                    crop.compress(Bitmap.CompressFormat.JPEG, 60, out);
+                    crop.compress(Bitmap.CompressFormat.JPEG, 55, out);
                     FrameListener l = listener;
                     if (l != null) l.onFrame(Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP));
                     bmp.recycle();

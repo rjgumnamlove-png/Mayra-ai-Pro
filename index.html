@@ -302,7 +302,7 @@ async function startMic(){
 }
 
 function cleanup(){
-  saveTurn();stopVideo();if(stopping)bgOff();live=false;try{wl&&wl.release();wl=null}catch(e){}
+  saveTurn();if(stopping||!screenOn)stopVideo();/* screen sharing stays on through reconnects */if(stopping)bgOff();live=false;try{wl&&wl.release();wl=null}catch(e){}
   try{if(node){node.port&&(node.port.onmessage=null);node.disconnect()}src&&src.disconnect();sink&&sink.disconnect()}catch(e){}
   if(stream)stream.getTracks().forEach(t=>t.stop());
   stream=node=src=sink=null;
@@ -350,7 +350,7 @@ async function start(){
       model:'models/'+modelName(),
       generationConfig:{responseModalities:['AUDIO'],speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:(window.__tcVoice&&window.__tcVoice())||$('voice').value}}}},
       systemInstruction:{parts:[{text:persona()+sysExtra()}]},
-      inputAudioTranscription:{},outputAudioTranscription:{},tools:(function(T){return $('gs').checked?[{googleSearch:{}}].concat(T):T})(window.__tcFilter?window.__tcFilter(TOOLS):TOOLS),...(noExtras?{}:{contextWindowCompression:{slidingWindow:{}},sessionResumption:resumeHandle?{handle:resumeHandle}:{}})}});
+      inputAudioTranscription:{},outputAudioTranscription:{},tools:(function(T){return $('gs').checked?[{googleSearch:{}}].concat(T):T})(window.__tcFilter?window.__tcFilter(TOOLS):TOOLS),...(noExtras?{}:{realtimeInputConfig:{automaticActivityDetection:{startOfSpeechSensitivity:'START_SENSITIVITY_HIGH',prefixPaddingMs:20,silenceDurationMs:700},activityHandling:'START_OF_ACTIVITY_INTERRUPTS'},contextWindowCompression:{slidingWindow:{}},sessionResumption:resumeHandle?{handle:resumeHandle}:{}})}});
     w.onmessage=e=>{q=q.then(()=>w===ws?handle(e.data):0).catch(x=>console.error(x))};
     w.onerror=()=>status('کنکشن میں خرابی؛ API key یا model چیک کریں');
     w.onclose=e=>{dbg('websocket closed, code='+e.code);
@@ -2586,6 +2586,501 @@ const _sxQari=sysExtra;
 sysExtra=function(){const t=_sxQari.apply(this,arguments);if(!qpAllowed())return t;
   const names=Object.keys(RECITERS).map(k=>RECITERS[k].n).join('، ');let last='';try{last=RECITERS[localStorage.getItem('mayra_qari')||'']?RECITERS[localStorage.getItem('mayra_qari')].n:''}catch(e){}
   return t+' قاری کا انتخاب: جب طالب علم کوئی سورت یا پارہ سننا چاہے اور قاری کا نام نہ لے، تو پہلے پیار سے پوچھیں کہ کس قاری کی آواز میں سننا پسند کریں گے، اور یہ نام بتائیں: '+names+'۔ ساتھ کہیں “یا آپ کہیں تو میں اپنی طرف سے کوئی خوبصورت تلاوت لگا دوں”'+(last?' (پچھلی بار '+last+' کو سنا تھا)':'')+'۔ وہ اپنی مرضی چھوڑے تو موقع کے مطابق خود کوئی قاری چن لیں۔ نام لینے پر وہی قاری play_quran کے reciter میں دیں۔'};
+
+/* ---- Quran v3: every Qari plays the WHOLE surah recording, so the Qari's breath and joined verses flow naturally
+   (no cut between verses). Verified sources: mp3quran.net servers for the ten Imams, way2quran / archive.org for
+   Al-Shahat Muhammad Anwar and Ragheb Ghalwash. The verse-by-verse files stay only as a fallback. ---- */
+const FULL_SRC={
+  alafasy:{ar:'مشاري العفاسي',u:['https://server8.mp3quran.net/afs/']},
+  sudais:{ar:'عبدالرحمن السديس',u:['https://server11.mp3quran.net/sds/']},
+  shuraim:{ar:'سعود الشريم',u:['https://server7.mp3quran.net/shur/']},
+  abdulbasit:{ar:'عبدالباسط عبدالصمد',u:['https://server7.mp3quran.net/basit/']},
+  minshawi:{ar:'محمد صديق المنشاوي',u:['https://server10.mp3quran.net/minsh/']},
+  husary:{ar:'محمود خليل الحصري',u:['https://server13.mp3quran.net/husr/']},
+  maher:{ar:'ماهر المعيقلي',u:['https://server12.mp3quran.net/maher/']},
+  ghamdi:{ar:'سعد الغامدي',u:['https://server7.mp3quran.net/s_gmd/']},
+  hudhaify:{ar:'علي الحذيفي',u:['https://server9.mp3quran.net/hthfi/']},
+  dosari:{ar:'ياسر الدوسري',u:['https://server11.mp3quran.net/yasser/']},
+  shahat:{ar:'الشحات محمد أنور',u:['https://media.way2quran.com/al-shahat-muhammad-anwar/hafs-an-asim/','https://archive.org/download/elshahhat_-_-__--mohammad---anwar----32kb---mp3----quran/']},
+  ghalwash:{ar:'راغب مصطفى غلوش',u:['https://media.way2quran.com/raghib-mostafa-ghalwash/hafs-an-asim/'],only:[7,17,21,25,36,37,42,49,50,54,83,90,96]}
+};
+delete RECITERS.mshahat;            // no complete, reliable online source was found for Sheikh Mahmoud Al-Shahat
+RECITERS.shahat.full=true;RECITERS.ghalwash.full=true;
+const _qpRecKey1=qpRecKey;
+qpRecKey=function(x){const k=_qpRecKey1(x);return k==='mshahat'?'shahat':k};
+async function getJSON(u){          // the phone app asks natively (no browser CORS limits); the browser falls back to fetch
+  try{const H=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.CapacitorHttp;if(NATIVE&&H&&H.get){const r=await H.get({url:u});return typeof r.data==='string'?JSON.parse(r.data):r.data}}catch(e){}
+  const r=await fetch(u);return r.json();
+}
+let MP3Q_READS=null;
+mp3qTiming=async function(info,su){
+  try{
+    if(!info||!info.ar)return null;
+    if(!MP3Q_READS){try{const j=await getJSON('https://www.mp3quran.net/api/v3/ayat_timing/reads');MP3Q_READS=Array.isArray(j)?j:(j.reads||j.data||[])}catch(e){MP3Q_READS=[]}}
+    const key=String(info.ar).replace(/[أإآ]/g,'ا').split(' ').slice(-1)[0];
+    const rd=MP3Q_READS.find(r=>String(r.name||r.reader_name||'').replace(/[أإآ]/g,'ا').indexOf(key)>=0);
+    if(!rd)return null;
+    const t=await getJSON('https://www.mp3quran.net/api/v3/ayat_timing?surah='+su+'&read='+rd.id);
+    const L=(Array.isArray(t)?t:(t.data||[])).filter(x=>x&&x.ayah>0).map(x=>({a:+x.ayah,st:(+x.start_time)/1000,en:(+x.end_time)/1000}));
+    return L.length?L:null;
+  }catch(e){return null}
+};
+qsPlaySeg=async function(){
+  const seg=QP.segs[QP.si];if(!seg){qpFinish();return}
+  const my=++QP.token;
+  const F=FULL_SRC[QP.rec];
+  if(!QP.info&&F)QP.info={ar:F.ar,list:F.only||null,servers:F.u.slice(),sv:0};
+  if(!QP.info||!QP.info.servers){qsToAyahMode();return}
+  await qpLoadText(seg.s);if(my!==QP.token)return;
+  if(QP.audio){try{QP.audio.onended=QP.audio.onerror=QP.audio.ontimeupdate=QP.audio.onloadedmetadata=null;QP.audio.pause()}catch(e){}}
+  const au=new Audio();QP.audio=au;au.preload='auto';
+  try{au.volume=Math.min(1,Math.max(0.2,(+$('vol').value||2)/2))}catch(e){}
+  let times=null,shown=-1,ok=false;
+  const failed=function(){
+    if(my!==QP.token||ok)return;
+    if(QP.info.sv<QP.info.servers.length-1){QP.info.sv++;qsPlaySeg();return}        // the next source for the same Qari
+    toast('یہ تلاوت ابھی لوڈ نہیں ہو سکی، آیت بہ آیت چلا رہی ہوں · Loading verse by verse');
+    qsToAyahMode();
+  };
+  au.onerror=failed;
+  au.onplaying=function(){ok=true};
+  const show=function(){
+    if(!times&&au.duration&&isFinite(au.duration))times=qsEstimate(seg.s,au.duration);
+    let a=0;if(times){for(const x of times){if(au.currentTime>=x.st-0.05)a=x.a}}
+    if(a&&a<seg.from)a=seg.from;
+    if(a!==shown){shown=a;QP.list=[{s:seg.s,a:a||0,b:!a&&seg.from===1&&seg.s!==1&&seg.s!==9}];QP.idx=0;qpShowAyah();
+      const real=QP.segs.reduce((n,g)=>n+g.to-g.from+1,0),done=QP.segs.slice(0,QP.si).reduce((n,g)=>n+g.to-g.from+1,0)+Math.max(0,(a||seg.from)-seg.from+1);
+      $('qpBar').style.width=Math.round(done/Math.max(1,real)*100)+'%'}
+    if(times&&seg.to<AYAH_COUNT[seg.s]){const end=times.find(x=>x.a===seg.to);if(end&&au.currentTime>=end.en){QP.si++;qsPlaySeg()}}
+  };
+  au.ontimeupdate=function(){if(my===QP.token)show()};
+  au.onloadedmetadata=function(){if(my!==QP.token)return;if(seg.from>1){if(!times)times=qsEstimate(seg.s,au.duration);const st=times&&times.find(x=>x.a===seg.from);if(st)au.currentTime=st.st}show()};
+  au.onended=function(){if(my!==QP.token||QP.state!=='playing')return;QP.si++;qsPlaySeg()};
+  au.src=QP.info.servers[QP.info.sv]+String(seg.s).padStart(3,'0')+'.mp3';
+  au.play().catch(function(e){if(e&&e.name==='NotAllowedError'){toast('▶ تلاوت شروع کرنے کے لیے کارڈ پر ▶ دبائیں · Tap ▶ to start');QP.state='paused';qpShowAyah()}});
+  QP.seekTo=function(dir){if(!times)return;const cur=times.filter(x=>x.st<=au.currentTime).pop();const i=cur?times.indexOf(cur):0;const nx=times[Math.max(0,Math.min(times.length-1,i+dir))];if(nx)au.currentTime=nx.st};
+  mp3qTiming(QP.info,seg.s).then(function(t){if(my===QP.token&&t){times=t;show()}});   // exact verse times when the server has them
+};
+function qsToAyahMode(){              // last resort: the verse-by-verse files (EveryAyah) of the same Qari, else Alafasy
+  if(!RECITERS[QP.rec]||!RECITERS[QP.rec].d)QP.rec='alafasy';
+  QP.mode='ayah';QP.list=[];QP.segs.slice(QP.si).forEach(g=>{if(g.from===1&&g.s!==1&&g.s!==9)QP.list.push({s:g.s,a:0,b:true});for(let x=g.from;x<=g.to;x++)QP.list.push({s:g.s,a:x})});QP.idx=0;qpPlayCurrent();
+}
+const _qpTool3=tool;
+tool=async function(n,a){
+  if(n==='play_quran'&&qpAllowed()){
+    const rk=qpRecKey(a&&a.reciter)||QP.rec;
+    const F=FULL_SRC[rk];
+    if(F){
+      const r=qpBuild(a||{});if(!r||!r.list.length)return{error:'give a surah number 1-114 or a juz 1-30'};
+      const segs=[];r.list.filter(x=>!x.b).forEach(x=>{const g=segs[segs.length-1];if(g&&g.s===x.s)g.to=x.a;else segs.push({s:x.s,from:x.a,to:x.a})});
+      if(F.only&&!segs.every(g=>F.only.includes(g.s))){
+        return{error:'not available in this voice',available_surahs:F.only.map(n=>(SURAH_UR[n]||n)).join('، '),instruction:'Tell the user kindly that '+RECITERS[rk].n+' recordings online have only these surahs, and offer one of them or another Qari.'};
+      }
+      QP.rec=rk;try{localStorage.setItem('mayra_qari',rk)}catch(e){}
+      QP.mode='surah';QP.segs=segs;QP.si=0;QP.title=r.title;QP.state='playing';QP.info=null;
+      $('qp').classList.add('on');qsPlaySeg();
+      return{status:'now playing in the background',what:r.title,verses:segs.reduce((n,g)=>n+g.to-g.from+1,0),reciter:RECITERS[rk].e,
+        instruction:'The recitation is playing now as one continuous recording and the card follows it. Stay silent while it plays. If the user talks, it pauses by itself; answer them, then ask if they want to continue (quran_control resume). Do not recite any verse yourself.'};
+    }
+  }
+  return _qpTool3.apply(this,arguments);
+};
+const _sxQari2=sysExtra;
+sysExtra=function(){let t=_sxQari2.apply(this,arguments);if(!qpAllowed())return t;
+  return t+' نوٹ: راغب مصطفى غلوش کی آواز میں صرف یہ سورتیں دستیاب ہیں: '+FULL_SRC.ghalwash.only.map(n=>SURAH_UR[n]).join('، ')+'۔'};
+
+/* ==== v1.5 phone-control upgrade: barge-in, screen-share awareness, own profile / channel,
+   smart taps, and where titles / descriptions / hashtags / feelings / location / music go ==== */
+const zz=ms=>new Promise(r=>setTimeout(r,ms));
+
+/* ---- 1) barge-in: when the user talks over Mayra, she stops at once ---- */
+const BG={avg:0.05,hot:0,buf:[],last:0,duck:false,dt:null,drop:0,self:false};
+function bgUnduck(){BG.duck=false;clearTimeout(BG.dt);try{if(outG&&ctx)outG.gain.setTargetAtTime(+$('vol').value,ctx.currentTime,0.05)}catch(e){}}
+const _flushB=flush;
+flush=function(){const r=_flushB.apply(this,arguments);if(!BG.self){BG.drop=0;if(BG.duck)bgUnduck()}return r};
+const _playB=play;
+play=function(u){if(Date.now()<BG.drop)return;return _playB.apply(this,arguments)};
+function bgBarge(spk){
+  BG.last=Date.now();BG.hot=0;dbg('barge-in: the user spoke over Mayra');
+  if(spk){
+    // speaker mode: the server could not hear the user, so stop locally and send the words just spoken
+    BG.self=true;try{flush()}finally{BG.self=false}
+    BG.drop=Date.now()+1800;
+    const b=BG.buf.splice(0);b.forEach(x=>{try{_onMicB(x)}catch(e){}});
+    return true;
+  }
+  // normal mode: silence her at once; the server confirms (interrupted) and the audio is cleared
+  BG.duck=true;try{if(outG&&ctx)outG.gain.setTargetAtTime(0,ctx.currentTime,0.015)}catch(e){}
+  clearTimeout(BG.dt);BG.dt=setTimeout(bgUnduck,1700);
+  return false;
+}
+const _onMicB=onMic;
+onMic=function(f){
+  try{
+    if(live&&ws&&ws.readyState===1&&ctx&&!mediaBusy){
+      const spk=$('spk').checked,playing=next>ctx.currentTime+0.05,sec=f.length/ctx.sampleRate;
+      if(playing&&!BG.duck){
+        let e=0;for(let i=0;i<f.length;i+=8)e+=f[i]*f[i];
+        const lv=Math.min(1,Math.sqrt(e/(f.length/8))*7),thr=Math.max(0.3,BG.avg*2.6);
+        if(lv>thr)BG.hot+=sec;else{BG.hot=Math.max(0,BG.hot-sec*0.5);BG.avg=BG.avg*0.96+lv*0.04}
+        if(spk){BG.buf.push(f);if(BG.buf.length>10)BG.buf.shift()}
+        if(BG.hot>=0.22&&Date.now()-BG.last>1200){if(bgBarge(spk))return}
+      }else if(!playing){BG.hot=0;BG.buf.length=0}
+    }
+  }catch(e){}
+  return _onMicB.apply(this,arguments);
+};
+// the words the user said arrived: if she was silenced for them, clear her audio for good
+const _cvcB=checkVoiceCommand;
+checkVoiceCommand=function(tx){if(BG.duck&&String(tx||'').trim()){BG.self=true;try{flush()}finally{BG.self=false}bgUnduck()}return _cvcB.apply(this,arguments)};
+
+/* ---- 2) screen sharing: Mayra always knows if it is on, and turns it on herself ---- */
+const SCR={starting:false,auto:false,lastAsk:0,lastUi:0,force:false,noted:null};
+const ACT_RE2=/(کھولو|کھول|جاؤ|جاو|چلو|چلیں|لائک|like|open|go to|scroll|سکرول|اسکرول|ٹائٹل|ڈسکرپشن|ڈسکریپشن|کیپشن|ہیش|ٹیگ|title|description|caption|hashtag|upload|اپلوڈ|اپ لوڈ|پوسٹ|post|لکھو|لکھ دو|ٹائپ|مدد|پروفائل|profile|چینل|channel|ایڈٹ|edit|ایس ای او|seo|فیلنگ|feeling|لوکیشن|location|میوزک|music|گانا|کمنٹ|comment|شیئر|share|سرچ|search|ڈھونڈ)/i;
+function scrIsOn(){return !!(screenOn||scrStream)}
+function scrNote(on,extra){
+  if(!live||!ws||ws.readyState!==1||SCR.noted===on&&!extra)return;SCR.noted=on;
+  send({realtimeInput:{text:on
+    ?'[Screen note (no reply needed): screen sharing is ON now. You see the phone screen live, a fresh picture every second or two. Never say the screen is not shared.'+(extra?' '+extra:'')+']'
+    :'[Screen note (no reply needed): screen sharing is OFF now. You still can read and tap the screen with ui_read / ui_click. If you need to SEE it, call share_screen with on=true yourself; do not ask the user to share it.]'}});
+}
+// taps "Start now" / "Entire screen" on Android's screen-share prompt (only right after Mayra asked for sharing)
+async function scrConsentTap(stopAt){
+  const MA=plug('MayraAccess');if(!(NATIVE&&MA))return;
+  try{const en=await MA.isEnabled();if(!en.enabled)return}catch(e){return}
+  let picked=false;
+  while(Date.now()<stopAt&&!scrIsOn()){
+    await zz(450);
+    let items=[];try{const r=await MA.uiRead();items=(r&&r.items)||[]}catch(e){continue}
+    const has=rx=>items.find(x=>rx.test(String(x.text||x.desc||'').trim()));
+    if(!picked){const one=has(/^(a single app|single app|one app|share one app|record one app|ایک ایپ)$/i);
+      if(one){try{await MA.uiClick({label:String(one.text||one.desc)})}catch(e){}await zz(400);
+        try{const r=await MA.uiRead();const e2=((r&&r.items)||[]).find(x=>/entire screen|full screen|پوری اسکرین/i.test(String(x.text||x.desc||'')));if(e2){await MA.uiClick({label:String(e2.text||e2.desc)});picked=true}}catch(e){}
+        continue}}
+    const go=has(/^(start now|start|share screen|share|ابھی شروع کریں|شروع کریں|اب شروع کریں)$/i);
+    if(go){try{await MA.uiClick({label:String(go.text||go.desc),where:'bottom'})}catch(e){}await zz(600)}
+  }
+}
+async function shareScreen(on,why){
+  if(!on){if(scrIsOn()){SCR.auto=false;stopVideo()}return{screen_shared:false}}
+  if(scrIsOn())return{screen_shared:true,note:'already shared: you see the screen live now'};
+  if(!live)return{screen_shared:false,error:'the call is not live'};
+  SCR.auto=why!=='user';SCR.lastAsk=Date.now();
+  toast('اسکرین شیئر ہو رہی ہے · Sharing your screen');
+  const tap=scrConsentTap(Date.now()+9000);
+  try{await startVideo('scr')}catch(e){}
+  await Promise.race([tap,zz(300)]);
+  const ok=scrIsOn();
+  return ok?{screen_shared:true,note:'you see the screen live now'}:{screen_shared:false,note:'the user did not allow screen sharing; still use ui_read to read the screen and ui_click to tap'};
+}
+const _svB=startVideo;
+startVideo=async function(kind){
+  SCR.starting=true;let r;try{r=await _svB.apply(this,arguments)}finally{SCR.starting=false}
+  if(kind==='scr'){if(scrIsOn())scrNote(true);else if(SCR.noted!==false)scrNote(false)}
+  return r};
+const _stvB=stopVideo;
+stopVideo=function(){const was=scrIsOn();const r=_stvB.apply(this,arguments);if(was&&!SCR.starting){SCR.auto=false;scrNote(false)}return r};
+autoScreenForApp=function(tx){
+  const t=String(tx||'');
+  if(!live||!APP_RE.test(t)||!ACT_RE2.test(t))return;
+  SCR.lastAsk=Date.now();
+  if(!scrIsOn())shareScreen(true,'auto');
+};
+// auto-started sharing ends by itself after 6 quiet minutes (no app request and no phone action)
+/* screen sharing never stops by itself: only the user stops it (button, or by asking), or the call ends.
+   If the call is fully gone (no reconnect) for 2 minutes, the native capture is released. */
+let scrOrphan=0;setInterval(function(){try{if(screenOn&&!live&&!want){scrOrphan+=30;if(scrOrphan>=120){scrOrphan=0;stopScreenNative();$('bScr').classList.remove('on')}}else scrOrphan=0}catch(e){}},30000);
+// lighter frames: busy (talking or tapping) = a frame every 1.5 s, quiet = one every 5 s; after a tap the next frame goes at once
+startScreenNative=async function(){
+  const SC=plug('MayraMedia');await SC.startScreen();if(screenH){try{screenH.remove()}catch(e){}}
+  let lastSent=0;
+  screenH=await SC.addListener('screenFrame',e=>{lastImg=e.data;if(!(live&&ws&&ws.readyState===1))return;
+    const now=Date.now(),busy=now-lastVoice<20000||now-SCR.lastUi<25000||now-SCR.lastAsk<25000;
+    if(!SCR.force&&now-lastSent<(busy?1400:5000))return;
+    SCR.force=false;lastSent=now;send({realtimeInput:{video:{data:e.data,mimeType:'image/jpeg'}}})});
+  screenOn=true};
+
+/* ---- 3) the user's OWN profile / channel (never the creator of the video on screen) ---- */
+const HKEY='mayra_handles';
+function handles(){try{return JSON.parse(localStorage.getItem(HKEY)||'{}')||{}}catch(e){return{}}}
+function saveHandle(app,h){h=String(h||'').trim().replace(/^https?:\/\/[^@]*@?/i,'').replace(/^@/,'').replace(/[\/?#].*$/,'');if(!h)return;const o=handles();o[app]=h;try{localStorage.setItem(HKEY,JSON.stringify(o))}catch(e){}}
+function normApp(x){let a=String(x||'').toLowerCase().replace(/[^a-z]/g,'');if(a==='yt')a='youtube';if(a==='fb')a='facebook';if(a==='ig'||a==='insta')a='instagram';if(a==='tt')a='tiktok';return a}
+const APKG={youtube:'com.google.android.youtube',tiktok:'com.zhiliaoapp.musically,com.ss.android.ugc.trill',instagram:'com.instagram.android',facebook:'com.facebook.katana,com.facebook.lite'};
+async function maOk(){const MA=plug('MayraAccess');if(!(NATIVE&&MA))return null;try{const en=await MA.isEnabled();if(!en.enabled)return null}catch(e){return null}return MA}
+async function waitLabels(MA,rx,ms){const end=Date.now()+ms;while(Date.now()<end){try{const r=await MA.uiRead();const it=((r&&r.items)||[]).find(x=>rx.test(String(x.text||'').trim())||rx.test(String(x.desc||'').trim()));if(it)return it}catch(e){}await zz(350)}return null}
+async function readHandle(MA,app){try{const r=await MA.uiRead();const it=((r&&r.items)||[]).find(x=>/^@[A-Za-z0-9._-]{2,40}$/.test(String(x.text||'').trim()));if(it){saveHandle(app,it.text);return String(it.text).trim()}}catch(e){}return ''}
+async function openMine(a){
+  const app=normApp(a.app);if(!APKG[app])return{error:'say which app: youtube, tiktok, instagram or facebook'};
+  if(a.handle)saveHandle(app,a.handle);
+  const h=handles()[app],MA=plug('MayraAccess');SCR.lastUi=Date.now();
+  if(!(NATIVE&&MA))return await openSocial({app:app,username:h||''});
+  const uri=async(u,p)=>{try{const r=await MA.openUri({uri:u,pkg:p});return !!(r&&r.ok)}catch(e){return false}};
+  const app_=async()=>{try{const r=await MA.openApp({pkg:APKG[app]});return !!(r&&r.ok)}catch(e){return false}};
+  // a saved @handle opens the profile directly (fastest)
+  if(h){const U={youtube:'https://www.youtube.com/@'+h,tiktok:'https://www.tiktok.com/@'+h,instagram:'instagram://user?username='+h,facebook:'fb://profile'}[app];
+    if(await uri(U,APKG[app]))return{status:'opened the user\'s own '+app+' '+(app==='youtube'?'channel':'profile')+' (@'+h+')'}}
+  if(app==='facebook'&&await uri('fb://profile',APKG.facebook)){SCR.force=true;return{status:'opened the user\'s own Facebook profile'}}
+  if(!(await app_()))return{error:app+' is not installed or did not open'};
+  const A=await maOk();if(!A)return{status:'app opened',note:'Accessibility is off, so tell the user to tap the Profile tab (bottom) themselves'};
+  const tab={youtube:/^(you|آپ)$/i,tiktok:/^(profile|پروفائل)$/i,instagram:/^(profile|پروفائل)$/i,facebook:/^(menu|profile|your profile|مینو)$/i}[app];
+  const it=await waitLabels(A,tab,6000);
+  if(!it)return{status:'app opened',note:'the bottom bar was not found yet; use ui_read, then ui_click with where="bottom"'};
+  try{await A.uiClick({label:String(it.text||it.desc),where:'bottom'})}catch(e){}
+  if(app==='youtube'){const v=await waitLabels(A,/^(view channel|your channel|go to channel|چینل دیکھیں)$/i,3500);if(v){try{await A.uiClick({label:String(v.text||v.desc)})}catch(e){}await zz(1500)}}
+  else if(app==='facebook'){await zz(900);try{const r=await A.uiRead();const me=((r&&r.items)||[]).find(x=>/see your profile|view your profile|your profile|اپنی پروفائل/i.test(String(x.text||x.desc||'')));if(me)await A.uiClick({label:String(me.text||me.desc)})}catch(e){}}
+  else await zz(1300);
+  SCR.force=true;
+  const got=(app==='youtube'||app==='tiktok')?await readHandle(A,app):'';
+  return{status:'opened the user\'s own '+app+' '+(app==='youtube'?'channel':'profile'),handle:got?got:undefined}
+}
+
+/* ---- 4) smarter, faster taps: best match, bottom-bar preference, auto retry and scroll ---- */
+function compactItems(items){return(items||[]).map(x=>{const t=String(x.text||x.desc||'').trim();return t?(t.length>40?t.slice(0,40)+'…':t)+(x.editable?' [box]':'')+(x.at==='bottom'?' [bottom]':x.at==='top'?' [top]':''):''}).filter(Boolean).slice(0,45)}
+async function smartTap(MA,a){
+  const label=String(a.label||''),where=String(a.where||'');
+  const once=async()=>{try{const r=await MA.uiClick({label,where});return r&&r.ok?r:null}catch(e){return null}};
+  let r=await once();if(!r){await zz(650);r=await once()}
+  if(!r&&a.scroll){for(let k=0;k<5&&!r;k++){try{MA.uiScroll?await MA.uiScroll({dir:'down'}):await MA.uiSwipe({dir:'up'})}catch(e){}await zz(500);r=await once()}}
+  if(r){SCR.force=true;return{status:'clicked',matched:r.text||label}}
+  let items=[];try{const x=await MA.uiRead();items=(x&&x.items)||[]}catch(e){}
+  return{error:'"'+label+'" was not found on the screen',visible_now:compactItems(items),hint:'Pick the closest label from visible_now and tap it now. If it may be lower on the page, call ui_click again with scroll=true. Bottom bar tabs: where="bottom".'};
+}
+try{const D=TOOLS[0].functionDeclarations,c=D.find(x=>x.name==='ui_click');
+  if(c){c.description='Tap a button or item on the phone screen by its visible text or description. The best match is tapped (exact text first). Use where="bottom" for the bottom bar tabs (Home, Profile, You, Shorts, Create) and where="top" for the top bar. Use scroll=true when the item may be further down (forms, edit screens, the post options list). If it is not found, the visible labels come back so you can tap the right one at once.';
+    c.parameters.properties.where={type:S,description:'optional: bottom or top'};c.parameters.properties.scroll={type:B,description:'optional: scroll down and look again if not visible'}}
+  D.push(
+   {name:'share_screen',description:'Turn phone screen sharing on yourself (on=true) whenever you need to see the screen. Never ask the user to share the screen and never say it is not shared without checking with this tool. on=false ONLY when the user clearly asks to stop screen sharing; never turn it off on your own, not even after a task is done.',parameters:{type:O,properties:{on:{type:B}},required:['on']}},
+   {name:'my_profile',description:'Open the USER\'S OWN profile or channel: YouTube channel, TikTok, Instagram or Facebook profile. Use for "my channel", "my profile", "meri profile kholo", "hamara channel". Never tap the profile picture of a video creator for this. handle = the user\'s @username if they tell it (it is saved).',parameters:{type:O,properties:{app:{type:S,description:'youtube, tiktok, instagram or facebook'},handle:{type:S}},required:['app']}},
+   {name:'ui_scroll',description:'Scroll the current page or form down or up (does not change the video in TikTok/Reels; use ui_swipe up for the next video).',parameters:{type:O,properties:{dir:{type:S,description:'down or up'}},required:['dir']}})}catch(e){}
+
+/* ---- 5) know-how: where every text and option lives in each app ---- */
+Object.assign(APP_GUIDE.youtube,{
+  my_channel:'Call my_profile with app=youtube (opens the user\'s own channel directly). Do not tap a video creator\'s picture.',
+  edit_video_seo:'Existing video (YouTube app): my_profile youtube or ui_click("You", where="bottom") → ui_click("Your videos", scroll=true) (or "View all" next to it) → ui_read to find the video by its title → tap the ⋮ next to it: ui_click("Action menu") (the ⋮ of the right video; ui_read shows them in order) → ui_click("Edit") → Edit screen: the TITLE box is at the top (ui_fill("Title", title) or the first [box]); the DESCRIPTION box is below it (ui_fill("Description", text) or "Add description"; ui_scroll down if not visible) → ui_click("Save") at the top right. Look at the thumbnail and the old title first to understand the video. TAGS: not in the YouTube app; only in the YouTube Studio app: Content → tap the video → pencil "Edit" → ui_scroll down → "Tags" / "Add tag" box → type tags separated by commas → "Save".',
+  where_texts_go:'Title → "Create a title" / "Title" box (Shorts: the caption box is the title, put #shorts there). Description → "Add description" box. HASHTAGS → the LAST line of the description (3-5; the first 3 show above the title). Tags → only YouTube Studio (Edit → Tags). Location, playlist, audience → lower on the same screen (ui_scroll down).'});
+Object.assign(APP_GUIDE.facebook,{
+  my_profile:'Call my_profile with app=facebook.',
+  post_extras:'In the post composer ("What\'s on your mind?" → Create post): the text box is the DESCRIPTION; HASHTAGS go at the end of the same text. The options are under the text as a list or a row of icons; if only icons show, ui_click("Add to your post") to open the full list. FEELING: ui_click("Feeling/activity", scroll=true) → tab "Feelings" (or "Activities") → ui_fill("Search", "happy") → ui_click("happy"). LOCATION: ui_click("Check in", scroll=true) → ui_fill("Search", place) (box "Where are you?") → ui_click(the place). MUSIC: ui_click("Music", scroll=true) (or "Add music" on a photo) → ui_fill("Search", song) → ui_click(song) → ui_click("Done"). TAG: "Tag people". PHOTO: "Photo/video". Then ui_click("Post") (or "Next" then "Post") only when the user says.',
+  edit_post:'Own post: ui_click("More options") (the ⋯ on that post) → ui_click("Edit post") → ui_fill on the text box → ui_click("Save").',
+  where_texts_go:'Post: one text box (description + hashtags at the end). Reel: "Describe your reel" box (caption + 2-4 hashtags), plus "Add location", "Tag people", "Add music" on the reel screens. Page post: the same composer from the page.'});
+Object.assign(APP_GUIDE.tiktok,{
+  my_profile:'Call my_profile with app=tiktok (bottom tab "Profile", not the creator picture on the right).',
+  where_texts_go:'Post screen: "Add description" box = CAPTION + HASHTAGS (type them at the end, or tap "# Hashtags"). "Location" row → pick the place. "Tag people", "Add link", "Everyone can view this post" lower down (ui_scroll down). SOUND is chosen on the edit screen before Next: ui_click("Add sound"). Old video: ⋯ / "More" on your own video → "Edit post" if shown (some regions only); otherwise the caption cannot be changed.'});
+Object.assign(APP_GUIDE.instagram,{
+  my_profile:'Call my_profile with app=instagram (bottom right "Profile").',
+  where_texts_go:'Final share screen: "Write a caption" / "Add a caption" box = CAPTION + 3-5 HASHTAGS at the end. "Add location", "Tag people", "Add music"/"Audio" (Reels: on the edit screen), "Add topics". Old post: ⋮ "More options" above the post → "Edit" → change caption → "Done" (✓).'});
+APP_GUIDE.general='Be fast: say one short line, then do the steps back to back without stopping to explain. 1) open_app (or my_profile for the user\'s own profile/channel). 2) ui_click with the label you expect; if it is not found, the result lists what IS visible: tap the right one at once (no extra ui_read needed). 3) Bottom tabs: where="bottom". Items lower on a form: scroll=true or ui_scroll. 4) Text boxes: ui_fill(label, text); comments: ui_type then ui_send. 5) Next video: ui_swipe up. Back: ui_global back. "My profile / my channel" always means the user\'s own account. Never say it is impossible while Accessibility is on.';
+const _guideB=tool;
+tool=async function(n,a){
+  if(/^ui_|^app_guide$|^open_app$/.test(n))SCR.lastUi=Date.now();
+  if(n==='share_screen')return await shareScreen(!(a&&a.on===false),'tool');
+  if(n==='my_profile')return await openMine(a||{});
+  if(n==='ui_scroll'){const MA=await maOk();if(!MA)return{error:'Accessibility is not enabled'};try{const r=MA.uiScroll?await MA.uiScroll({dir:String(a.dir||'down')}):await MA.uiSwipe({dir:String(a.dir)==='up'?'down':'up'});SCR.force=true;return r&&r.ok?{status:'scrolled '+(a.dir||'down')}:{error:'nothing to scroll'}}catch(e){return{error:String(e.message||e)}}}
+  if(n==='ui_click'&&!SEND_RX.test(String(a&&a.label||'').trim())){const MA=plug('MayraAccess');if(NATIVE&&MA){const A=await maOk();if(!A)return _guideB.apply(this,arguments);return await smartTap(A,a||{})}}
+  if(n==='open_app'&&normApp(a&&a.app)==='youtube'&&NATIVE){const MA=plug('MayraAccess');if(MA&&MA.openUri){
+    const u=a.query?'https://www.youtube.com/results?search_query='+encodeURIComponent(a.query):'https://www.youtube.com/';
+    try{const r=await MA.openUri({uri:u,pkg:APKG.youtube});if(r&&r.ok){SCR.force=true;return{status:'YouTube opened'+(a.query?' with the search':''),note:'For the user\'s own channel use my_profile. Then ui_click / ui_fill.'}}}catch(e){}
+    try{const r=await MA.openApp({pkg:APKG.youtube});if(r&&r.ok)return{status:'YouTube opened'}}catch(e){}}}
+  const r=await _guideB.apply(this,arguments);
+  if(n==='app_guide'&&r&&r.steps&&/edit|seo|hashtag|tag|description|caption|title|feeling|location|music|ایڈٹ|ہیش|ٹیگ|ڈسکرپشن|کیپشن|ٹائٹل|فیلنگ|لوکیشن|میوزک|گانا/i.test(String(a&&a.task||''))&&!r.upload_help)r.upload_help=UPLOAD_HELP;
+  if(/^ui_/.test(n))SCR.force=true;
+  return r;
+};
+
+/* ---- 6) the rules she follows every call ---- */
+const _sxPhone=sysExtra;
+sysExtra=function(){const t=_sxPhone.apply(this,arguments);
+  return t+' فون کنٹرول (تیز اور سمجھدار): اسکرین شیئر ابھی '+(scrIsOn()?'آن ہے، آپ اسکرین دیکھ رہی ہیں':'بند ہے')+'۔ کبھی صارف سے اسکرین شیئر کرنے کو نہ کہیں اور نہ کہیں کہ اسکرین شیئر نہیں؛ دیکھنا ہو تو share_screen(on=true) خود چلائیں، اور [Screen note] والے پیغام سے موجودہ حالت جانیں۔ ٹیپ کرنے اور پڑھنے کے لیے (ui_read، ui_click) اسکرین شیئر ضروری نہیں۔ “میری/ہماری پروفائل” یا “میرا چینل” کا مطلب ہمیشہ صارف کا اپنا اکاؤنٹ ہے: my_profile چلائیں، چلتی ویڈیو والے کی پروفائل کبھی نہ کھولیں۔ کام کرتے ہوئے ایک چھوٹا جملہ بولیں (جیسے “ابھی کرتی ہوں”) اور پھر بغیر رکے ٹولز چلاتی جائیں؛ ہر قدم پر لمبی وضاحت نہیں۔ ui_click نہ ملے تو جواب میں visible_now دیکھ کر فوراً صحیح لیبل دبائیں۔ ٹائٹل، ڈسکرپشن، ہیش ٹیگ، ٹیگز، فیلنگ، لوکیشن یا میوزک کا کام ہو تو پہلے app_guide سے where_texts_go، post_extras یا edit_video_seo دیکھیں۔ صارف بات کے بیچ میں بولے تو فوراً رک کر سنیں، پچھلی بات دوبارہ شروع نہ کریں۔'};
+
+/* ==== field map: where every box and button is, in the apps AND in the phone browser (Chrome),
+   plus a "think for yourself" method for screens that look different ==== */
+const FIELD_SENSE='HOW TO THINK ON ANY EDIT/UPLOAD SCREEN (apps change their look; reason it out): '+
+ '1) Look at the screen (it is shared, you see it) and ui_read. Items marked [box] are typing boxes; the words in or next to a box (its hint) say what it is for. Boxes go top to bottom in this usual order: TITLE (or caption) first, DESCRIPTION second, then TAGS lower down. '+
+ '2) A box you cannot see is usually lower: ui_scroll down and ui_read again. A box that is hidden (TAGS, location, category) is behind a button like "Show more", "More options", "Advanced settings", "Additional info": tap it, then scroll. '+
+ '3) Some boxes open a new screen when tapped (YouTube title/description in the app): ui_fill handles this; if it fails, ui_click the box text, then ui_type. '+
+ '4) Replace old text fully (ui_fill replaces). For SEO first understand the video: look at the thumbnail, the current title, the video itself on screen (tap play if needed) and ask one short question only if still unclear. '+
+ '5) After filling, ui_read once to check the text is there, then tap Save / Done / ✓ (edits) - but Upload / Post / Publish only when the user says. '+
+ '6) In Chrome (mobile browser) the same boxes exist on the web page; if a site shows "Open app" or a small mobile page without edit options, tap Chrome ⋮ (More options, top right) → "Desktop site", then continue. '+
+ '7) If something does not work, try the next way at once (other label, scroll, Show more, the app instead of the browser); never give up after one try and never tell the user it is impossible.';
+Object.assign(APP_GUIDE.youtube,{
+  app_upload_fields:'YouTube app, after choosing the video → "Add details" screen: TITLE box at the top ("Create a title"; Shorts: "Caption your Short", the caption is the title, add #shorts); DESCRIPTION row just below ("Add description", tap it → a new box opens → type → back arrow/✓); then rows: Visibility, Location, "Add to playlist", Audience ("Select audience": "No, it\'s not made for kids"), Comments. "Next" / "Upload" at the top right or bottom. No TAGS box in the YouTube app.',
+  app_edit_fields:'YouTube app, old video: bottom tab "You" → "Your videos" (scroll if needed, or "View all") → the ⋮ next to the video ("Action menu" / "More") → "Edit" → "Edit video" screen: TITLE box at the top, DESCRIPTION box below it, then Visibility, Location, Playlists, Audience. "Save" at the top right. TAGS are not here (use YouTube Studio).',
+  studio_app_fields:'YouTube Studio app (best for full SEO): bottom tab "Content" → tap the video → pencil icon "Edit" at the top → TITLE box (top), DESCRIPTION box (below), Visibility, then scroll down: "Tags" (or "Add tag"/"More options" → Tags: type each tag and comma), Category, Audience, Comments. "Save" at the top right.',
+  browser_studio_fields:'YouTube in Chrome: m.youtube.com cannot edit videos. Open studio.youtube.com (if it asks to use the app or looks small, Chrome ⋮ → "Desktop site"). "Content" (left menu ☰) → tap the video title or the pencil "Details" → DETAILS page: TITLE box "Add a title that describes your video" (max 100 characters) at the top; DESCRIPTION box "Tell viewers about your video" (max 5000) under it; Thumbnail; Playlists; Audience ("No, it\'s not made for kids"); then the button "Show more" (scroll down) → TAGS box "Add tag" (type, then comma; max 500 characters total), Language, Recording date and location, Category, Comments. "Save" at the top right. Upload in the browser: Create (camera +) → "Upload videos" → Details page (same boxes) → Next → Next → Visibility → Publish.',
+  hashtags_rule:'YouTube hashtags: 3-5 at the END of the description (the first 3 show above the title). Never more than 15 (YouTube then ignores them). Tags (keywords, no #) only in Studio.'});
+Object.assign(APP_GUIDE.instagram,{
+  app_new_fields:'Instagram app, new Reel/post: "+" (Create) → Reel → pick video → edit screen ("Add audio"/"Audio" for music, "Text", "Stickers") → "Next" → SHARE screen: CAPTION box at the top next to the cover ("Write a caption and add hashtags…"; hashtags go at the end of the caption), "Edit cover", then rows: "Tag people", "Add location", "Add topics", "Audience", "Also share to Facebook", "More options" → advanced settings (alt text, hide like counts). "Share" at the bottom.',
+  app_edit_fields:'Instagram app, old post/Reel: open it → ⋯ "More options" (top right of the post) → "Edit" → CAPTION box under the photo/video (tap and change it; ui_fill on the caption box), "Add location"/"Edit location", "Tag people" → "Done" (✓ top right).',
+  browser_fields:'Instagram in Chrome (instagram.com): new post: "Create" (+) → "Select from computer/device" → Next (crop) → Next (filters) → CAPTION box "Write a caption…" on the right/bottom, then "Add location", "Accessibility" (alt text), "Advanced settings" → "Share". Edit old post: open it → ⋯ → "Edit" → caption → "Done".'});
+Object.assign(APP_GUIDE.facebook,{
+  app_fields:'Facebook app post: "What\'s on your mind?" → Create post screen: ONE text box at the top (DESCRIPTION + hashtags at the end); options list below or icons row ("Add to your post" opens the full list): Photo/video, Tag people, Feeling/activity, Check in, Music, Background colour, GIF, Life event. "Post" at the top right (or "Next" then "Post"). Reel: "Describe your reel…" box on the last screen + "Add location", "Tag people". Edit: ⋯ on the post → "Edit post" → change text → "Save".',
+  browser_fields:'Facebook in Chrome (m.facebook.com or facebook.com): same composer "What\'s on your mind?" → text box, then "Add to your post" icons (Photo/video, Tag people, Feeling/activity, Check in) → "Post". Edit: ⋯ on the post → "Edit post" → "Save".'});
+Object.assign(APP_GUIDE.tiktok,{
+  app_fields:'TikTok app post screen: DESCRIPTION box at the top ("Add description…" - caption + hashtags; chips "# Hashtags" and "@ Mention" under it), cover "Select cover" on the right, rows: "Location", "Add link", "Everyone can view this post" (privacy), "More options" (comments, quality, "Allow duet/stitch"). "Post" bottom right ("Drafts" left). Music: on the edit screen before "Next": "Add sound".',
+  browser_fields:'TikTok in Chrome: tiktok.com → "Upload" (TikTok Studio, may need Chrome ⋮ → "Desktop site") → select video → DESCRIPTION box (caption + "#Hashtags" "@Mention" buttons), Cover, Location, "Who can watch this video", "Allow users to: Comment / Duet / Stitch" → "Post".'});
+// app_guide: always hand over the thinking method; "chrome"/"browser" tasks get the browser maps
+const _guideC=tool;
+tool=async function(n,a){
+  if(n==='app_guide'){
+    const raw=String(a&&a.app||'').toLowerCase(),task=String(a&&a.task||'');
+    if(/chrome|browser|براؤزر|web/.test(raw)){
+      const t=task.toLowerCase(),pick=/insta/.test(t)?'instagram':/tik/.test(t)?'tiktok':/face|fb/.test(t)?'facebook':'youtube';
+      const r=await _guideC.call(this,'app_guide',{app:pick,task:task});if(r&&typeof r==='object')r.how_to_think=FIELD_SENSE;return r}
+    const r=await _guideC.apply(this,arguments);if(r&&typeof r==='object')r.how_to_think=FIELD_SENSE;return r}
+  if(n==='ui_fill'){
+    let r=await _guideC.apply(this,arguments);if(!r||!r.error)return r;
+    const MA=await maOk();if(!MA)return r;
+    // not found: look under "Show more" / "More options", then scroll down and try again
+    const label=String(a&&a.label||'');
+    if(/tag|ٹیگ|location|category|لوکیشن/i.test(label)){for(const m of ['Show more','More options','Advanced settings','Additional info']){try{const c=await MA.uiClick({label:m});if(c&&c.ok){await zz(700);break}}catch(e){}}
+      r=await _guideC.apply(this,arguments);if(r&&!r.error){SCR.force=true;return r}}
+    for(let k=0;k<4;k++){try{MA.uiScroll?await MA.uiScroll({dir:'down'}):await MA.uiSwipe({dir:'up'})}catch(e){}await zz(550);
+      r=await _guideC.apply(this,arguments);if(r&&!r.error){SCR.force=true;return{status:'filled (after scrolling)'}}}
+    let items=[];try{const x=await MA.uiRead();items=(x&&x.items)||[]}catch(e){}
+    return{error:'box "'+label+'" not found',boxes_and_labels_now:compactItems(items),hint:'Look at the screen: pick the right [box] by its hint/position and call ui_fill with that exact hint, or ui_click "Show more"/"More options", or ui_scroll up if you went past it.'};
+  }
+  return _guideC.apply(this,arguments);
+};
+const _sxField=sysExtra;
+sysExtra=function(){return _sxField.apply(this,arguments)+' ایڈٹ/SEO کا کام: آپ کو ہر جگہ کا پتا ہے (یوٹیوب ایپ، YouTube Studio ایپ، Chrome میں studio.youtube.com، انسٹاگرام، فیس بک، ٹک ٹاک: ایپ اور براؤزر دونوں)؛ app_guide سے نقشہ اور how_to_think لیں اور خود سوچ کر کام مکمل کریں: خانہ نہ دکھے تو نیچے اسکرول، “Show more” یا “More options”؛ ایک طریقہ نہ چلے تو فوراً دوسرا۔ ٹیگز چاہییں تو YouTube Studio (ایپ یا براؤزر) استعمال کریں۔ اسکرین شیئر خود کبھی بند نہ کریں، صرف صارف کے کہنے پر۔'};
+
+/* ==== SEO boxes: which box is the title, the description, the hashtags and the tags,
+   on every platform, in the app, in Chrome and in the Facebook browser ==== */
+const SEO_BOXES={
+ facebook:'FACEBOOK SEO - which box is which. '+
+  'APP, new video post: "What\'s on your mind?" → "Photo/video" → pick the video → the ONE text box ("Say something about this video…" / "What\'s on your mind?") = DESCRIPTION; put the hook as the first line (it works as the title) and 2-4 HASHTAGS at the end of the same box. On a PAGE or in professional mode an extra "Title" / "Add title" box may appear: if you see it, put the title there. '+
+  'APP, Reel: "Reel" → pick → "Next" → "Describe your reel…" box = caption + hashtags at the end; then "Add location", "Tag people", "Audience" → "Share now". '+
+  'APP, old video: ⋯ (More options) on the post → "Edit post" = the description box → "Save". On a Page you may also see "Edit video": "Title", "Description", "Tags" boxes → "Save". '+
+  'CHROME or the Facebook in-app browser (m.facebook.com): the same composer: one text box = description + hashtags. For TITLE and TAGS of a Page video use the desktop page: Chrome ⋮ → "Desktop site" → open the video post → ⋯ → "Edit video" → "Title" box (top), "Description" box (below), "Tags" box (type a tag, press comma/enter), thumbnail → "Save". Meta Business Suite (business.facebook.com, or its app) also works: Content → the video → "Edit" → Title / Description. '+
+  'Profiles have no tags box: hashtags in the description are the tags.',
+ tiktok:'TIKTOK SEO - which box is which. '+
+  'APP, post screen (after "Next"): the big box at the top "Add description…" = CAPTION. TikTok has no separate title for normal videos, so the FIRST LINE of the caption is the title (a hook with the main keyword). HASHTAGS go in the same box at the end (3-5), or tap the "# Hashtags" chip under the box and pick suggestions. If a second box "Add a catchy title" is shown (photo posts and some long videos), put the title there and the rest in the description. Then "Location", "Add link", "Everyone can view this post", "More options" → "Post". '+
+  'APP, old video: your video → "…" (More/Share) → "Edit post" (only in some regions); if it is not there, the caption cannot be changed: tell the user honestly and offer a new caption for a re-post. '+
+  'CHROME: tiktok.com → "Upload" (TikTok Studio; if it asks for the app, Chrome ⋮ → "Desktop site") → select video → "Description" box = caption + hashtags (the "#Hashtags" and "@Mention" buttons under it), "Cover", "Location", "Who can watch this video", "Allow users to: Comment / Duet / Stitch" → "Post". '+
+  'Keywords: TikTok search reads the caption, the on-screen text and the spoken words, so put the keyword in the first line.',
+ instagram:'INSTAGRAM SEO - which box is which. '+
+  'Instagram has no title box. The CAPTION box is everything: first line = the hook/title with the main keyword, then 1-3 short lines, a call to action, then 3-5 HASHTAGS at the end (in the same box). '+
+  'APP, new Reel/post: "+" → "Reel" → pick → "Next" → share screen: caption box at the top next to the cover ("Write a caption and add hashtags…"), "Edit cover" (choose a clear frame), "Tag people", "Add location", "Add topics" (pick 1-3 topics: helps reach), "Audience", "More options" → "Advanced settings" → "Write alt text" (describe the video with the keyword) → "Share". Music: on the edit screen ("Add audio"). '+
+  'APP, old post/Reel: open it → ⋯ (top right) → "Edit" → the caption under the video becomes editable → change it → "Done" / ✓. Alt text: ⋯ → "Edit" → "Edit alt text". '+
+  'CHROME (instagram.com): "Create" (+) → "Select from device" → Next → Next → caption box "Write a caption…", "Add location", "Accessibility" (alt text), "Advanced settings" → "Share". Edit: open the post → ⋯ → "Edit" → caption → "Done".',
+ youtube:'YOUTUBE SEO - which box is which. Title → "Create a title" (upload) / "Title" (edit) box at the top. Description → the box under it ("Add description" / "Tell viewers about your video"). Hashtags → last line of the description (3-5). Tags → only in YouTube Studio: the app (Edit → scroll → Tags) or Chrome studio.youtube.com (Details → "Show more" → "Add tag"). See the other youtube keys for the exact screens.'
+};
+const NATURAL_WORK='While working, talk like a real helper, short and warm, not a robot: one line before starting ("اچھا، ابھی کھولتی ہوں"), a tiny update at real milestones ("ٹائٹل ڈال دیا… اب ڈسکرپشن"), and at the end say in 1-2 lines what you wrote and why it can reach more people. No step-by-step narration, no reading the labels aloud.';
+const _guideD=tool;
+tool=async function(n,a){
+  const r=await _guideD.apply(this,arguments);
+  if(n==='app_guide'&&r&&typeof r==='object'){
+    const raw=(String(a&&a.app||'')+' '+String(a&&a.task||'')).toLowerCase();
+    const p=/insta|ig\b|انسٹا/.test(raw)?'instagram':/tik|ٹک/.test(raw)?'tiktok':/face|fb|فیس/.test(raw)?'facebook':/you|yt|یوٹیوب/.test(raw)?'youtube':'';
+    if(p)r.seo_boxes=SEO_BOXES[p];else r.seo_boxes_all=SEO_BOXES;
+    r.talk_style=NATURAL_WORK;
+  }
+  return r;
+};
+const _sxBoxes=sysExtra;
+sysExtra=function(){return _sxBoxes.apply(this,arguments)+' کس پلیٹ فارم پر کون سا خانہ ٹائٹل، ڈسکرپشن، ہیش ٹیگ یا ٹیگز کا ہے (فیس بک ایپ، فیس بک براؤزر، Chrome، ٹک ٹاک، انسٹاگرام): app_guide کے seo_boxes میں ہے؛ جہاں ٹائٹل کا الگ خانہ نہیں (ٹک ٹاک، انسٹاگرام، فیس بک پروفائل) وہاں کیپشن کی پہلی لائن ہی ٹائٹل ہے اور ہیش ٹیگ اسی خانے کے آخر میں۔ کام کرتے ہوئے قدرتی، مختصر اور گرم انداز میں بات کریں۔'};
+
+/* ==== thinking phone control: read ANY screen as a map, work out which box is which by meaning
+   (any phone, language, app version or browser), explore (Show more / More / scroll), act, then verify ==== */
+const APP_NAMES={'com.android.chrome':'Chrome browser','com.sec.android.app.sbrowser':'Samsung Internet browser','com.facebook.katana':'Facebook app','com.facebook.lite':'Facebook Lite','com.facebook.orca':'Messenger','com.google.android.youtube':'YouTube app','com.google.android.apps.youtube.creator':'YouTube Studio app','com.zhiliaoapp.musically':'TikTok app','com.ss.android.ugc.trill':'TikTok app','com.instagram.android':'Instagram app','com.facebook.pages.app':'Meta Business Suite','com.opera.browser':'Opera browser','com.microsoft.emmx':'Edge browser','org.mozilla.firefox':'Firefox browser'};
+const GOALS={
+  title:{w:['title','headline','create a title','add a title','caption your short','عنوان','ٹائٹل','سرخی','शीर्षक','टाइटल','العنوان','titre','título','judul','başlık'],id:['title','headline']},
+  description:{w:['description','describe','tell viewers','say something','what\'s on your mind','whats on your mind','write a caption','caption','add description','about this video','تفصیل','وضاحت','ڈسکرپشن','کیپشن','بیان','विवरण','डिस्क्रिप्शन','कैप्शन','الوصف','وصف','descripción','deskripsi','açıklama'],id:['description','desc','caption','composer','status','body','message']},
+  tags:{w:['tags','tag','add tag','keywords','ٹیگز','ٹیگ','टैग','الوسوم','etiquetas','etiketler'],id:['tag','keyword'],not:['tag people','tag friends','people','friends','لوگوں','دوست']},
+  comment:{w:['comment','add a comment','write a comment','reply','تبصرہ','کمنٹ','टिप्पणी','تعليق'],id:['comment','reply']},
+  search:{w:['search','سرچ','تلاش','खोजें','بحث'],id:['search','query']}};
+GOALS.caption=GOALS.description;GOALS.hashtags=GOALS.description;
+const EXPANDERS=/^(show more|see more|more options|more|advanced settings|additional info|additional details|add to your post|all options|expand|details|⋯|…|مزید|اور دکھائیں|مزید دکھائیں|مزید اختیارات|और देखें|अधिक|المزيد|عرض المزيد)$/i;
+function itemWords(x){return (String(x.text||'')+' '+String(x.desc||'')+' '+String(x.hint||'')).toLowerCase().trim()}
+function shortItem(x){const t=String(x.text||x.hint||x.desc||'').trim();return (x.box?'[box] ':x.scroll?'[list] ':x.tap?'[btn] ':'')+(t?'"'+(t.length>45?t.slice(0,45)+'…':t)+'"':'(no text)')+(x.hint&&x.text?' hint "'+String(x.hint).slice(0,30)+'"':'')+(x.id?' id:'+x.id:'')+' @'+x.x+','+x.y+(x.on?' (on)':'')}
+async function getMap(MA){
+  if(MA.uiMap){try{const m=await MA.uiMap();return{app:m.app||'',items:m.items||[]}}catch(e){}}
+  try{const r=await MA.uiRead();return{app:'',items:(r.items||[]).map((x,i)=>({text:x.text,desc:x.desc,box:x.editable,tap:x.clickable,x:50,y:x.at==='top'?8:x.at==='bottom'?94:20+i}))}}catch(e){return{app:'',items:[]}}}
+function summarizeMap(m){
+  const it=m.items||[];
+  return{app:APP_NAMES[m.app]||m.app||'unknown',
+    boxes:it.filter(x=>x.box).map(shortItem),
+    expanders:it.filter(x=>!x.box&&EXPANDERS.test(String(x.text||x.desc||'').trim())).map(shortItem),
+    scrollable:it.some(x=>x.scroll),
+    top_bar:it.filter(x=>!x.box&&x.y<=12&&(x.text||x.desc)).map(shortItem).slice(0,10),
+    bottom_bar:it.filter(x=>!x.box&&x.y>=88&&(x.text||x.desc)).map(shortItem).slice(0,10),
+    other:it.filter(x=>!x.box&&x.y>12&&x.y<88&&(x.text||x.desc)).map(shortItem).slice(0,45)}}
+// how well an item fits a goal: its words, hint, id, a label just above it, and its order among boxes
+function goalScore(x,goal,m){
+  const G=GOALS[goal];if(!G)return 0;const w=itemWords(x),id=String(x.id||'').toLowerCase();let s=0;
+  G.w.forEach(k=>{if(w.includes(k))s=Math.max(s,k.length>5?60:45)});
+  G.id.forEach(k=>{if(id.includes(k))s=Math.max(s,55)});
+  if(x.box&&s<40){const above=(m.items||[]).filter(o=>!o.box&&o.y<x.y&&x.y-o.y<=7&&Math.abs(o.x-x.x)<45);
+    above.forEach(o=>{const ow=itemWords(o);G.w.forEach(k=>{if(ow.includes(k))s=Math.max(s,50)})})}
+  (G.not||[]).forEach(k=>{if(w.includes(k))s-=80});
+  if(goal!=='search'&&(/search|سرچ|تلاش/.test(w)||/search/.test(id)))s-=70;
+  if(goal!=='comment'&&/comment|reply|تبصرہ/.test(w))s-=40;
+  if(x.box){s+=10;const bx=(m.items||[]).filter(o=>o.box).sort((a,b)=>a.y-b.y),i=bx.indexOf(x);
+    if(goal==='title'&&i===0)s+=8;if((goal==='description'||goal==='caption'||goal==='hashtags')&&(i===1||bx.length===1))s+=6}
+  return s}
+function bestFor(m,goal){let b=null,bs=0;(m.items||[]).forEach(x=>{const s=goalScore(x,goal,m);if(s>bs){bs=s;b=x}});return bs>=40?{item:b,score:bs}:null}
+async function fillItem(MA,x,text){
+  const key=String(x.text||x.hint||x.desc||'').trim();
+  if(x.box&&key&&MA.uiFill){try{const r=await MA.uiFill({label:key.slice(0,60),text});if(r&&r.ok)return true}catch(e){}}
+  // no words on the box (or it opens a new screen): tap it where it is, then type into the box that gets focus
+  if(MA.uiTapAt){try{await MA.uiTapAt({x:x.x,y:x.y})}catch(e){}}else if(key){try{await MA.uiClick({label:key})}catch(e){}}
+  await zz(900);
+  try{if(MA.uiFill){const r=await MA.uiFill({label:'',text});if(r&&r.ok)return true}}catch(e){}
+  try{const r=await MA.uiType({text});return !!(r&&r.ok)}catch(e){return false}}
+async function smartFill(a){
+  const MA=await maOk();if(!MA)return{error:'Accessibility is not enabled (or this is not the Android app)'};
+  let goal=String(a.goal||'').toLowerCase().trim();const text=String(a.text||'');
+  if(/hash|ہیش/.test(goal))goal='hashtags';if(/tag|ٹیگ/.test(goal)&&goal!=='hashtags')goal='tags';if(/desc|ڈسک|تفصیل/.test(goal))goal='description';if(/caption|کیپشن/.test(goal))goal='caption';if(/title|ٹائٹل|عنوان/.test(goal))goal='title';
+  if(!GOALS[goal])return{error:'goal must be title, description, caption, hashtags, tags, comment or search'};
+  const steps=[];SCR.lastUi=Date.now();
+  let m=await getMap(MA),hit=bestFor(m,goal),usedExp={};
+  for(let round=0;round<7&&!hit;round++){
+    // 1) open hidden parts first (Show more / More options / Advanced settings), 2) then scroll down
+    const ex=(m.items||[]).find(x=>!x.box&&EXPANDERS.test(String(x.text||x.desc||'').trim())&&!usedExp[String(x.text||x.desc)]);
+    if(ex&&round<3){usedExp[String(ex.text||ex.desc)]=1;steps.push('tapped '+String(ex.text||ex.desc));
+      try{MA.uiTapAt?await MA.uiTapAt({x:ex.x,y:ex.y}):await MA.uiClick({label:String(ex.text||ex.desc)})}catch(e){}}
+    else{steps.push('scrolled down');try{MA.uiScroll?await MA.uiScroll({dir:'down'}):await MA.uiSwipe({dir:'up'})}catch(e){}}
+    await zz(650);m=await getMap(MA);hit=bestFor(m,goal)}
+  if(!hit)return{error:'could not find the '+goal+' box on this screen',tried:steps,screen:summarizeMap(m),think:'Look at the shared screen and this map: is it the right screen (maybe the edit screen is not open yet, or a popup is covering it)? Close popups ("Not now", "Got it", "Skip" or back), open the edit/upload screen, or use ui_fill/ui_tap_at on the box you see.'};
+  const what=hit.item;steps.push('using '+shortItem(what));
+  // TAGS are separate chips: put them in one by one, each closed with Enter (or a comma on older builds)
+  if(goal==='tags'){
+    const tags=text.split(/[,،\n#]+/).map(t=>t.trim()).filter(Boolean).filter((t,i,a)=>a.indexOf(t)===i).slice(0,30);
+    let n=0;
+    for(let i=0;i<tags.length;i++){
+      const t=tags[i];let ok2=false;
+      if(i===0)ok2=await fillItem(MA,what,MA.uiEnter?t:t+',');
+      else{try{const r=await MA.uiFill({label:'',text:MA.uiEnter?t:t+','});ok2=!!(r&&r.ok)}catch(e){}if(!ok2){try{const r=await MA.uiType({text:MA.uiEnter?t:t+','});ok2=!!(r&&r.ok)}catch(e){}}}
+      if(ok2&&MA.uiEnter){try{await MA.uiEnter()}catch(e){}}
+      if(ok2)n++;await zz(350)}
+    await zz(400);const m3=await getMap(MA),first=tags[0]?tags[0].toLowerCase():'';
+    const seen=(m3.items||[]).some(x=>itemWords(x).includes(first));SCR.force=true;
+    return n?{status:n+' of '+tags.length+' tags added one by one',verified:seen,box:shortItem(what),steps:steps,note:seen?'the tags show on the screen':'look at the screen: if a tag stayed as plain text, tap the box and press done/enter'}
+            :{error:'found the tags box but typing failed',box:shortItem(what),screen:summarizeMap(m3)};
+  }
+  const ok=await fillItem(MA,what,text);
+  await zz(500);const m2=await getMap(MA),probe=text.trim().slice(0,18).toLowerCase();
+  const verified=!!probe&&(m2.items||[]).some(x=>itemWords(x).includes(probe));
+  SCR.force=true;
+  if(!ok&&!verified)return{error:'found the '+goal+' box but typing failed',box:shortItem(what),tried:steps,screen:summarizeMap(m2)};
+  return{status:goal+' written',verified:verified,box:shortItem(what),steps:steps,note:verified?'the text is on the screen now':'typed, but could not read it back: look at the screen to check'}}
+try{TOOLS[0].functionDeclarations.push(
+ {name:'screen_map',description:'See the current phone screen as a map: which app or browser it is, every text box (with its hint and id), every button, the top and bottom bars, "Show more"/"More options" style buttons and if it can scroll, each with its position (x,y in % of the screen). Use it to understand ANY phone, language, layout or app version before acting, instead of guessing labels.'},
+ {name:'smart_fill',description:'(For tags give them comma separated: each one is added as its own tag, one by one.) Write text into the right box by its MEANING, on any phone, app or browser: goal = title, description, caption, hashtags, tags, comment or search. It works out which box is which (hint, id, the label above it, order), opens "Show more"/"More options" or scrolls if the box is hidden, types, then checks the text is there. Best for SEO: title, description and tags.',parameters:{type:O,properties:{goal:{type:S},text:{type:S}},required:['goal','text']}},
+ {name:'ui_tap_at',description:'Tap a point on the screen by position in percent (x from left, y from top), for icons without any text (⋮, ✎, ✓, +). Get the position from screen_map or from what you see on the shared screen.',parameters:{type:O,properties:{x:{type:N},y:{type:N}},required:['x','y']}})}catch(e){}
+const THINK_LOOP='THINK LIKE A PERSON, NOT FROM MEMORY: every phone is different (language of the phone, Android version, Chrome or Samsung Internet or the Facebook in-app browser, app version, small or big screen, font size, dark mode). Guides are hints, not scripts. Loop: 1) OBSERVE: look at the shared screen and call screen_map (which app/browser, which boxes, bars, Show more). 2) PLAN the next one or two steps toward the goal. 3) ACT: smart_fill for boxes, ui_click / ui_tap_at for buttons, ui_scroll for lower parts. 4) CHECK: did the screen change as expected? 5) ADAPT: if not, think why (popup, keyboard covering the box - ui_global back hides it, wrong screen, hidden behind Show more/More/⋯, needs Desktop site in a browser, the phone is in another language) and try another way at once. A label in another language means the same thing (عنوان = title, تفصیل = description). Finish the job, then tell the user briefly.';
+const _guideE=tool;
+tool=async function(n,a){
+  if(n==='screen_map'){const MA=await maOk();if(!MA)return{error:'Accessibility is not enabled'};SCR.lastUi=Date.now();const m=await getMap(MA);return summarizeMap(m)}
+  if(n==='smart_fill')return await smartFill(a||{});
+  if(n==='ui_tap_at'){const MA=await maOk();if(!MA)return{error:'Accessibility is not enabled'};if(!MA.uiTapAt)return{error:'this app build is older; use ui_click'};SCR.lastUi=Date.now();
+    try{const r=await MA.uiTapAt({x:Math.max(0,Math.min(100,+a.x||50)),y:Math.max(0,Math.min(100,+a.y||50))});SCR.force=true;return r&&r.ok?{status:'tapped at '+a.x+','+a.y}:{error:'tap failed'}}catch(e){return{error:String(e.message||e)}}}
+  const r=await _guideE.apply(this,arguments);
+  if(n==='app_guide'&&r&&typeof r==='object')r.think_loop=THINK_LOOP;
+  if(n==='ui_click'&&r&&r.error){try{const MA=await maOk();if(MA&&MA.uiMap){const m=await getMap(MA);r.screen=summarizeMap(m);delete r.visible_now}}catch(e){}}
+  return r};
+const _sxThink=sysExtra;
+sysExtra=function(){return _sxThink.apply(this,arguments)+' سوچ کر کام: ہر موبائل الگ ہوتا ہے (زبان، براؤزر، ایپ کا ورژن، اسکرین کا سائز)، اس لیے رٹے ہوئے لیبلز پر نہ چلیں۔ پہلے اسکرین دیکھیں اور screen_map لیں، سمجھیں کون سا خانہ کس کام کا ہے، پھر smart_fill (ٹائٹل، ڈسکرپشن، ٹیگز، کیپشن) اور ui_click / ui_tap_at سے کام کریں، ہر قدم کے بعد دیکھیں کہ اسکرین ویسی بدلی یا نہیں، نہ بدلے تو وجہ سوچ کر دوسرا راستہ لیں (پاپ اپ، کی بورڈ، Show more، More، ⋯، Desktop site)۔ کام مکمل اور درست کریں۔'};
 
 /* ---- changing mode by voice (all modes) ---- */
 try{TOOLS[0].functionDeclarations.push({name:'switch_mode',description:'Switch the app to another mode, only after the user agrees or asks. For learning (Islamic studies: kalimas, duas, stories; or English, Arabic, Urdu speaking practice) use mode te with a subject; the teacher call (Zainab or Ahmed) then starts.',parameters:{type:O,properties:{mode:{type:S,description:'One of: '+Object.keys(MODES).join(', ')+' (te = teacher)'},subject:{type:S,description:'Only for te: en, ar, ur, is (Islamic studies) or kids'},teacher:{type:S,description:'Only for te: f (Zainab) or m (Ahmed), if the user chose'}},required:['mode']}})}catch(e){}
