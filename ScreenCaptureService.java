@@ -28,6 +28,8 @@ public class ScreenCaptureService extends Service {
     public interface FrameListener { void onFrame(String base64Jpeg); }
 
     static volatile FrameListener listener;
+    static volatile String status = "not started";
+    static volatile int images = 0, frames = 0;
 
     private MediaProjection projection;
     private VirtualDisplay display;
@@ -50,11 +52,12 @@ public class ScreenCaptureService extends Service {
         int code = intent.getIntExtra("code", 0);
         Intent data = intent.getParcelableExtra("data");
         MediaProjectionManager mgr = (MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE);
-        try { projection = mgr.getMediaProjection(code, data); } catch (Exception e) { projection = null; }
-        if (projection == null) { stopSelf(); return START_NOT_STICKY; }
+        images = 0; frames = 0;
+        try { projection = mgr.getMediaProjection(code, data); } catch (Exception e) { projection = null; status = "getMediaProjection failed: " + e; }
+        if (projection == null) { if ("not started".equals(status)) status = "no projection"; stopSelf(); return START_NOT_STICKY; }
         projection.registerCallback(new MediaProjection.Callback() {
             @Override
-            public void onStop() { stopCapture(); stopSelf(); }
+            public void onStop() { status = "stopped by Android"; stopCapture(); stopSelf(); }
         }, new Handler(getMainLooper()));
 
         DisplayMetrics dm = getResources().getDisplayMetrics();
@@ -65,8 +68,6 @@ public class ScreenCaptureService extends Service {
         thread = new HandlerThread("mayra-screen");
         thread.start();
         Handler handler = new Handler(thread.getLooper());
-        display = projection.createVirtualDisplay("mayra", sw, sh, dm.densityDpi,
-                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, reader.getSurface(), null, handler);
         reader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
             @Override
             public void onImageAvailable(ImageReader r) {
@@ -74,6 +75,7 @@ public class ScreenCaptureService extends Service {
                 try {
                     img = r.acquireLatestImage();
                     if (img == null) return;
+                    images++;
                     long now = System.currentTimeMillis();
                     if (now - lastFrame < 1500) return;   // a frame every 1.5 s: lighter for TikTok / video apps
                     lastFrame = now;
@@ -88,15 +90,20 @@ public class ScreenCaptureService extends Service {
                     ByteArrayOutputStream out = new ByteArrayOutputStream();
                     crop.compress(Bitmap.CompressFormat.JPEG, 55, out);
                     FrameListener l = listener;
-                    if (l != null) l.onFrame(Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP));
+                    if (l != null) { l.onFrame(Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)); frames++; }
                     bmp.recycle();
                     crop.recycle();
-                } catch (Exception ignored) {
+                } catch (Throwable e) { status = "frame error: " + e;
                 } finally {
                     if (img != null) img.close();
                 }
             }
         }, handler);
+        try {
+            display = projection.createVirtualDisplay("mayra", sw, sh, dm.densityDpi,
+                    DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, reader.getSurface(), null, handler);
+            status = "capturing";
+        } catch (Throwable e) { status = "createVirtualDisplay failed: " + e; stopCapture(); stopSelf(); }
         return START_NOT_STICKY;
     }
 

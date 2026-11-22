@@ -3033,8 +3033,9 @@ async function smartFill(a){
   if(/hash|ہیش/.test(goal))goal='hashtags';if(/tag|ٹیگ/.test(goal)&&goal!=='hashtags')goal='tags';if(/desc|ڈسک|تفصیل/.test(goal))goal='description';if(/caption|کیپشن/.test(goal))goal='caption';if(/title|ٹائٹل|عنوان/.test(goal))goal='title';
   if(!GOALS[goal])return{error:'goal must be title, description, caption, hashtags, tags, comment or search'};
   const steps=[];SCR.lastUi=Date.now();
-  let m=await getMap(MA),hit=bestFor(m,goal),usedExp={};
+  let m=await getMap(MA),hit=bestFor(m,goal),usedExp={},lastSig='',same=0;
   for(let round=0;round<7&&!hit;round++){
+    { const sg=mapSig(m); if(sg===lastSig){ if(++same>=2)break } else { same=0; lastSig=sg } }   /* the screen stopped changing: stop scrolling */
     // 1) open hidden parts first (Show more / More options / Advanced settings), 2) then scroll down
     const ex=(m.items||[]).find(x=>!x.box&&EXPANDERS.test(String(x.text||x.desc||'').trim())&&!usedExp[String(x.text||x.desc)]);
     if(ex&&round<3){usedExp[String(ex.text||ex.desc)]=1;steps.push('tapped '+String(ex.text||ex.desc));
@@ -3292,6 +3293,72 @@ greetNow=function(){
 // 5) the rules for doing a task properly
 const _sxTask=sysExtra;
 sysExtra=function(){return _sxTask.apply(this,arguments)+' کام مکمل کرنے کے اصول: (1) صارف یوٹیوب، فیس بک، ٹک ٹاک یا انسٹاگرام یا “میرا چینل” کہے تو ہمیشہ فون کی ایپ کھولیں (open_app یا my_profile)؛ Chrome یا براؤزر صرف تب جب صارف خود براؤزر یا Chrome کہے۔ (2) جو کام شروع ہو اسی پر رہیں جب تک مکمل نہ ہو؛ ادھر ادھر کی باتیں نہیں۔ (3) کبھی نہ کہیں “ہو گیا” جب تک ٹول کا جواب verified:true نہ ہو یا آپ اسکرین پر خود لکھا ہوا نہ دیکھ لیں؛ نہ ہوا ہو تو سچ بتائیں اور دوسرا طریقہ آزمائیں۔ (4) ٹائٹل، ڈسکرپشن، ٹیگز کبھی سرچ والے خانے میں نہ لکھیں، اور لکھنے کے بعد تیر (arrow)، سرچ یا X (clear) نہ دبائیں؛ آخر میں صرف Save۔ (5) صارف کہے “ٹائٹل یہ رہا” یا کسی چیز کی طرف اشارہ کرے تو اسکرین پر دیکھ کر tap_and_type یا ui_tap_at سے وہیں کام کریں، صارف سے دوبارہ ٹیپ کرنے کو نہ کہیں۔ (6) screen_map میں چیز نہ ملے تو اپنی آنکھوں (اسکرین شیئر کی تصویر) پر بھروسہ کریں۔'};
+
+/* ==== Mayra's eyes, version 2: the debug log from a moto g84 (Android 15) showed screen sharing ON but
+   0 pictures from Android, so she was blind. Now she sees through Accessibility screenshots (Android 11+):
+   no "Start now" prompt, no capture service; the old MediaProjection way stays as a backup and logs its status. ==== */
+SCR.snapOn=false;SCR.snapBusy=false;SCR.snapFails=0;SCR.lastSnap=0;
+const _scrIsOnB=scrIsOn;
+scrIsOn=function(){return !!(SCR.snapOn||_scrIsOnB.apply(this,arguments))};
+async function snapOnce(){const MA=await maOk();if(!MA||!MA.uiSnap)return{ok:false,error:'no accessibility screenshot in this build'};
+  try{const r=await MA.uiSnap();return r||{ok:false,error:'no reply'}}catch(e){return{ok:false,error:String(e.message||e)}}}
+async function trySnapMode(){
+  if(SCR.snapOn)return true;
+  const r=await snapOnce();
+  if(!r.ok){dbg('accessibility screenshot not available: '+(r.error||''));return false}
+  SCR.snapOn=true;SCR.snapFails=0;lastImg=r.data;SCR.lastFrameAt=Date.now();SCR.lastSnap=Date.now();
+  try{$('bScr').classList.add('on')}catch(e){}
+  dbg('screen: using accessibility screenshots');
+  if(live&&ws&&ws.readyState===1){sendLastFrame();SCR.noted=null;scrNote(true)}
+  return true}
+const _shareC=shareScreen;
+shareScreen=async function(on,why){
+  if(on&&!scrIsOn()&&live){if(await trySnapMode())return{screen_shared:true,note:'you see the screen now (a fresh picture every 1-2 seconds while you work)'}}
+  if(!on&&SCR.snapOn){SCR.snapOn=false;try{$('bScr').classList.remove('on')}catch(e){}scrNote(false);if(!_scrIsOnB())return{screen_shared:false}}
+  return _shareC.apply(this,arguments)};
+const _svSnap=startVideo;
+startVideo=async function(kind){if(kind==='scr'&&live&&!SCR.snapOn&&await trySnapMode()){toast('Screen sharing is on · اسکرین شیئر آن');return}return _svSnap.apply(this,arguments)};
+const _stvSnap=stopVideo;
+stopVideo=function(){if(SCR.snapOn&&!SCR.starting){SCR.snapOn=false;try{$('bScr').classList.remove('on')}catch(e){}scrNote(false)}return _stvSnap.apply(this,arguments)};
+// the screenshot loop: busy = every ~1.5 s, watching a video = every ~1 s, quiet = every 5 s; same picture is not re-sent
+setInterval(async function(){
+  if(!SCR.snapOn||SCR.snapBusy||!live||!ws||ws.readyState!==1)return;
+  const now=Date.now(),watching=now<SCR.watchUntil,busy=watching||now-lastVoice<20000||now-SCR.lastUi<25000||now-SCR.lastAsk<25000;
+  if(!SCR.force&&now-SCR.lastSnap<(watching?1000:busy?1500:5000))return;
+  SCR.snapBusy=true;SCR.lastSnap=now;
+  try{const r=await snapOnce();
+    if(r.ok&&r.data){SCR.snapFails=0;SCR.lastFrameAt=Date.now();if(r.data!==lastImg||SCR.force){lastImg=r.data;SCR.force=false;sendLastFrame()}}
+    else if(++SCR.snapFails>=5){dbg('accessibility screenshots failing ('+(r.error||'')+'), switching to screen capture');SCR.snapOn=false;SCR.snapFails=0;try{await _shareC(true,'tool')}catch(e){}}}
+  finally{SCR.snapBusy=false}},300);
+// reconnects keep the screen on in screenshot mode too
+try{const _cl=cleanup;cleanup=function(){const keep=SCR.snapOn&&!stopping;const r=_cl.apply(this,arguments);if(keep){SCR.snapOn=true;try{$('bScr').classList.add('on')}catch(e){}}return r}}catch(e){}
+// backup way (MediaProjection): write its real state into the debug log
+setInterval(async function(){try{if(!screenOn)return;const SC=plug('MayraMedia');if(!SC||!SC.screenStatus)return;const s=await SC.screenStatus();dbg('screen capture status: '+s.status+', images '+s.images+', frames '+s.frames+(s.listener?'':' (no listener)'))}catch(e){}},30000);
+
+/* ---- never "done" when it was not; no blind loops ---- */
+const _honestT=tool;
+tool=async function(n,a){
+  if(n==='smart_fill'&&!String(a&&a.text||'').trim())return{error:'text is empty: first decide what to write (look at the video, the old title), then call smart_fill with the text'};
+  if(n==='watch_video'){try{const MA=await maOk();if(MA){const m=await getMap(MA);if(/rjbilal/.test(m.app||''))return{error:'Mayra\'s own app is in front, not the video. Open the video in its app first, then watch.'}}}catch(e){}}
+  const r=await _honestT.apply(this,arguments);
+  if(r&&typeof r==='object'&&r.error&&!r.tell_user)r.tell_user='This step did NOT work. Do not say it is done. Try another way at once; if you really cannot, tell the user honestly what is blocking.';
+  return r};
+const _sfLoop=smartFill;
+smartFill=async function(a){
+  const MA=await maOk();
+  if(MA){const m=await getMap(MA);if(!(m.items||[]).length)return{error:'this screen shows nothing to Accessibility right now',think:'Use your eyes on the screen picture: find the box and use tap_and_type(x,y,text). If you see nothing either, call share_screen(on=true) to refresh the picture.'}}
+  return _sfLoop.apply(this,arguments)};
+// tap_and_type: if no box shows up in the map, still try the box that got the cursor, then check
+const _tatB=tapAndType;
+tapAndType=async function(a){
+  const r=await _tatB.apply(this,arguments);
+  if(!r||!r.error||!/no writing box/.test(r.error))return r;
+  const MA=await maOk();if(!MA)return r;const text=String(a.text||'');
+  let ok=false;try{const f=await MA.uiFill({label:'',text});ok=!!(f&&f.ok)}catch(e){}
+  if(!ok){try{const t=await MA.uiType({text});ok=!!(t&&t.ok)}catch(e){}}
+  await zz(500);let seen=false;try{const m=await getMap(MA),p=text.trim().slice(0,18).toLowerCase();seen=!!p&&(m.items||[]).some(x=>!x.search&&itemWords(x).includes(p))}catch(e){}
+  SCR.force=true;
+  return ok||seen?{status:seen?'written and checked':'typed into the selected box, NOT confirmed: look at the screen picture',verified:seen}:r};
 
 /* every tool call is logged here, as the outermost layer */
 const _logT=tool;

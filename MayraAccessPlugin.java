@@ -64,6 +64,20 @@ public class MayraAccessPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void uiSnap(final PluginCall call) {
+        MayraAccessService.snap(new MayraAccessService.SnapResult() {
+            @Override
+            public void done(String b64, String error) {
+                JSObject o = new JSObject();
+                o.put("ok", b64 != null);
+                if (b64 != null) o.put("data", b64);
+                if (error != null) o.put("error", error);
+                call.resolve(o);
+            }
+        });
+    }
+
+    @PluginMethod
     public void uiEnter(PluginCall call) {
         JSObject o = new JSObject();
         o.put("ok", MayraAccessService.imeEnter());

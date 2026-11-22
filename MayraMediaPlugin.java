@@ -66,6 +66,16 @@ public class MayraMediaPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void screenStatus(PluginCall call) {
+        JSObject o = new JSObject();
+        o.put("status", ScreenCaptureService.status);
+        o.put("images", ScreenCaptureService.images);
+        o.put("frames", ScreenCaptureService.frames);
+        o.put("listener", ScreenCaptureService.listener != null);
+        call.resolve(o);
+    }
+
+    @PluginMethod
     public void stopScreen(PluginCall call) {
         ScreenCaptureService.listener = null;
         Intent i = new Intent(getContext(), ScreenCaptureService.class);

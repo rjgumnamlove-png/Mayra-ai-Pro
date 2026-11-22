@@ -176,14 +176,12 @@ public class MayraAccessService extends AccessibilityService {
         if (s == null || label == null) return null;
         String l = label.trim().toLowerCase();
         if (l.isEmpty()) return null;
-        AccessibilityNodeInfo root = s.getRootInActiveWindow();
-        if (root == null) return null;
         int h = Math.max(1, s.getResources().getDisplayMetrics().heightPixels);
         String w = where == null ? "" : where.trim().toLowerCase();
         boolean nav = false;
         for (String x : NAV_WORDS) if (x.equals(l)) { nav = true; break; }
-        List<AccessibilityNodeInfo> nodes = new ArrayList<>();
-        all(root, nodes);
+        List<AccessibilityNodeInfo> nodes = screenNodes();
+        if (nodes.isEmpty()) return null;
         AccessibilityNodeInfo best = null;
         int bestScore = 0;
         String bestText = null;
@@ -225,10 +223,8 @@ public class MayraAccessService extends AccessibilityService {
     static boolean scroll(String dir) {
         MayraAccessService s = instance;
         if (s == null) return false;
-        AccessibilityNodeInfo root = s.getRootInActiveWindow();
-        if (root == null) return false;
-        List<AccessibilityNodeInfo> nodes = new ArrayList<>();
-        all(root, nodes);
+        List<AccessibilityNodeInfo> nodes = screenNodes();
+        if (nodes.isEmpty()) return false;
         AccessibilityNodeInfo best = null;
         long bestArea = 0;
         for (AccessibilityNodeInfo n : nodes) {
@@ -270,9 +266,16 @@ public class MayraAccessService extends AccessibilityService {
         return id.contains("search") || id.contains("query") || w.contains("search") || w.contains("تلاش") || w.contains("سرچ") || w.contains("खोज");
     }
 
+    static AccessibilityNodeInfo focusedBox() {
+        for (AccessibilityNodeInfo r : roots()) {
+            AccessibilityNodeInfo f = r.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
+            if (f != null && f.isEditable()) return f;
+        }
+        return null;
+    }
+
     private static AccessibilityNodeInfo findEditableNotSearch(AccessibilityNodeInfo n) {
-        List<AccessibilityNodeInfo> nodes = new ArrayList<>();
-        all(n, nodes);
+        List<AccessibilityNodeInfo> nodes = screenNodes();
         for (AccessibilityNodeInfo x : nodes) if (x != null && x.isEditable() && x.isVisibleToUser() && !isSearchBox(x)) return x;
         return null;
     }
@@ -282,8 +285,8 @@ public class MayraAccessService extends AccessibilityService {
         if (s == null) return false;
         AccessibilityNodeInfo root = s.getRootInActiveWindow();
         if (root == null) return false;
-        AccessibilityNodeInfo f = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
-        if (f == null || !f.isEditable()) f = findEditableNotSearch(root);
+        AccessibilityNodeInfo f = focusedBox();
+        if (f == null) f = findEditableNotSearch(root);
         if (f == null) return false;
         f.performAction(AccessibilityNodeInfo.ACTION_FOCUS);
         Bundle b = new Bundle();
@@ -403,10 +406,48 @@ public class MayraAccessService extends AccessibilityService {
     }
 
     // ---------- fill a named text box (upload screens: title, description, caption, tags) ----------
+    // walks the screen; hidden parts (old pages an app keeps in memory) are skipped, so the visible page is always reached
     private static void all(AccessibilityNodeInfo n, List<AccessibilityNodeInfo> out) {
-        if (n == null || out.size() > 600) return;
+        if (n == null || out.size() > 3000) return;
+        if (!out.isEmpty() && !n.isVisibleToUser()) return;
         out.add(n);
         for (int i = 0; i < n.getChildCount(); i++) all(n.getChild(i), out);
+    }
+
+    // the screen = the active window, plus the other app/system windows on top (dialogs, bottom sheets)
+    static List<AccessibilityNodeInfo> roots() {
+        List<AccessibilityNodeInfo> r = new ArrayList<>();
+        MayraAccessService s = instance;
+        if (s == null) return r;
+        AccessibilityNodeInfo a = s.getRootInActiveWindow();
+        if (a != null) r.add(a);
+        try {
+            List<android.view.accessibility.AccessibilityWindowInfo> ws = s.getWindows();
+            if (ws != null) for (android.view.accessibility.AccessibilityWindowInfo w : ws) {
+                int t = w.getType();
+                if (t != android.view.accessibility.AccessibilityWindowInfo.TYPE_APPLICATION
+                        && t != android.view.accessibility.AccessibilityWindowInfo.TYPE_SYSTEM) continue;
+                AccessibilityNodeInfo x = w.getRoot();
+                if (x == null) continue;
+                CharSequence pk = x.getPackageName();
+                if (pk != null && pk.toString().startsWith("com.rjbilal") && a != null && a.getPackageName() != null
+                        && !a.getPackageName().toString().startsWith("com.rjbilal")) continue;   // Mayra's own window behind another app
+                boolean dup = false;
+                for (AccessibilityNodeInfo y : r) if (y.equals(x)) { dup = true; break; }
+                if (!dup) r.add(x);
+            }
+        } catch (Exception ignored) {}
+        return r;
+    }
+
+    private static List<AccessibilityNodeInfo> screenNodes() {
+        List<AccessibilityNodeInfo> out = new ArrayList<>();
+        for (AccessibilityNodeInfo r : roots()) {
+            List<AccessibilityNodeInfo> part = new ArrayList<>();
+            all(r, part);
+            out.addAll(part);
+        }
+        return out;
     }
 
     private static String words(AccessibilityNodeInfo n) {
@@ -424,8 +465,7 @@ public class MayraAccessService extends AccessibilityService {
         AccessibilityNodeInfo root = s.getRootInActiveWindow();
         if (root == null) return false;
         String l = label == null ? "" : label.trim().toLowerCase();
-        List<AccessibilityNodeInfo> nodes = new ArrayList<>();
-        all(root, nodes);
+        List<AccessibilityNodeInfo> nodes = screenNodes();
         AccessibilityNodeInfo target = null;
         if (!l.isEmpty()) {
             for (AccessibilityNodeInfo n : nodes) {                  // the box itself shows the label (hint)
@@ -445,8 +485,8 @@ public class MayraAccessService extends AccessibilityService {
                 }
             }
         } else {
-            target = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
-            if (target == null || !target.isEditable()) target = findEditableNotSearch(root);
+            target = focusedBox();
+            if (target == null) target = findEditableNotSearch(root);
         }
         if (target == null) return false;
         target.performAction(AccessibilityNodeInfo.ACTION_FOCUS);
@@ -467,12 +507,11 @@ public class MayraAccessService extends AccessibilityService {
         DisplayMetrics dm = s.getResources().getDisplayMetrics();
         float W = Math.max(1, dm.widthPixels), H = Math.max(1, dm.heightPixels);
         JSONArray out = new JSONArray();
-        List<AccessibilityNodeInfo> nodes = new ArrayList<>();
-        all(root, nodes);
+        List<AccessibilityNodeInfo> nodes = screenNodes();
         try {
             res.put("app", root.getPackageName() == null ? "" : root.getPackageName().toString());
             for (AccessibilityNodeInfo n : nodes) {
-                if (n == null || !n.isVisibleToUser() || out.length() >= 160) continue;
+                if (n == null || !n.isVisibleToUser() || out.length() >= 220) continue;
                 CharSequence t = n.getText(), d = n.getContentDescription();
                 CharSequence h = Build.VERSION.SDK_INT >= 26 ? n.getHintText() : null;
                 String id = n.getViewIdResourceName();
@@ -516,8 +555,42 @@ public class MayraAccessService extends AccessibilityService {
         if (s == null || Build.VERSION.SDK_INT < 30) return false;
         AccessibilityNodeInfo root = s.getRootInActiveWindow();
         if (root == null) return false;
-        AccessibilityNodeInfo f = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
-        if (f == null || !f.isEditable()) return false;
+        AccessibilityNodeInfo f = focusedBox();
+        if (f == null) return false;
         return f.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.getId());
+    }
+
+    // ---------- see the screen without MediaProjection (Android 11+, needs canTakeScreenshot in the config) ----------
+    interface SnapResult { void done(String base64Jpeg, String error); }
+
+    static void snap(final SnapResult cb) {
+        final MayraAccessService s = instance;
+        if (s == null) { cb.done(null, "accessibility off"); return; }
+        if (Build.VERSION.SDK_INT < 30) { cb.done(null, "android older than 11"); return; }
+        try {
+            s.takeScreenshot(android.view.Display.DEFAULT_DISPLAY, s.getMainExecutor(), new TakeScreenshotCallback() {
+                @Override
+                public void onSuccess(ScreenshotResult r) {
+                    try {
+                        android.hardware.HardwareBuffer hb = r.getHardwareBuffer();
+                        android.graphics.Bitmap hw = android.graphics.Bitmap.wrapHardwareBuffer(hb, r.getColorSpace());
+                        if (hw == null) { hb.close(); cb.done(null, "no bitmap"); return; }
+                        float scale = 540f / Math.min(hw.getWidth(), hw.getHeight());
+                        int w = Math.max(2, Math.round(hw.getWidth() * scale)), h = Math.max(2, Math.round(hw.getHeight() * scale));
+                        android.graphics.Bitmap sw = hw.copy(android.graphics.Bitmap.Config.ARGB_8888, false);
+                        hw.recycle();
+                        hb.close();
+                        android.graphics.Bitmap small = android.graphics.Bitmap.createScaledBitmap(sw, w, h, true);
+                        if (small != sw) sw.recycle();
+                        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+                        small.compress(android.graphics.Bitmap.CompressFormat.JPEG, 55, out);
+                        small.recycle();
+                        cb.done(android.util.Base64.encodeToString(out.toByteArray(), android.util.Base64.NO_WRAP), null);
+                    } catch (Throwable e) { cb.done(null, "convert: " + e); }
+                }
+                @Override
+                public void onFailure(int code) { cb.done(null, "screenshot error " + code); }
+            });
+        } catch (Throwable e) { cb.done(null, String.valueOf(e)); }
     }
 }
