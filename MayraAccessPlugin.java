@@ -64,6 +64,24 @@ public class MayraAccessPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void uiKeyboard(PluginCall call) {
+        JSObject o = new JSObject();
+        String mode = call.getString("mode", "replace");
+        if ("read".equals(mode)) {
+            String t = MayraAccessService.imeRead();
+            o.put("ok", t != null);
+            if (t != null) o.put("text", t);
+        } else {
+            boolean ok = MayraAccessService.imeWrite(call.getString("text", ""), mode);
+            o.put("ok", ok);
+            String t = ok ? MayraAccessService.imeRead() : null;
+            if (t != null) o.put("text", t);
+        }
+        o.put("ready", MayraAccessService.imeReady());
+        call.resolve(o);
+    }
+
+    @PluginMethod
     public void uiSnap(final PluginCall call) {
         MayraAccessService.snap(new MayraAccessService.SnapResult() {
             @Override

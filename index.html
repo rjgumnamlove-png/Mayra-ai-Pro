@@ -3360,6 +3360,92 @@ tapAndType=async function(a){
   SCR.force=true;
   return ok||seen?{status:seen?'written and checked':'typed into the selected box, NOT confirmed: look at the screen picture',verified:seen}:r};
 
+/* ==== from the 2nd phone log: pictures now arrive, but YouTube's Edit page hides its boxes from Accessibility and
+   her taps missed (y 49-53% = Visibility/Audience, while Title is ~33-42%). So: a faint grid on every picture so she can
+   point, the keyboard mode (types into the box with the cursor, reads it back), one-step "open the Edit page",
+   and calm screenshot timing (error 3 = "too soon", not a failure). ==== */
+let snapLock=Promise.resolve(),snapLastCall=0,snapWarned=false;
+snapOnce=function(){
+  const run=async()=>{const MA=await maOk();if(!MA||!MA.uiSnap)return{ok:false,error:'no accessibility screenshot in this build'};
+    const wait=1100-(Date.now()-snapLastCall);if(wait>0)await zz(wait);snapLastCall=Date.now();
+    try{const r=await MA.uiSnap();return r||{ok:false,error:'no reply'}}catch(e){return{ok:false,error:String(e.message||e)}}};
+  const p=snapLock.then(run,run);snapLock=p.catch(()=>{});return p};
+// a faint 10% grid with numbers (top = x %, left = y %) so she can tell where things are
+function gridify(b64){return new Promise(res=>{const im=new Image();
+  im.onload=()=>{try{const W=im.width,H=im.height,c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');g.drawImage(im,0,0);
+    g.lineWidth=1;g.strokeStyle='rgba(255,0,200,0.33)';const fs=Math.max(10,Math.round(W/34));g.font='bold '+fs+'px sans-serif';g.textBaseline='top';
+    const lab=(t,x,y)=>{const w=g.measureText(t).width+4;g.fillStyle='rgba(0,0,0,0.55)';g.fillRect(x,y,w,fs+2);g.fillStyle='#ffe14d';g.fillText(t,x+2,y+1)};
+    for(let i=1;i<10;i++){const x=Math.round(W*i/10),y=Math.round(H*i/10);g.beginPath();g.moveTo(x+.5,0);g.lineTo(x+.5,H);g.moveTo(0,y+.5);g.lineTo(W,y+.5);g.stroke();lab(String(i*10),x+1,1);lab(String(i*10),1,y+1)}
+    res(c.toDataURL('image/jpeg',0.62).split(',')[1])}catch(e){res(b64)}};
+  im.onerror=()=>res(b64);im.src='data:image/jpeg;base64,'+b64})}
+SCR.lastRaw='';SCR.realFails=0;
+// the screenshot loop (replaces the older one): same timing, grid added, "too soon" ignored, never jumps to the old prompt
+SCR.snapLoop2=true;
+setInterval(async function(){
+  if(!SCR.snapOn||SCR.snapBusy2||!live||!ws||ws.readyState!==1)return;
+  const now=Date.now(),watching=now<SCR.watchUntil,busy=watching||now-lastVoice<20000||now-SCR.lastUi<25000||now-SCR.lastAsk<25000;
+  if(!SCR.force&&now-SCR.lastSnap<(watching?1100:busy?1500:5000))return;
+  SCR.snapBusy2=true;SCR.lastSnap=now;
+  try{const r=await snapOnce();
+    if(r.ok&&r.data){SCR.realFails=0;SCR.lastFrameAt=Date.now();
+      if(r.data!==SCR.lastRaw||SCR.force){SCR.lastRaw=r.data;lastImg=await gridify(r.data);SCR.force=false;sendLastFrame()}}
+    else if(!/error 3\b/.test(String(r.error||''))&&++SCR.realFails===8&&!snapWarned){snapWarned=true;dbg('accessibility screenshots keep failing: '+(r.error||''))}}
+  finally{SCR.snapBusy2=false}},300);
+SCR.snapBusy=true;   // switches the older loop off (it had no grid and could jump to the old permission prompt)
+const _trySnapB=trySnapMode;
+trySnapMode=async function(){const ok=await _trySnapB.apply(this,arguments);if(ok&&lastImg&&!SCR.lastRaw){SCR.lastRaw=lastImg;lastImg=await gridify(lastImg);sendLastFrame()}return ok};
+
+/* ---- where to tap: x,y in % (the grid), or Gemini style point [y,x] / box [ymin,xmin,ymax,xmax] in 0-1000 ---- */
+function toPct(a){a=a||{};
+  if(Array.isArray(a.box_2d)&&a.box_2d.length===4){const b=a.box_2d.map(Number);return{x:(b[1]+b[3])/20,y:(b[0]+b[2])/20}}
+  if(Array.isArray(a.point)&&a.point.length===2){const p=a.point.map(Number);return{x:p[1]/10,y:p[0]/10}}
+  return{x:+a.x,y:+a.y}}
+const POS_PARAMS={x:{type:N,description:'% from the left (grid numbers on top)'},y:{type:N,description:'% from the top (grid numbers on the left)'},point:{type:'ARRAY',items:{type:N},description:'or [y,x] in 0-1000'},box_2d:{type:'ARRAY',items:{type:N},description:'or [ymin,xmin,ymax,xmax] in 0-1000'}};
+try{const D=TOOLS[0].functionDeclarations;
+  ['ui_tap_at','tap_and_type'].forEach(nm=>{const d=D.find(x=>x.name===nm);if(d){Object.assign(d.parameters.properties,POS_PARAMS);d.parameters.required=nm==='tap_and_type'?['text']:[]}});
+  D.push({name:'type_here',description:'Mayra as the keyboard: write into the box that has the cursor right now, in ANY app (works even when the app hides its boxes). mode: replace (default: select all and write the new text), add (write at the cursor), clear, read (just tell what the box holds). It returns the box text after writing. To change a few words of a title: read it, then replace with the full corrected text.',parameters:{type:O,properties:{text:{type:S},mode:{type:S}}}},
+   {name:'open_video_edit',description:'YouTube app: on the Videos / Your videos list, open the Edit page of a video in one step (taps its ⋮ and then Edit). title = a few words of the video title (optional; without it the first video).',parameters:{type:O,properties:{title:{type:S}}}})}catch(e){}
+async function keyboard(text,mode){const MA=await maOk();if(!MA||!MA.uiKeyboard)return{ok:false,error:'keyboard mode needs the new app build'};
+  try{const r=await MA.uiKeyboard({text:String(text||''),mode:mode||'replace'});return r||{ok:false}}catch(e){return{ok:false,error:String(e.message||e)}}}
+const normT=t=>String(t||'').toLowerCase().replace(/[^\p{L}\p{N} ]/gu,' ').replace(/\s+/g,' ').trim();
+async function openVideoEdit(a){
+  const MA=await maOk();if(!MA)return{error:'Accessibility is not enabled'};SCR.lastUi=Date.now();
+  const m=await getMap(MA),it=m.items||[],menus=it.filter(x=>/^(action menu|more actions|more options|more)$/i.test(String(x.desc||x.text||'').trim())&&x.x>70);
+  if(!menus.length)return{error:'no ⋮ (Action menu) buttons on this screen',think:'Open the channel → Videos (or You → Your videos) first, then call open_video_edit again.',screen:summarizeMap(m)};
+  let target=menus.sort((p,q)=>p.y-q.y)[0],why='the first video';
+  const want=normT(a&&a.title).slice(0,24);
+  if(want){const t=it.find(x=>normT(x.text||x.desc).includes(want.slice(0,14)));
+    if(t){target=menus.slice().sort((p,q)=>Math.abs(p.y-t.y)-Math.abs(q.y-t.y))[0];why='"'+String(t.text||t.desc).slice(0,40)+'"'}
+    else why='the first video (title not found on screen; scroll and try again if it is another one)'}
+  try{await MA.uiTapAt({x:target.x,y:target.y})}catch(e){}
+  await zz(900);
+  let r=null;for(let k=0;k<3&&!(r&&r.ok);k++){try{r=await MA.uiClick({label:'Edit'})}catch(e){}if(!(r&&r.ok))await zz(500)}
+  if(!(r&&r.ok))return{error:'opened the ⋮ menu of '+why+' but "Edit" was not in it',screen:summarizeMap(await getMap(MA))};
+  await zz(1500);SCR.force=true;
+  uimemSave(m.app,'Edit a video: Videos list → its ⋮ (Action menu) → Edit; then use the picture (the page hides its boxes): Title text under the preview, "Show more" for Description/Tags');
+  return{status:'Edit page opened for '+why,next:'This page may hide its boxes from Accessibility, so use your eyes: look at the picture with the grid. Title = the text under the video preview (above Visibility): tap_and_type on it. Description, Tags: tap "Show more" (ui_tap_at on it), then the Description row / "Attributes, Tags" row, write with type_here, go back, and finally tap Save (top right).'}}
+async function tapThenType(a){
+  const MA=await maOk();if(!MA)return{error:'Accessibility is not enabled'};
+  const p=toPct(a),text=String(a.text||'');if(!(p.x>=0&&p.x<=100&&p.y>=0&&p.y<=100))return{error:'give x,y in % (or point [y,x] 0-1000)'};
+  SCR.lastUi=Date.now();try{await MA.uiTapAt({x:p.x,y:p.y})}catch(e){}
+  await zz(900);
+  const k=await keyboard(text,a.mode||'replace');
+  if(k.ok){const got=String(k.text||'');const okText=!text||got.includes(text.trim().slice(0,20));SCR.force=true;
+    return okText?{status:'written and checked',box_text_now:got.slice(0,300)}:{status:'written, but the box now says something else: check the picture',box_text_now:got.slice(0,300)}}
+  if(k.ready===false||k.error)dbg('keyboard mode not ready: '+(k.error||'no box with a cursor'));
+  return null}
+const _vEdit=tool;
+tool=async function(n,a){
+  if(n==='open_video_edit')return await openVideoEdit(a||{});
+  if(n==='type_here'){SCR.lastUi=Date.now();const k=await keyboard(a&&a.text,(a&&a.mode)||'replace');SCR.force=true;
+    if(k.ok)return{status:(a&&a.mode)==='read'?'read':'written',box_text_now:String(k.text||'').slice(0,400)};
+    return{error:k.error||'no box has the cursor right now: tap the box first (ui_tap_at / tap_and_type), then type_here'}}
+  if(n==='ui_tap_at'&&a&&(a.point||a.box_2d)){const p=toPct(a);a=Object.assign({},a,{x:p.x,y:p.y})}
+  if(n==='tap_and_type'){const r=await tapThenType(a||{});if(r)return r;const p=toPct(a);a=Object.assign({},a,{x:p.x,y:p.y})}
+  return _vEdit.call(this,n,a)};
+const _sxGrid=sysExtra;
+sysExtra=function(){return _sxGrid.apply(this,arguments)+' اسکرین کی تصویر پر ہلکی گلابی لکیروں کا جال (grid) ہے: اوپر لکھے نمبر x فیصد، بائیں طرف لکھے نمبر y فیصد۔ کسی چیز کو ٹیپ کرنا ہو تو اس کی جگہ جال سے پڑھیں اور ui_tap_at یا tap_and_type میں وہی x,y دیں۔ لکھنے کے لیے: tap_and_type (خانے پر ٹیپ + لکھنا)، یا خانہ پہلے سے منتخب ہو تو type_here؛ ٹائٹل کے چند الفاظ بدلنے ہوں تو پہلے type_here(mode=read) سے پڑھیں، پھر پورا درست ٹائٹل type_here(mode=replace) سے لکھیں۔ یوٹیوب کی ویڈیو ایڈٹ کرنی ہو تو Videos لسٹ پر open_video_edit چلائیں (⋮ اور Edit خود دباتا ہے)؛ ⋮ کھلنے کے بعد صارف سے کبھی نہ پوچھیں کہ Edit نظر آ رہا ہے، خود دبائیں۔ SEO کا کہا جائے تو اجازت مت مانگیں: ویڈیو دیکھیں، لکھیں، آخر میں Save دبائیں، پھر بتائیں۔'};
+
 /* every tool call is logged here, as the outermost layer */
 const _logT=tool;
 tool=async function(n,a){

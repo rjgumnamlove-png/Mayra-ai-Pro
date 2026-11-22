@@ -2,6 +2,7 @@ package com.rjbilal.mayra;
 
 import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.GestureDescription;
+import android.accessibilityservice.InputMethod;
 import android.content.Intent;
 import android.graphics.Path;
 import android.graphics.Rect;
@@ -136,7 +137,7 @@ public class MayraAccessService extends AccessibilityService {
                     o.put("editable", n.isEditable());
                     Rect r = new Rect();
                     n.getBoundsInScreen(r);
-                    int hh = Math.max(1, s.getResources().getDisplayMetrics().heightPixels);
+                    int hh = Math.max(1, realMetrics(s).heightPixels);
                     float cy = r.centerY() / (float) hh;
                     o.put("at", cy < 0.15f ? "top" : (cy > 0.85f ? "bottom" : "middle"));
                     out.put(o);
@@ -176,7 +177,7 @@ public class MayraAccessService extends AccessibilityService {
         if (s == null || label == null) return null;
         String l = label.trim().toLowerCase();
         if (l.isEmpty()) return null;
-        int h = Math.max(1, s.getResources().getDisplayMetrics().heightPixels);
+        int h = Math.max(1, realMetrics(s).heightPixels);
         String w = where == null ? "" : where.trim().toLowerCase();
         boolean nav = false;
         for (String x : NAV_WORDS) if (x.equals(l)) { nav = true; break; }
@@ -504,7 +505,7 @@ public class MayraAccessService extends AccessibilityService {
         JSONObject res = new JSONObject();
         AccessibilityNodeInfo root = s.getRootInActiveWindow();
         if (root == null) return res;
-        DisplayMetrics dm = s.getResources().getDisplayMetrics();
+        DisplayMetrics dm = realMetrics(s);
         float W = Math.max(1, dm.widthPixels), H = Math.max(1, dm.heightPixels);
         JSONArray out = new JSONArray();
         List<AccessibilityNodeInfo> nodes = screenNodes();
@@ -545,7 +546,7 @@ public class MayraAccessService extends AccessibilityService {
     static boolean tapPercent(float px, float py) {
         MayraAccessService s = instance;
         if (s == null) return false;
-        DisplayMetrics dm = s.getResources().getDisplayMetrics();
+        DisplayMetrics dm = realMetrics(s);
         return tapAt(dm.widthPixels * px / 100f, dm.heightPixels * py / 100f);
     }
 
@@ -592,5 +593,50 @@ public class MayraAccessService extends AccessibilityService {
                 public void onFailure(int code) { cb.done(null, "screenshot error " + code); }
             });
         } catch (Throwable e) { cb.done(null, String.valueOf(e)); }
+    }
+
+    // ---------- real screen size (with status and navigation bars), the same size as the screenshot ----------
+    static DisplayMetrics realMetrics(MayraAccessService s) {
+        DisplayMetrics dm = new DisplayMetrics();
+        try {
+            android.view.WindowManager wm = (android.view.WindowManager) s.getSystemService(android.content.Context.WINDOW_SERVICE);
+            wm.getDefaultDisplay().getRealMetrics(dm);
+            if (dm.widthPixels > 0 && dm.heightPixels > 0) return dm;
+        } catch (Throwable ignored) {}
+        return s.getResources().getDisplayMetrics();
+    }
+
+    // ---------- Mayra as a keyboard (Android 13+): types into the box that has the cursor, even when the app
+    // hides its boxes from Accessibility (like YouTube's Edit video page), and reads back what the box holds ----------
+    private static InputMethod.AccessibilityInputConnection ic() {
+        MayraAccessService s = instance;
+        if (s == null || Build.VERSION.SDK_INT < 33) return null;
+        try {
+            InputMethod im = s.getInputMethod();
+            return im == null ? null : im.getCurrentInputConnection();
+        } catch (Throwable e) { return null; }
+    }
+
+    static boolean imeReady() { return ic() != null; }
+
+    // mode: replace (select all, then write), add (write at the cursor), clear
+    static boolean imeWrite(String text, String mode) {
+        InputMethod.AccessibilityInputConnection c = ic();
+        if (c == null) return false;
+        try {
+            if (!"add".equals(mode)) c.performContextMenuAction(android.R.id.selectAll);
+            if ("clear".equals(mode)) { c.commitText("", 1, null); return true; }
+            c.commitText(text == null ? "" : text, 1, null);
+            return true;
+        } catch (Throwable e) { return false; }
+    }
+
+    static String imeRead() {
+        InputMethod.AccessibilityInputConnection c = ic();
+        if (c == null) return null;
+        try {
+            android.view.inputmethod.SurroundingText t = c.getSurroundingText(5000, 5000, 0);
+            return t == null || t.getText() == null ? "" : t.getText().toString();
+        } catch (Throwable e) { return null; }
     }
 }
