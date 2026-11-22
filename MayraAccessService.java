@@ -262,13 +262,28 @@ public class MayraAccessService extends AccessibilityService {
         return null;
     }
 
+    // a search bar is never used as a fallback box (typing a title there and pressing Enter would search)
+    static boolean isSearchBox(AccessibilityNodeInfo n) {
+        if (n == null) return false;
+        String id = n.getViewIdResourceName() == null ? "" : n.getViewIdResourceName().toLowerCase();
+        String w = words(n);
+        return id.contains("search") || id.contains("query") || w.contains("search") || w.contains("تلاش") || w.contains("سرچ") || w.contains("खोज");
+    }
+
+    private static AccessibilityNodeInfo findEditableNotSearch(AccessibilityNodeInfo n) {
+        List<AccessibilityNodeInfo> nodes = new ArrayList<>();
+        all(n, nodes);
+        for (AccessibilityNodeInfo x : nodes) if (x != null && x.isEditable() && x.isVisibleToUser() && !isSearchBox(x)) return x;
+        return null;
+    }
+
     static boolean typeText(String text) {
         MayraAccessService s = instance;
         if (s == null) return false;
         AccessibilityNodeInfo root = s.getRootInActiveWindow();
         if (root == null) return false;
         AccessibilityNodeInfo f = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
-        if (f == null || !f.isEditable()) f = findEditable(root);
+        if (f == null || !f.isEditable()) f = findEditableNotSearch(root);
         if (f == null) return false;
         f.performAction(AccessibilityNodeInfo.ACTION_FOCUS);
         Bundle b = new Bundle();
@@ -431,7 +446,7 @@ public class MayraAccessService extends AccessibilityService {
             }
         } else {
             target = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
-            if (target == null || !target.isEditable()) target = findEditable(root);
+            if (target == null || !target.isEditable()) target = findEditableNotSearch(root);
         }
         if (target == null) return false;
         target.performAction(AccessibilityNodeInfo.ACTION_FOCUS);
@@ -473,6 +488,8 @@ public class MayraAccessService extends AccessibilityService {
                 if (h != null && h.length() > 0) o.put("hint", cut(h));
                 if (id != null) o.put("id", id.substring(id.indexOf('/') + 1));
                 if (edit) o.put("box", true);
+                if (edit && n.isFocused()) o.put("focused", true);
+                if (edit && isSearchBox(n)) o.put("search", true);
                 if (click) o.put("tap", true);
                 if (scr) o.put("scroll", true);
                 if (n.isChecked()) o.put("on", true);

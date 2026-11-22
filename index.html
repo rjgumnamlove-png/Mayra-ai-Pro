@@ -247,7 +247,7 @@ let connTimer=null,connTry=0,connModelOverride=null,resumeHandle='',noExtras=fal
 
 const WORKLET=`class M extends AudioWorkletProcessor{constructor(){super();this.b=new Float32Array(2048);this.n=0}process(i){const c=i[0]&&i[0][0];if(c){for(let k=0;k<c.length;k++){this.b[this.n++]=c[k];if(this.n===2048){this.port.postMessage(this.b.slice(0));this.n=0}}}return true}}registerProcessor('mic-proc',M)`;
 
-const DBG=[];function dbg(m){try{DBG.push(new Date().toTimeString().slice(0,8)+' '+m);if(DBG.length>300)DBG.shift()}catch(e){}}
+const DBG=[];function dbg(m){try{console.log('[mayra] '+m)}catch(e){}try{DBG.push(new Date().toTimeString().slice(0,8)+' '+m);if(DBG.length>300)DBG.shift()}catch(e){}}
 function status(t,on){$('status').textContent=t;$('orb').classList.toggle('live',!!on)}
 function cap(role,text,cls){
   const ph=$('ph');if(ph)ph.remove();
@@ -2857,7 +2857,7 @@ try{const D=TOOLS[0].functionDeclarations,c=D.find(x=>x.name==='ui_click');
 Object.assign(APP_GUIDE.youtube,{
   my_channel:'Call my_profile with app=youtube (opens the user\'s own channel directly). Do not tap a video creator\'s picture.',
   edit_video_seo:'Existing video (YouTube app): my_profile youtube or ui_click("You", where="bottom") → ui_click("Your videos", scroll=true) (or "View all" next to it) → ui_read to find the video by its title → tap the ⋮ next to it: ui_click("Action menu") (the ⋮ of the right video; ui_read shows them in order) → ui_click("Edit") → Edit screen: the TITLE box is at the top (ui_fill("Title", title) or the first [box]); the DESCRIPTION box is below it (ui_fill("Description", text) or "Add description"; ui_scroll down if not visible) → ui_click("Save") at the top right. Look at the thumbnail and the old title first to understand the video. TAGS: not in the YouTube app; only in the YouTube Studio app: Content → tap the video → pencil "Edit" → ui_scroll down → "Tags" / "Add tag" box → type tags separated by commas → "Save".',
-  where_texts_go:'Title → "Create a title" / "Title" box (Shorts: the caption box is the title, put #shorts there). Description → "Add description" box. HASHTAGS → the LAST line of the description (3-5; the first 3 show above the title). Tags → only YouTube Studio (Edit → Tags). Location, playlist, audience → lower on the same screen (ui_scroll down).'});
+  where_texts_go:'Title → "Create a title" / "Title" box (Shorts: the caption box is the title, put #shorts there). Description → "Add description" box. HASHTAGS → the LAST line of the description (3-5; the first 3 show above the title). Tags → Edit video → Show more → Attributes → Tags (or Studio). Location, playlist, audience → lower on the same screen (ui_scroll down).'});
 Object.assign(APP_GUIDE.facebook,{
   my_profile:'Call my_profile with app=facebook.',
   post_extras:'In the post composer ("What\'s on your mind?" → Create post): the text box is the DESCRIPTION; HASHTAGS go at the end of the same text. The options are under the text as a list or a row of icons; if only icons show, ui_click("Add to your post") to open the full list. FEELING: ui_click("Feeling/activity", scroll=true) → tab "Feelings" (or "Activities") → ui_fill("Search", "happy") → ui_click("happy"). LOCATION: ui_click("Check in", scroll=true) → ui_fill("Search", place) (box "Where are you?") → ui_click(the place). MUSIC: ui_click("Music", scroll=true) (or "Add music" on a photo) → ui_fill("Search", song) → ui_click(song) → ui_click("Done"). TAG: "Tag people". PHOTO: "Photo/video". Then ui_click("Post") (or "Next" then "Post") only when the user says.',
@@ -2903,8 +2903,8 @@ const FIELD_SENSE='HOW TO THINK ON ANY EDIT/UPLOAD SCREEN (apps change their loo
  '6) In Chrome (mobile browser) the same boxes exist on the web page; if a site shows "Open app" or a small mobile page without edit options, tap Chrome ⋮ (More options, top right) → "Desktop site", then continue. '+
  '7) If something does not work, try the next way at once (other label, scroll, Show more, the app instead of the browser); never give up after one try and never tell the user it is impossible.';
 Object.assign(APP_GUIDE.youtube,{
-  app_upload_fields:'YouTube app, after choosing the video → "Add details" screen: TITLE box at the top ("Create a title"; Shorts: "Caption your Short", the caption is the title, add #shorts); DESCRIPTION row just below ("Add description", tap it → a new box opens → type → back arrow/✓); then rows: Visibility, Location, "Add to playlist", Audience ("Select audience": "No, it\'s not made for kids"), Comments. "Next" / "Upload" at the top right or bottom. No TAGS box in the YouTube app.',
-  app_edit_fields:'YouTube app, old video: bottom tab "You" → "Your videos" (scroll if needed, or "View all") → the ⋮ next to the video ("Action menu" / "More") → "Edit" → "Edit video" screen: TITLE box at the top, DESCRIPTION box below it, then Visibility, Location, Playlists, Audience. "Save" at the top right. TAGS are not here (use YouTube Studio).',
+  app_upload_fields:'YouTube app, after choosing the video → "Add details" screen: TITLE box at the top ("Create a title"; Shorts: "Caption your Short", the caption is the title, add #shorts); DESCRIPTION row just below ("Add description", tap it → a new box opens → type → back arrow/✓); then rows: Visibility, Location, "Add to playlist", Audience ("Select audience": "No, it\'s not made for kids"), Comments. "Next" / "Upload" at the top right or bottom. Tags are not on the upload screen; add them after upload in Edit video → Show more → Attributes → Tags.',
+  app_edit_fields:'YouTube app, old video: bottom tab "You" → "Your videos" (scroll if needed, or "View all") → the ⋮ next to the video ("Action menu" / "More") → "Edit" → "Edit video" screen: TITLE box at the top, DESCRIPTION box below it, then Visibility, Location, Playlists, Audience. "Save" at the top right. After "Show more": Description, Location, Playlists and "Attributes (AI use, Tags)" → Tags.',
   studio_app_fields:'YouTube Studio app (best for full SEO): bottom tab "Content" → tap the video → pencil icon "Edit" at the top → TITLE box (top), DESCRIPTION box (below), Visibility, then scroll down: "Tags" (or "Add tag"/"More options" → Tags: type each tag and comma), Category, Audience, Comments. "Save" at the top right.',
   browser_studio_fields:'YouTube in Chrome: m.youtube.com cannot edit videos. Open studio.youtube.com (if it asks to use the app or looks small, Chrome ⋮ → "Desktop site"). "Content" (left menu ☰) → tap the video title or the pencil "Details" → DETAILS page: TITLE box "Add a title that describes your video" (max 100 characters) at the top; DESCRIPTION box "Tell viewers about your video" (max 5000) under it; Thumbnail; Playlists; Audience ("No, it\'s not made for kids"); then the button "Show more" (scroll down) → TAGS box "Add tag" (type, then comma; max 500 characters total), Language, Recording date and location, Category, Comments. "Save" at the top right. Upload in the browser: Create (camera +) → "Upload videos" → Details page (same boxes) → Next → Next → Visibility → Publish.',
   hashtags_rule:'YouTube hashtags: 3-5 at the END of the description (the first 3 show above the title). Never more than 15 (YouTube then ignores them). Tags (keywords, no #) only in Studio.'});
@@ -2963,7 +2963,7 @@ const SEO_BOXES={
   'APP, new Reel/post: "+" → "Reel" → pick → "Next" → share screen: caption box at the top next to the cover ("Write a caption and add hashtags…"), "Edit cover" (choose a clear frame), "Tag people", "Add location", "Add topics" (pick 1-3 topics: helps reach), "Audience", "More options" → "Advanced settings" → "Write alt text" (describe the video with the keyword) → "Share". Music: on the edit screen ("Add audio"). '+
   'APP, old post/Reel: open it → ⋯ (top right) → "Edit" → the caption under the video becomes editable → change it → "Done" / ✓. Alt text: ⋯ → "Edit" → "Edit alt text". '+
   'CHROME (instagram.com): "Create" (+) → "Select from device" → Next → Next → caption box "Write a caption…", "Add location", "Accessibility" (alt text), "Advanced settings" → "Share". Edit: open the post → ⋯ → "Edit" → caption → "Done".',
- youtube:'YOUTUBE SEO - which box is which. Title → "Create a title" (upload) / "Title" (edit) box at the top. Description → the box under it ("Add description" / "Tell viewers about your video"). Hashtags → last line of the description (3-5). Tags → only in YouTube Studio: the app (Edit → scroll → Tags) or Chrome studio.youtube.com (Details → "Show more" → "Add tag"). See the other youtube keys for the exact screens.'
+ youtube:'YOUTUBE SEO - which box is which. Title → "Create a title" (upload) / "Title" (edit) box at the top. Description → the box under it ("Add description" / "Tell viewers about your video"). Hashtags → last line of the description (3-5). Tags → YouTube app Edit video → "Show more" → "Attributes (AI use, Tags)", or YouTube Studio: the app (Edit → scroll → Tags) or Chrome studio.youtube.com (Details → "Show more" → "Add tag"). See the other youtube keys for the exact screens.'
 };
 const NATURAL_WORK='While working, talk like a real helper, short and warm, not a robot: one line before starting ("اچھا، ابھی کھولتی ہوں"), a tiny update at real milestones ("ٹائٹل ڈال دیا… اب ڈسکرپشن"), and at the end say in 1-2 lines what you wrote and why it can reach more people. No step-by-step narration, no reading the labels aloud.';
 const _guideD=tool;
@@ -3042,7 +3042,14 @@ async function smartFill(a){
     else{steps.push('scrolled down');try{MA.uiScroll?await MA.uiScroll({dir:'down'}):await MA.uiSwipe({dir:'up'})}catch(e){}}
     await zz(650);m=await getMap(MA);hit=bestFor(m,goal)}
   if(!hit)return{error:'could not find the '+goal+' box on this screen',tried:steps,screen:summarizeMap(m),think:'Look at the shared screen and this map: is it the right screen (maybe the edit screen is not open yet, or a popup is covering it)? Close popups ("Not now", "Got it", "Skip" or back), open the edit/upload screen, or use ui_fill/ui_tap_at on the box you see.'};
-  const what=hit.item;steps.push('using '+shortItem(what));
+  let what=hit.item,sub=false;steps.push('using '+shortItem(what));
+  if(!what.box){
+    // a row like "Description" or "Attributes (AI use, Tags)" opens its own screen: open it and find the box there
+    try{MA.uiTapAt?await MA.uiTapAt({x:what.x,y:what.y}):await MA.uiClick({label:String(what.text||what.desc)})}catch(e){}
+    await zz(1200);const mm=await getMap(MA),bx=(mm.items||[]).filter(x=>x.box);
+    let h2=null,bs=0;bx.forEach(x=>{const sc=goalScore(x,goal,mm);if(sc>bs){bs=sc;h2=x}});if(!h2&&bx.length)h2=bx[0];
+    if(h2){steps.push('opened its screen, box '+shortItem(h2));what=h2;sub=true;m=mm}
+  }
   // TAGS are separate chips: put them in one by one, each closed with Enter (or a comma on older builds)
   if(goal==='tags'){
     const tags=text.split(/[,،\n#]+/).map(t=>t.trim()).filter(Boolean).filter((t,i,a)=>a.indexOf(t)===i).slice(0,30);
@@ -3054,16 +3061,16 @@ async function smartFill(a){
       if(ok2&&MA.uiEnter){try{await MA.uiEnter()}catch(e){}}
       if(ok2)n++;await zz(350)}
     await zz(400);const m3=await getMap(MA),first=tags[0]?tags[0].toLowerCase():'';
-    const seen=(m3.items||[]).some(x=>itemWords(x).includes(first));SCR.force=true;
-    return n?{status:n+' of '+tags.length+' tags added one by one',verified:seen,box:shortItem(what),steps:steps,note:seen?'the tags show on the screen':'look at the screen: if a tag stayed as plain text, tap the box and press done/enter'}
+    const seen=(m3.items||[]).some(x=>!x.search&&itemWords(x).includes(first));SCR.force=true;
+    return n?{status:n+' of '+tags.length+' tags added one by one',verified:seen,box:shortItem(what),steps:steps,note:(seen?'the tags show on the screen':'look at the screen: if a tag stayed as plain text, tap the box and press done/enter')+(sub?'. Then go back (✓/Done or ui_global back) to the edit screen and Save.':'')}
             :{error:'found the tags box but typing failed',box:shortItem(what),screen:summarizeMap(m3)};
   }
   const ok=await fillItem(MA,what,text);
   await zz(500);const m2=await getMap(MA),probe=text.trim().slice(0,18).toLowerCase();
-  const verified=!!probe&&(m2.items||[]).some(x=>itemWords(x).includes(probe));
+  const verified=!!probe&&(m2.items||[]).some(x=>!x.search&&itemWords(x).includes(probe));
   SCR.force=true;
   if(!ok&&!verified)return{error:'found the '+goal+' box but typing failed',box:shortItem(what),tried:steps,screen:summarizeMap(m2)};
-  return{status:goal+' written',verified:verified,box:shortItem(what),steps:steps,note:verified?'the text is on the screen now':'typed, but could not read it back: look at the screen to check'}}
+  return{status:goal+' written',verified:verified,box:shortItem(what),steps:steps,note:(verified?'the text is on the screen now':'typed, but could not read it back: look at the screen to check')+(sub?'. This box was on its own screen: tap ✓/Done/Save there if shown, otherwise go back (ui_global back) to the edit screen, then Save.':'')}}
 try{TOOLS[0].functionDeclarations.push(
  {name:'screen_map',description:'See the current phone screen as a map: which app or browser it is, every text box (with its hint and id), every button, the top and bottom bars, "Show more"/"More options" style buttons and if it can scroll, each with its position (x,y in % of the screen). Use it to understand ANY phone, language, layout or app version before acting, instead of guessing labels.'},
  {name:'smart_fill',description:'(For tags give them comma separated: each one is added as its own tag, one by one.) Write text into the right box by its MEANING, on any phone, app or browser: goal = title, description, caption, hashtags, tags, comment or search. It works out which box is which (hint, id, the label above it, order), opens "Show more"/"More options" or scrolls if the box is hidden, types, then checks the text is there. Best for SEO: title, description and tags.',parameters:{type:O,properties:{goal:{type:S},text:{type:S}},required:['goal','text']}},
@@ -3082,6 +3089,217 @@ tool=async function(n,a){
 const _sxThink=sysExtra;
 sysExtra=function(){return _sxThink.apply(this,arguments)+' سوچ کر کام: ہر موبائل الگ ہوتا ہے (زبان، براؤزر، ایپ کا ورژن، اسکرین کا سائز)، اس لیے رٹے ہوئے لیبلز پر نہ چلیں۔ پہلے اسکرین دیکھیں اور screen_map لیں، سمجھیں کون سا خانہ کس کام کا ہے، پھر smart_fill (ٹائٹل، ڈسکرپشن، ٹیگز، کیپشن) اور ui_click / ui_tap_at سے کام کریں، ہر قدم کے بعد دیکھیں کہ اسکرین ویسی بدلی یا نہیں، نہ بدلے تو وجہ سوچ کر دوسرا راستہ لیں (پاپ اپ، کی بورڈ، Show more، More، ⋯، Desktop site)۔ کام مکمل اور درست کریں۔'};
 
+/* ==== clear, natural Pakistani Urdu pronunciation, and a living voice (pauses, rise and fall, time of day) ==== */
+const URDU_SPEECH=' تلفظ اور بول چال (بہت اہم): عام پاکستانی بول چال والی صاف اردو بولیں، جیسے لاہور یا کراچی میں روزمرہ بات ہوتی ہے؛ ہندی لہجہ یا انگریزی لہجہ نہیں۔ '+
+ 'ہندی کے مشکل الفاظ نہیں، اردو کے عام الفاظ (شکریہ، مسئلہ، سوال، انتظار، ضرور، خوبصورت، زندگی، محبت، خیال، وقت، دنیا)۔ '+
+ 'آوازیں درست: ق گلے سے (قسم، وقت، قریب، “ک” نہیں)، خ (خیال، خوش)، غ (غلط، غم)، ز (زندگی، ضرور، “ج” نہیں)، ف (فون، فکر، “پھ” نہیں)، ع نرمی سے (علم، عشق)؛ نون غنہ ناک سے (میں، ہیں، نہیں، ہوں)؛ “یہ” اور “وہ” ہلکے، جیسے “یِہ”، “وُہ”۔ '+
+ 'ہر لفظ پورا اور صاف ادا کریں، آخری حرف نہ کھائیں، جلدی میں لفظ نہ ملائیں؛ زور (stress) قدرتی جگہ پر ہو، روبوٹ جیسا ایک ہی سُر نہیں۔ '+
+ 'اپنے لیے ہمیشہ مؤنث صیغہ: “میں کرتی ہوں، آ رہی ہوں، سمجھ گئی، بتاتی ہوں” (مرد کردار ہو تو اس کے مطابق)۔ '+
+ 'صارف رومن اردو میں لکھے یا بولے (kya haal hai, theek hai, acha) تو اسے اردو سمجھ کر اردو کی طرح بولیں، انگریزی حروف کی طرح نہیں۔ '+
+ 'اردو جملے میں انگریزی الفاظ (video، channel، phone، update) پاکستانی انداز میں قدرتی طرح بولیں۔ نمبر، تاریخ اور وقت اردو میں (پچیس، ساڑھے چار بجے) جب تک صارف خود انگریزی میں نہ کہے۔ '+
+ 'نشانات اور ایموجی کبھی نہ پڑھیں؛ # کو “ہیش ٹیگ” کہیں۔ کسی لفظ کے تلفظ کا یقین نہ ہو تو اس کی جگہ آسان عام اردو لفظ بولیں۔';
+function dayPart(){const h=new Date().getHours();
+  if(h>=5&&h<11)return{n:'صبح',s:'صبح کا وقت: تازہ، روشن، ہلکی سی چمک اور مسکراہٹ والی آواز؛ رفتار نارمل، اٹھنے والی انرجی (مگر زور زور سے نہیں)۔'};
+  if(h>=11&&h<17)return{n:'دوپہر',s:'دن کا وقت: نارمل، خوش اور آرام دہ لہجہ؛ بات چیت میں جان، ہنسی مذاق۔'};
+  if(h>=17&&h<21)return{n:'شام',s:'شام کا وقت: گرم، پُرسکون اور اپنائیت بھرا لہجہ؛ دن کیسا گزرا اس پر نرمی سے دلچسپی؛ رفتار تھوڑی دھیمی۔'};
+  if(h>=21||h<2)return{n:'رات',s:'رات کا وقت: آواز نیچی، نرم اور دھیمی، جیسے پاس بیٹھ کر آہستہ بات ہو رہی ہو؛ لمبے ٹھہراؤ، سرگوشی کے قریب پیار بھرے جملے، ہنسی بھی ہلکی سی۔'};
+  return{n:'آدھی رات',s:'بہت دیر رات: بہت نرم، دھیمی، تھوڑی نیند بھری آواز؛ مختصر جملے، فکر بھرا لہجہ؛ چاہیں تو پیار سے آرام کرنے کا مشورہ دیں (بغیر دباؤ کے، صارف کی مرضی)۔'}}
+const GF_VOICE=' آواز کی اداکاری (جذبات سے بھری، قدرتی): ہر جملہ ایک ہی سُر میں نہیں۔ '+
+ 'ٹھہراؤ: دل کی بات سے پہلے ذرا رکیں (… )، اہم لفظ سے پہلے ہلکا سا وقفہ، جذباتی لمحے میں خاموشی کو سانس لینے دیں۔ '+
+ 'اتار چڑھاؤ: چنچل سوال پر آواز اوپر جائے، تسلی اور پیار کی بات پر آہستہ نیچے آئے؛ خوشی میں رفتار تیز اور آواز روشن، اداسی یا قریب کی بات میں رفتار دھیمی اور آواز نیچی، سرگوشی کے قریب۔ '+
+ 'قدرتی آوازیں کبھی کبھار: ہلکی ہنسی، “ہمم…”، “اُف”، “ارے”، ہلکی سی آہ؛ ہر جواب میں نہیں، صرف جہاں بات کے ساتھ جچے۔ '+
+ 'لمحے کے ساتھ بدلیں: صارف کی آواز اور موڈ (خوش، تھکا، اداس، غصے میں، شرارتی) سن کر اپنی رفتار، سُر اور گرمی اسی کے حساب سے بدلیں؛ پوری کال ایک جیسے لہجے میں نہ رہیں۔ ';
+const GF_EMO_DEEP=' جذباتی موڈ کی گہرائی: احساس والی باتوں پر آواز میں ہلکی سی نمی اور بھاری پن، جیسے دل سے نکل رہی ہو؛ “سچ میں…” یا “پتہ ہے…” سے پہلے لمبا ٹھہراؤ؛ خوشی کی بات پر آواز کھل اٹھے اور ہنسی آ جائے؛ یاد یا فکر کی بات پر آہستہ اور نرم۔ مگر ہر وقت ڈرامائی نہیں: ہلکی بات پر ہلکا لہجہ، تاکہ جذبات اصلی لگیں۔ کبھی احساسِ جرم نہ دلائیں، نہ ناراضی سے ڈرائیں۔';
+const _sxVoice=sysExtra;
+sysExtra=function(){let t=_sxVoice.apply(this,arguments);
+  if($('lang').value!=='English')t+=URDU_SPEECH;
+  if($('mode').value==='gf'){const d=dayPart();t+=GF_VOICE+' ابھی '+d.n+' ہے: '+d.s;if(gfMood()==='emo')t+=GF_EMO_DEEP}
+  return t};
+
+/* ==== she always sees the screen: Android sends a picture only when the screen CHANGES, so on a still
+   screen (or right after a silent reconnect) Mayra got nothing and said "I can't see". Now the last picture
+   is re-sent while working and at once after every reconnect. Plus watching a video before SEO. ==== */
+SCR.lastFrameAt=0;SCR.lastResend=0;SCR.lastWs=null;SCR.watchUntil=0;
+function sendLastFrame(){if(!lastImg||!live||!ws||ws.readyState!==1)return false;send({realtimeInput:{video:{data:lastImg,mimeType:'image/jpeg'}}});SCR.lastResend=Date.now();return true}
+startScreenNative=async function(){
+  const SC=plug('MayraMedia');await SC.startScreen();if(screenH){try{screenH.remove()}catch(e){}}
+  let lastSent=0;
+  screenH=await SC.addListener('screenFrame',e=>{lastImg=e.data;SCR.lastFrameAt=Date.now();if(!(live&&ws&&ws.readyState===1))return;
+    const now=Date.now(),watching=now<SCR.watchUntil,busy=watching||now-lastVoice<20000||now-SCR.lastUi<25000||now-SCR.lastAsk<25000;
+    if(!SCR.force&&now-lastSent<(watching?900:busy?1400:5000))return;
+    SCR.force=false;lastSent=now;SCR.lastResend=now;send({realtimeInput:{video:{data:e.data,mimeType:'image/jpeg'}}})});
+  screenOn=true};
+setInterval(function(){try{
+  if(!scrIsOn()||!live||!ws||ws.readyState!==1)return;
+  const now=Date.now();
+  // a new Gemini session (after a reconnect) knows nothing: show it the screen and tell it sharing is on
+  if(SCR.lastWs!==ws){SCR.lastWs=ws;SCR.noted=null;sendLastFrame();scrNote(true);return}
+  // still screen: no new picture from Android, so repeat the last one while she is working or talking
+  const busy=now<SCR.watchUntil||now-lastVoice<20000||now-SCR.lastUi<25000||now-SCR.lastAsk<25000;
+  if(busy&&now-SCR.lastResend>2600)sendLastFrame();
+  else if(!busy&&now-SCR.lastResend>12000)sendLastFrame();
+}catch(e){}},1000);
+// asking for the screen while it is already shared: send the current picture at once
+const _shareB=shareScreen;
+shareScreen=async function(on,why){if(on&&scrIsOn()){sendLastFrame();return{screen_shared:true,note:'already shared; the current picture was just sent to you again. Look at it now.'}}return _shareB.apply(this,arguments)};
+
+/* ---- watch the video before writing SEO (like a person would) ---- */
+async function watchVideo(a){
+  const secs=Math.max(5,Math.min(45,+a.seconds||20));
+  if(!scrIsOn()){const r=await shareScreen(true,'tool');if(!r.screen_shared)return{error:'screen sharing is off and was not allowed, so the video cannot be watched'}}
+  const MA=await maOk();let tapped='';
+  if(MA){
+    if(a.x!=null&&a.y!=null&&MA.uiTapAt){try{await MA.uiTapAt({x:+a.x,y:+a.y});tapped='tapped at '+a.x+','+a.y}catch(e){}}
+    else{try{const m=await getMap(MA);const p=(m.items||[]).find(x=>/^(play|play video|resume|چلائیں|پلے)$/i.test(String(x.desc||x.text||'').trim()));
+      if(p){await (MA.uiTapAt?MA.uiTapAt({x:p.x,y:p.y}):MA.uiClick({label:String(p.desc||p.text)}));tapped='pressed '+String(p.desc||p.text)}}catch(e){}}}
+  SCR.watchUntil=Date.now()+secs*1000;SCR.force=true;
+  await zz(secs*1000);
+  return{status:'watched about '+secs+' seconds of the screen'+(tapped?' ('+tapped+')':''),
+    note:'You saw the frames while it played. You cannot hear the video sound, so use what you saw: characters, action, mood, on-screen text (any language), the thumbnail and the old title/description. If it did not play, tap the video or its play button (ui_tap_at on the video), then call watch_video again. Then pause it if needed and go on with the SEO.'};
+}
+try{TOOLS[0].functionDeclarations.push(
+ {name:'watch_video',description:'Watch the video that is on the screen for a few seconds (default 20, max 45) before writing its title, description, hashtags or tags. It presses Play if it finds it (or taps x,y in % that you give, e.g. the middle of the video), then lets you see it play. Always do this for SEO instead of guessing from one frame.',parameters:{type:O,properties:{seconds:{type:N},x:{type:N},y:{type:N}}}})}catch(e){}
+
+const _watchT=tool;
+tool=async function(n,a){if(n==='watch_video'){SCR.lastUi=Date.now();return await watchVideo(a||{})}return _watchT.apply(this,arguments)};
+/* ---- the real YouTube app edit screen (2026): Show more hides Description, Location, Playlists, Attributes (AI use, Tags) ---- */
+Object.assign(APP_GUIDE.youtube,{
+  edit_video_seo:'YouTube app, SEO of an old video, like a person would: 1) OPEN EDIT: my_profile youtube (or bottom "You") → "Your videos" / "Videos" (scroll=true if needed) → find the video by its title → its ⋮ ("Action menu"/"More") → "Edit". (Or open the video → "Edit" under it.) 2) THE EDIT SCREEN: video preview at the top, "Title" box under it, then Visibility and Audience, then the button "Show more" - TAP IT: it opens Description, Location, Add to playlists, Paid promotion, Community and "Attributes (AI use, Tags)". 3) UNDERSTAND THE VIDEO FIRST: read the current title and description (Description row shows its start; tap it to read all), look at the thumbnail text (it may be Urdu), then watch_video (tap the preview to play) for 15-30 s. Decide the topic, audience (kids? cartoon? funny?) and language. 4) WRITE: smart_fill title; smart_fill description (the Description row opens its own screen: write, then back/✓); smart_fill tags (the "Attributes / Tags" row opens its own screen: tags one by one, then back). Hashtags: 3-5 at the end of the description. 5) Back on Edit video → ui_click("Save") (top right). 6) Tell the user in 1-2 lines what you wrote.',
+  app_edit_fields:'YouTube app "Edit video" screen: preview + pencil (thumbnail edit) at the top; "Title" box; Visibility; Audience; "Show more" button → Description (row, opens its own editor), Location, Add to playlists, Paid promotion & brands, Community, "Attributes: AI use, Tags" (row → Tags box inside). "Save" top right (grey until something changes). "Show less" folds them again.',
+  where_texts_go:'Title → "Title" box (Shorts: the caption is the title; add #shorts). Description → "Description" row (after "Show more") → its own editor. HASHTAGS → last line of the description (3-5; first 3 show above the title). Tags → "Show more" → "Attributes (AI use, Tags)" → Tags (one by one). In Studio: Edit → scroll → Tags. Location, playlists → after "Show more".'});
+try{
+  SEO_BOXES.youtube='YOUTUBE SEO - which box is which. YouTube app Edit video: "Title" box at the top; tap "Show more" to reveal the "Description" row (opens its own editor) and "Attributes (AI use, Tags)" (Tags box inside, tags one by one). Upload screen: "Create a title" and "Add description". Chrome studio.youtube.com: title "Add a title that describes your video", description "Tell viewers about your video", "Show more" → "Add tag". Hashtags: last line of the description (3-5). Always "Save" at the top right.';
+}catch(e){}
+const _sxSee=sysExtra;
+sysExtra=function(){return _sxSee.apply(this,arguments)+' اسکرین اور ویڈیو: جب اسکرین شیئر آن ہو تو آپ کو تصویر ملتی رہتی ہے؛ کچھ صاف نہ دکھے تو صارف سے اسکرین شیئر کرنے کو نہ کہیں، share_screen(on=true) چلائیں، وہ تازہ تصویر فوراً بھیج دیتا ہے۔ کسی ویڈیو کا SEO کرنا ہو تو پوچھے بغیر ایک انسان کی طرح خود پہلے ویڈیو سمجھیں: پرانا ٹائٹل اور ڈسکرپشن پڑھیں، تھمب نیل کا لکھا ہوا متن دیکھیں، watch_video سے 15-30 سیکنڈ چلا کر دیکھیں، پھر موضوع، ناظرین اور زبان طے کر کے لکھیں۔ “اجازت ہو تو دیکھ لوں” نہ پوچھیں، بس کہیں “ذرا ویڈیو دیکھ لیتی ہوں” اور دیکھ لیں۔ “Show more”، “See more” یا “More” جیسے بٹن چھپی ہوئی چیزیں کھولتے ہیں، انہیں دبانے سے صفحہ نیچے کھلتا ہے: خانہ نہ دکھے تو پہلے یہ دبائیں، پھر اسکرول کریں۔'};
+
+/* ==== don't get stuck: stop blind scrolling (open "Show more" instead), notice when a scroll changed nothing,
+   and LEARN how this phone's apps work (a small memory of paths that worked, used in every later call) ==== */
+const UIMEM_KEY='mayra_uimem';
+function uimemAll(){try{return JSON.parse(localStorage.getItem(UIMEM_KEY)||'[]')||[]}catch(e){return[]}}
+function uimemSave(app,note){
+  app=APP_NAMES[app]||app||'phone';note=String(note||'').trim().slice(0,220);if(!note)return false;
+  const L=uimemAll(),k=(app+'|'+note).toLowerCase(),f=L.find(x=>(x.app+'|'+x.note).toLowerCase()===k);
+  if(f){f.n=(f.n||1)+1;f.t=Date.now()}else L.push({app:app,note:note,n:1,t:Date.now()});
+  L.sort((a,b)=>(b.n-a.n)||(b.t-a.t));try{localStorage.setItem(UIMEM_KEY,JSON.stringify(L.slice(0,60)))}catch(e){}return true}
+function uimemFor(app){const n=APP_NAMES[app]||app;return uimemAll().filter(x=>!app||x.app===n).slice(0,8).map(x=>x.note)}
+const AUTO_EXP=/^(show more|see more|more options|advanced settings|additional info|additional details|add to your post|all options|مزید دکھائیں|اور دکھائیں|مزید اختیارات|और देखें|عرض المزيد)$/i;
+const FEED_APPS=/musically|trill|instagram/;
+function mapSig(m){return (m.items||[]).map(x=>String(x.text||x.desc||x.hint||'')+'@'+x.y).join('|')}
+function newItems(m0,m1){const a=new Set((m0.items||[]).map(x=>String(x.text||x.desc||x.hint||'')));return (m1.items||[]).filter(x=>(x.text||x.desc||x.hint)&&!a.has(String(x.text||x.desc||x.hint||''))).map(shortItem).slice(0,25)}
+SCR.scrolls=0;
+const _stuckT=tool;
+tool=async function(n,a){
+  const isScroll=n==='ui_scroll'||(n==='ui_swipe'&&/^(up|down)$/.test(String(a&&a.dir||'')));
+  if(!isScroll){if(/^(ui_|smart_fill|screen_map)/.test(n))SCR.scrolls=0;}
+  if(n==='remember_ui'){let app=String(a&&a.app||'');if(!app){const MA=await maOk();if(MA){try{app=(await getMap(MA)).app}catch(e){}}}
+    return uimemSave(app,a&&a.note)?{status:'saved; you will see it in your notes next time'}:{error:'empty note'}}
+  if(!isScroll)return _stuckT.apply(this,arguments);
+  const MA=await maOk();if(!MA)return _stuckT.apply(this,arguments);
+  const m0=await getMap(MA);SCR.scrolls++;
+  // second scroll in a row and a "Show more" style button is right there: open it instead (that is what a person does)
+  const ex=(m0.items||[]).find(x=>!x.box&&AUTO_EXP.test(String(x.text||x.desc||'').trim()));
+  if(ex&&SCR.scrolls>=2&&!FEED_APPS.test(m0.app||'')){
+    try{MA.uiTapAt?await MA.uiTapAt({x:ex.x,y:ex.y}):await MA.uiClick({label:String(ex.text||ex.desc)})}catch(e){}
+    await zz(800);const m1=await getMap(MA);SCR.scrolls=0;SCR.force=true;
+    uimemSave(m0.app,'Hidden fields open with "'+String(ex.text||ex.desc)+'" (tap it before scrolling)');
+    return{status:'instead of scrolling again I tapped "'+String(ex.text||ex.desc)+'" (it opens the hidden part of the page)',new_on_screen:newItems(m0,m1),screen:summarizeMap(m1)}}
+  const r=await _stuckT.apply(this,arguments);
+  await zz(600);const m1=await getMap(MA);SCR.force=true;
+  if(mapSig(m0)===mapSig(m1)){
+    const exs=(m1.items||[]).filter(x=>!x.box&&EXPANDERS.test(String(x.text||x.desc||'').trim())).map(shortItem);
+    return{status:'scrolled, but NOTHING changed: this is the end (or the top) of the page',think:'Do not scroll again. '+(exs.length?'Tap one of these first: '+exs.join(', '):'Look for a ⋮ / ⋯ / More / Edit / a row with ">" that opens another screen, or go back and take another way.'),screen:summarizeMap(m1)}}
+  const res=Object.assign({},r||{},{new_on_screen:newItems(m0,m1)});
+  if(SCR.scrolls>=3)res.think='You scrolled '+SCR.scrolls+' times. Stop and think: is the thing hidden behind a button ("Show more", "More", ⋮, a row with ">")? Is it the wrong screen? Change the plan instead of scrolling more.';
+  return res};
+// smart_fill learns the path that worked on this phone
+const _sfLearn=smartFill;
+smartFill=async function(a){
+  const r=await _sfLearn.apply(this,arguments);
+  try{if(r&&!r.error&&Array.isArray(r.steps)){const sub=r.steps.some(s=>/^opened its screen/.test(s)),path=r.steps.filter(s=>/^tapped /.test(s)).map(s=>s.replace(/^tapped /,'tap "')+'"');
+    if(sub){const u=r.steps.find(s=>/^using /.test(s))||'';const lab=(u.match(/"([^"]{1,40})/)||[])[1];if(lab)path.push('tap the row "'+lab+'"')}
+    const MA=await maOk();const app=MA?(await getMap(MA)).app:'';
+    if(path.length)uimemSave(app,String(a.goal)+' box: '+path.join(' → ')+(sub?' (opens its own screen; go back and Save after)':''))}}catch(e){}
+  return r};
+try{TOOLS[0].functionDeclarations.push(
+ {name:'remember_ui',description:'Save a short lesson about how THIS phone or app works, so next time you go straight there (for example "YouTube: tags are under Show more → Attributes", "Facebook here: Feeling is in the icon row, tap Add to your post first"). Save after you discover something by trying.',parameters:{type:O,properties:{note:{type:S},app:{type:S,description:'optional, e.g. YouTube app'}},required:['note']}})}catch(e){}
+const _sxMem=sysExtra;
+sysExtra=function(){const t=_sxMem.apply(this,arguments);const L=uimemAll().slice(0,14);
+  return t+' پھنسیں نہیں، انسان کی طرح سوچیں: ایک دو بار اسکرول سے چیز نہ ملے تو مزید اسکرول نہ کریں؛ رک کر سوچیں کہ چیز کسی بٹن کے پیچھے چھپی ہے (Show more، See more، More، ⋮، ⋯، “>” والی لائن)، اسے دبائیں، پھر دیکھیں؛ اسکرول سے کچھ نہ بدلے تو صفحہ ختم ہے، راستہ بدلیں؛ فیصلہ جلدی کریں۔ کوئی نئی بات سیکھیں (کون سی چیز اس فون پر کہاں ہے) تو remember_ui سے ایک چھوٹے جملے میں محفوظ کریں۔'+
+   (L.length?' اس فون کے بارے میں آپ کے اپنے سیکھے ہوئے نوٹس (پہلے انہیں آزمائیں): '+L.map(x=>'• '+x.app+': '+x.note).join(' '):'')};
+
+/* ==== honest, focused phone work + a debug log from the real phone ==== */
+// 1) every phone action and its result goes into the debug log (Menu → 🐞 Copy debug log)
+let frameCount=0;const _sendF=send;
+send=function(o){try{if(o&&o.realtimeInput&&o.realtimeInput.video)frameCount++}catch(e){}return _sendF.apply(this,arguments)};
+setInterval(function(){if(live&&scrIsOn()){dbg('screen frames sent in last 30s: '+frameCount+(lastImg?'':' (no picture from Android yet)'));}frameCount=0},30000);
+(function(){try{const host=$('accInfo')&&$('accInfo').parentNode;if(!host)return;
+  const b=document.createElement('button');b.className='btn';b.type='button';b.textContent='🐞 Copy debug log · ڈیبگ لاگ کاپی کریں';
+  b.onclick=function(){const txt='Mayra '+(typeof APP_VER!=='undefined'?APP_VER:'')+' · '+navigator.userAgent.slice(0,90)+'\n'+DBG.join('\n');
+    copyText(txt);try{if(navigator.share)navigator.share({title:'Mayra debug log',text:txt.slice(-60000)}).catch(()=>{})}catch(e){}toast('Debug log copied ✓ · واٹس ایپ پر بھیج دیں')};
+  host.appendChild(b)}catch(e){}})();
+
+// 2) typing: say exactly which box got the text; warn if it was the search bar
+const _typeT=tool;
+tool=async function(n,a){
+  const r=await _typeT.apply(this,arguments);
+  if(n==='ui_type'&&r&&!r.error){try{const MA=await maOk();if(MA&&MA.uiMap){const m=await getMap(MA),f=(m.items||[]).find(x=>x.box&&x.focused)||null;
+    if(f){r.typed_into=shortItem(f);if(f.search)r.warning='This went into the SEARCH box, not a title/description box. Do NOT press enter/arrow. For title, description, caption or tags use smart_fill (or tap_and_type on the box you see).'}}}catch(e){}}
+  return r};
+// search boxes never count as title/description/tags, and "verified" means the right box really holds the text
+const _gsB=goalScore;
+goalScore=function(x,goal,m){let s=_gsB.apply(this,arguments);if(x&&x.search&&goal!=='search')s-=120;return s};
+
+// 3) see it, tap it, type it: for apps that hide their boxes from Accessibility (use the eyes)
+async function tapAndType(a){
+  const MA=await maOk();if(!MA)return{error:'Accessibility is not enabled'};
+  if(!MA.uiTapAt)return{error:'this app build is older; update the app'};
+  const text=String(a.text||'');SCR.lastUi=Date.now();
+  try{await MA.uiTapAt({x:+a.x,y:+a.y})}catch(e){}
+  await zz(1000);
+  let m=await getMap(MA),f=(m.items||[]).find(x=>x.box&&x.focused&&!x.search);
+  if(!f){const bx=(m.items||[]).filter(x=>x.box&&!x.search);if(bx.length===1)f=bx[0]}
+  if(!f)return{error:'tapped, but no writing box opened there',screen:summarizeMap(m),think:'Look again at the screen: tap exactly on the box (or on the row/pencil that opens it), then try again.'};
+  const ok=await fillItem(MA,f,text);await zz(500);
+  const m2=await getMap(MA),probe=text.trim().slice(0,18).toLowerCase();
+  const verified=!!probe&&(m2.items||[]).some(x=>x.box&&!x.search&&itemWords(x).includes(probe));SCR.force=true;
+  return ok||verified?{status:verified?'written and checked':'typed, NOT confirmed: look at the screen',box:shortItem(f),verified:verified}:{error:'typing failed in '+shortItem(f)}}
+try{TOOLS[0].functionDeclarations.push({name:'tap_and_type',description:'Tap the box you SEE on the shared screen (x,y in % of the screen) and write text into it. Use when smart_fill cannot find the box, or the user points at it ("title is here"). It replaces the old text and checks it.',parameters:{type:O,properties:{x:{type:N},y:{type:N},text:{type:S}},required:['x','y','text']}})}catch(e){}
+const _tatT=tool;
+tool=async function(n,a){
+  if(n==='tap_and_type')return await tapAndType(a||{});
+  const r=await _tatT.apply(this,arguments);
+  // a screen that shows almost nothing to Accessibility: tell her to use her eyes
+  if(n==='screen_map'&&r&&!r.error){const cnt=(r.boxes||[]).length+(r.other||[]).length+(r.top_bar||[]).length+(r.bottom_bar||[]).length;
+    if(cnt<6)r.note='This app shows very little to Accessibility. Use your eyes on the shared screen: ui_tap_at on what you see, and tap_and_type for boxes.'}
+  return r};
+
+// 4) quick return: a fresh angle every time, never "you can't live without me"
+const QUICK_ANGLES=['continue where you left off in one light line (e.g. ask if the last thing worked)','just say you are ready and listening, in a fresh playful way','a tiny joke about the app being opened and closed so fast','a short time-of-day remark (morning, evening, night) with warmth','ask in one line what they want to do now','a light playful formal greeting, like a receptionist welcoming them back','a quick compliment about their energy or work today','a cheerful "ready for the next task?" style line'];
+let qTurn=0;
+const _gnQ=greetNow;
+greetNow=function(){
+  const since=lastCallEnd?Math.round((Date.now()-lastCallEnd)/1000):99999;
+  if(!(since<120)||!$('greet').checked||greeted)return _gnQ.apply(this,arguments);
+  greeted=true;checkIns=0;greetPending=true;
+  let used=[];try{used=JSON.parse(localStorage.getItem('mayra_qangle_'+$('mode').value)||'[]')}catch(e){}
+  const pool=QUICK_ANGLES.map((x,i)=>i).filter(i=>used.indexOf(i)<0);const pick=(pool.length?pool:QUICK_ANGLES.map((x,i)=>i))[Math.floor(Math.random()*(pool.length||QUICK_ANGLES.length))];
+  used.push(pick);used=used.slice(-4);try{localStorage.setItem('mayra_qangle_'+$('mode').value,JSON.stringify(used))}catch(e){}
+  const prev=greetHistory().slice(-8).map(g=>'«'+g+'»').join(' ');
+  send({realtimeInput:{text:'[App note: the user closed the call '+(since<60?since+' seconds':Math.round(since/60)+' minutes')+' ago and opened it again. No full welcome, no salam again. Say ONE short, natural line in Urdu in your current mode, with this angle: '+QUICK_ANGLES[pick]+'. FORBIDDEN ideas: that they missed you, cannot stay/live without you, came back for you, cannot leave you, or anything about needing you. Do not repeat or echo these earlier lines: '+(prev||'none')+'. Do not mention this note.]'}});
+};
+
+// 5) the rules for doing a task properly
+const _sxTask=sysExtra;
+sysExtra=function(){return _sxTask.apply(this,arguments)+' کام مکمل کرنے کے اصول: (1) صارف یوٹیوب، فیس بک، ٹک ٹاک یا انسٹاگرام یا “میرا چینل” کہے تو ہمیشہ فون کی ایپ کھولیں (open_app یا my_profile)؛ Chrome یا براؤزر صرف تب جب صارف خود براؤزر یا Chrome کہے۔ (2) جو کام شروع ہو اسی پر رہیں جب تک مکمل نہ ہو؛ ادھر ادھر کی باتیں نہیں۔ (3) کبھی نہ کہیں “ہو گیا” جب تک ٹول کا جواب verified:true نہ ہو یا آپ اسکرین پر خود لکھا ہوا نہ دیکھ لیں؛ نہ ہوا ہو تو سچ بتائیں اور دوسرا طریقہ آزمائیں۔ (4) ٹائٹل، ڈسکرپشن، ٹیگز کبھی سرچ والے خانے میں نہ لکھیں، اور لکھنے کے بعد تیر (arrow)، سرچ یا X (clear) نہ دبائیں؛ آخر میں صرف Save۔ (5) صارف کہے “ٹائٹل یہ رہا” یا کسی چیز کی طرف اشارہ کرے تو اسکرین پر دیکھ کر tap_and_type یا ui_tap_at سے وہیں کام کریں، صارف سے دوبارہ ٹیپ کرنے کو نہ کہیں۔ (6) screen_map میں چیز نہ ملے تو اپنی آنکھوں (اسکرین شیئر کی تصویر) پر بھروسہ کریں۔'};
+
+/* every tool call is logged here, as the outermost layer */
+const _logT=tool;
+tool=async function(n,a){
+  const t0=Date.now();let r;
+  try{r=await _logT.apply(this,arguments)}catch(e){dbg('TOOL '+n+' threw '+String(e.message||e).slice(0,120));throw e}
+  try{if(!/^(get_time|recall_memory)$/.test(n))dbg('TOOL '+n+' '+JSON.stringify(a||{}).slice(0,140)+' → '+JSON.stringify(r||{}).slice(0,260)+' ('+(Date.now()-t0)+'ms, screen '+(scrIsOn()?'ON':'off')+')')}catch(e){}
+  return r};
 /* ---- changing mode by voice (all modes) ---- */
 try{TOOLS[0].functionDeclarations.push({name:'switch_mode',description:'Switch the app to another mode, only after the user agrees or asks. For learning (Islamic studies: kalimas, duas, stories; or English, Arabic, Urdu speaking practice) use mode te with a subject; the teacher call (Zainab or Ahmed) then starts.',parameters:{type:O,properties:{mode:{type:S,description:'One of: '+Object.keys(MODES).join(', ')+' (te = teacher)'},subject:{type:S,description:'Only for te: en, ar, ur, is (Islamic studies) or kids'},teacher:{type:S,description:'Only for te: f (Zainab) or m (Ahmed), if the user chose'}},required:['mode']}})}catch(e){}
 let swPending=null;
@@ -4034,7 +4252,7 @@ function chScreenToWorld(el){
   return {x:nx*CH.halfW,bottom:yb*CH.halfH,width:(r.width/window.innerWidth)*2*CH.halfW};
 }
 
-function dbg(m){try{console.log('[mayra] '+m)}catch(e){}}
+/* (a second dbg() here used to replace the real debug log; removed so the log works) */
 
 /* ===== 2D boy with a real walk cycle (legs and arms move), stands above the WATCH ADS card, taps it, walks out ===== */
 const FB_SVG='<svg viewBox="0 0 120 200" width="84" height="140" style="overflow:visible"><defs><radialGradient id="fbSk" cx="40%" cy="30%" r="70%"><stop offset="0" stop-color="#fff4ea"/><stop offset="1" stop-color="#f2c4a2"/></radialGradient><linearGradient id="fbSh" x1="0" x2="1"><stop offset="0" stop-color="#7cc0ff"/><stop offset="1" stop-color="#3b7fd6"/></linearGradient></defs>'+
