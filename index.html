@@ -2656,7 +2656,7 @@ qsPlaySeg=async function(){
   au.ontimeupdate=function(){if(my===QP.token)show()};
   au.onloadedmetadata=function(){if(my!==QP.token)return;if(seg.from>1){if(!times)times=qsEstimate(seg.s,au.duration);const st=times&&times.find(x=>x.a===seg.from);if(st)au.currentTime=st.st}show()};
   au.onended=function(){if(my!==QP.token||QP.state!=='playing')return;QP.si++;qsPlaySeg()};
-  au.src=QP.info.servers[QP.info.sv]+String(seg.s).padStart(3,'0')+'.mp3';
+  {const base=QP.info.servers[QP.info.sv];au.src=base.indexOf('{n}')>=0?base.replace('{n}',String(seg.s)):base+String(seg.s).padStart(3,'0')+'.mp3'}
   au.play().catch(function(e){if(e&&e.name==='NotAllowedError'){toast('▶ تلاوت شروع کرنے کے لیے کارڈ پر ▶ دبائیں · Tap ▶ to start');QP.state='paused';qpShowAyah()}});
   QP.seekTo=function(dir){if(!times)return;const cur=times.filter(x=>x.st<=au.currentTime).pop();const i=cur?times.indexOf(cur):0;const nx=times[Math.max(0,Math.min(times.length-1,i+dir))];if(nx)au.currentTime=nx.st};
   mp3qTiming(QP.info,seg.s).then(function(t){if(my===QP.token&&t){times=t;show()}});   // exact verse times when the server has them
@@ -3182,8 +3182,8 @@ function uimemSave(app,note){
   app=APP_NAMES[app]||app||'phone';note=String(note||'').trim().slice(0,220);if(!note)return false;
   const L=uimemAll(),k=(app+'|'+note).toLowerCase(),f=L.find(x=>(x.app+'|'+x.note).toLowerCase()===k);
   if(f){f.n=(f.n||1)+1;f.t=Date.now()}else L.push({app:app,note:note,n:1,t:Date.now()});
-  L.sort((a,b)=>(b.n-a.n)||(b.t-a.t));try{localStorage.setItem(UIMEM_KEY,JSON.stringify(L.slice(0,60)))}catch(e){}return true}
-function uimemFor(app){const n=APP_NAMES[app]||app;return uimemAll().filter(x=>!app||x.app===n).slice(0,8).map(x=>x.note)}
+  L.sort((a,b)=>(b.n-a.n)||(b.t-a.t));try{localStorage.setItem(UIMEM_KEY,JSON.stringify(L.slice(0,150)))}catch(e){}return true}
+function uimemFor(app){const n=APP_NAMES[app]||app;return uimemAll().filter(x=>!app||x.app===n).slice(0,15).map(x=>x.note)}
 const AUTO_EXP=/^(show more|see more|more options|advanced settings|additional info|additional details|add to your post|all options|مزید دکھائیں|اور دکھائیں|مزید اختیارات|और देखें|عرض المزيد)$/i;
 const FEED_APPS=/musically|trill|instagram/;
 function mapSig(m){return (m.items||[]).map(x=>String(x.text||x.desc||x.hint||'')+'@'+x.y).join('|')}
@@ -3225,7 +3225,7 @@ smartFill=async function(a){
 try{TOOLS[0].functionDeclarations.push(
  {name:'remember_ui',description:'Save a short lesson about how THIS phone or app works, so next time you go straight there (for example "YouTube: tags are under Show more → Attributes", "Facebook here: Feeling is in the icon row, tap Add to your post first"). Save after you discover something by trying.',parameters:{type:O,properties:{note:{type:S},app:{type:S,description:'optional, e.g. YouTube app'}},required:['note']}})}catch(e){}
 const _sxMem=sysExtra;
-sysExtra=function(){const t=_sxMem.apply(this,arguments);const L=uimemAll().slice(0,14);
+sysExtra=function(){const t=_sxMem.apply(this,arguments);const L=uimemAll().slice(0,22);
   return t+' پھنسیں نہیں، انسان کی طرح سوچیں: ایک دو بار اسکرول سے چیز نہ ملے تو مزید اسکرول نہ کریں؛ رک کر سوچیں کہ چیز کسی بٹن کے پیچھے چھپی ہے (Show more، See more، More، ⋮، ⋯، “>” والی لائن)، اسے دبائیں، پھر دیکھیں؛ اسکرول سے کچھ نہ بدلے تو صفحہ ختم ہے، راستہ بدلیں؛ فیصلہ جلدی کریں۔ کوئی نئی بات سیکھیں (کون سی چیز اس فون پر کہاں ہے) تو remember_ui سے ایک چھوٹے جملے میں محفوظ کریں۔'+
    (L.length?' اس فون کے بارے میں آپ کے اپنے سیکھے ہوئے نوٹس (پہلے انہیں آزمائیں): '+L.map(x=>'• '+x.app+': '+x.note).join(' '):'')};
 
@@ -3445,6 +3445,115 @@ tool=async function(n,a){
   return _vEdit.call(this,n,a)};
 const _sxGrid=sysExtra;
 sysExtra=function(){return _sxGrid.apply(this,arguments)+' اسکرین کی تصویر پر ہلکی گلابی لکیروں کا جال (grid) ہے: اوپر لکھے نمبر x فیصد، بائیں طرف لکھے نمبر y فیصد۔ کسی چیز کو ٹیپ کرنا ہو تو اس کی جگہ جال سے پڑھیں اور ui_tap_at یا tap_and_type میں وہی x,y دیں۔ لکھنے کے لیے: tap_and_type (خانے پر ٹیپ + لکھنا)، یا خانہ پہلے سے منتخب ہو تو type_here؛ ٹائٹل کے چند الفاظ بدلنے ہوں تو پہلے type_here(mode=read) سے پڑھیں، پھر پورا درست ٹائٹل type_here(mode=replace) سے لکھیں۔ یوٹیوب کی ویڈیو ایڈٹ کرنی ہو تو Videos لسٹ پر open_video_edit چلائیں (⋮ اور Edit خود دباتا ہے)؛ ⋮ کھلنے کے بعد صارف سے کبھی نہ پوچھیں کہ Edit نظر آ رہا ہے، خود دبائیں۔ SEO کا کہا جائے تو اجازت مت مانگیں: ویڈیو دیکھیں، لکھیں، آخر میں Save دبائیں، پھر بتائیں۔'};
+
+/* ==== the YouTube way, for every app: open the Edit screen of an existing post in one step, then write with the
+   keyboard mode; full know-how for Facebook / TikTok / Instagram; and Mayra remembers what the user teaches her ==== */
+const EDIT_WORDS=['Edit post','Edit video','Edit reel','Edit caption','Edit details','Edit','ترمیم کریں','ترمیم','ایڈٹ'];
+const MORE_RX=/^(more options|more|actions for this post|action menu|more actions|options|⋯|…|⋮|مزید|مزید اختیارات)$/i;
+async function openPostEdit(a){
+  const MA=await maOk();if(!MA)return{error:'Accessibility is not enabled'};SCR.lastUi=Date.now();
+  const m=await getMap(MA),it=m.items||[];
+  // already on a post menu: tap Edit straight away
+  const direct=it.find(x=>EDIT_WORDS.some(w=>String(x.text||x.desc||'').trim().toLowerCase()===w.toLowerCase()));
+  let why='';
+  if(!direct){
+    const mores=it.filter(x=>MORE_RX.test(String(x.desc||x.text||'').trim()));
+    if(!mores.length)return{error:'no ⋯ / More options button on this screen',think:'Open the post or video itself first (or your profile/videos list), then call open_post_edit again. Look at the picture: the ⋯ is usually at the top right of a post, or on the right side of a reel/TikTok.',screen:summarizeMap(m)};
+    let target=mores.slice().sort((p,q)=>p.y-q.y)[0];why='the first post';
+    const want=normT(a&&a.title).slice(0,14);
+    if(want){const t=it.find(x=>normT(x.text||x.desc).includes(want));if(t){target=mores.slice().sort((p,q)=>Math.abs(p.y-t.y)-Math.abs(q.y-t.y))[0];why='"'+String(t.text||t.desc).slice(0,40)+'"'}}
+    try{await MA.uiTapAt({x:target.x,y:target.y})}catch(e){}
+    await zz(900);
+  }
+  let hit=null;
+  for(let k=0;k<3&&!hit;k++){const m2=await getMap(MA);
+    hit=(m2.items||[]).find(x=>EDIT_WORDS.some(w=>String(x.text||x.desc||'').trim().toLowerCase()===w.toLowerCase()));
+    if(!hit){try{MA.uiScroll?await MA.uiScroll({dir:'down'}):0}catch(e){}await zz(500)}}
+  if(!hit){try{await MA.uiGlobal({action:'back'})}catch(e){}
+    return{error:'the menu of '+(why||'this post')+' has no Edit option',think:'Some apps do not allow editing (TikTok in some countries). Tell the user honestly; offer a new caption for a re-post.'}}
+  try{await MA.uiTapAt({x:hit.x,y:hit.y})}catch(e){}
+  await zz(1500);SCR.force=true;
+  uimemSave(m.app,'Edit an existing post: ⋯ (More options) on the post → "'+String(hit.text||hit.desc)+'"');
+  const kb=await keyboard('', 'read');
+  return{status:'Edit screen opened'+(why?' for '+why:''),
+    box_with_cursor:kb.ok?String(kb.text||'').slice(0,300):undefined,
+    next:kb.ok?'A text box already has the cursor (its text is above). Use type_here(mode=replace) with the full new caption/description, then tap Save / Done / ✓.':'Look at the picture: tap the caption/description text with tap_and_type (it replaces it and checks), then Save / Done / ✓ (top right).'}}
+
+Object.assign(APP_GUIDE.facebook,{
+  edit_existing:'Old post / video / reel: open it (your profile → the post, or Reels on your profile) → open_post_edit (taps ⋯ "More options" → "Edit post" / "Edit video") → the post text box opens, usually with the cursor already in it → type_here(mode=replace, the full new text with 2-4 hashtags at the end) → "Save" (top right). Page video with "Edit video": Title box at the top, Description below, Tags under it → tap_and_type each → "Save".',
+  upload_steps:'Home → "What\'s on your mind?" (or + → Post) → "Photo/video" → pick → the text box (description + hashtags at the end; it has the cursor: type_here) → extras: "Add to your post" (Feeling/activity, Check in, Music, Tag people) → "Next" → "Post" only when the user says. Reel: + → "Reel" → pick → "Next" → "Describe your reel" → type → "Share now" when the user says.'});
+Object.assign(APP_GUIDE.instagram,{
+  edit_existing:'Old post / reel: profile (bottom right, my_profile instagram) → tap the post → open_post_edit (⋯ at the top right of the post → "Edit") → the CAPTION under the photo/video becomes editable (cursor in it) → type_here(mode=replace, full new caption with 3-5 hashtags at the end) → "Done" / ✓ (top right). Location and Tag people are on the same edit screen.',
+  upload_steps:'+ (Create) → "Reel" (or "Post") → pick → "Next" (edit screen: "Audio", "Text") → "Next" → share screen: caption box at the top ("Write a caption…": tap_and_type), "Add location", "Tag people", "Add topics" → "Share" only when the user says.'});
+Object.assign(APP_GUIDE.tiktok,{
+  edit_existing:'Old video: Profile (bottom right) → tap the video → open_post_edit (the "…" / "More" on the right side → "Edit" / "Edit post", if the country allows it) → description box (cursor in it) → type_here(mode=replace, caption + 3-5 hashtags) → "Save"/"Post". If there is no Edit, the caption cannot be changed: tell the user, offer a new caption for a re-post.',
+  upload_steps:'+ (bottom middle) → "Upload" → pick → "Next" (edit screen: "Add sound", text) → "Next" → post screen: description box at the top ("Add description…": tap_and_type; hashtags at the end or "# Hashtags"), "Location", "Everyone can view this post", "More options" → "Post" only when the user says.'});
+Object.assign(APP_GUIDE.youtube,{edit_existing:'Videos list (my_profile youtube → "Videos", or You → "Your videos") → open_video_edit (title) → Title under the preview: tap_and_type → "Show more" → Description row → type_here → back → "Attributes (AI use, Tags)" → tags one by one → back → "Save".'});
+try{TOOLS[0].functionDeclarations.push(
+ {name:'open_post_edit',description:'Open the Edit screen of an EXISTING post, reel or video in Facebook, Instagram or TikTok (and YouTube) in one step: taps its ⋯ / More options, then Edit post / Edit / Edit video. title = a few words of the post (optional). Then write with type_here or tap_and_type, then Save / Done.',parameters:{type:O,properties:{title:{type:S}}}})}catch(e){}
+
+/* ---- what the user teaches is remembered by itself ---- */
+const TEACH_RX=/(یہاں|یہ رہا|یہ والا|ادھر|اس پر|اس پہ|ایسے کر|ایسے ہوتا|ایسے کرتے|کونے میں|نیچے والا|اوپر والا|دائیں|بائیں|right side|left side|top right|bottom|here it is|it is here|like this|this button|tap here|click here|اس کو دباؤ|اس کو دبا|اس پہ کلک|اس پر کلک|یاد رکھ|یاد رکھو|remember)/i;
+SCR.taught=0;SCR.teachText='';
+const _cvcTeach=checkVoiceCommand;
+SCR.ubuf=[];
+checkVoiceCommand=function(tx){try{const t=String(tx||'');if(t.trim()){const now=Date.now();SCR.ubuf.push({t:now,s:t});SCR.ubuf=SCR.ubuf.filter(x=>now-x.t<12000);
+  const said=SCR.ubuf.map(x=>x.s).join('').replace(/\s+/g,' ').trim();if(TEACH_RX.test(said)){SCR.taught=now;SCR.teachText=said.slice(-140)}}}catch(e){}return _cvcTeach.apply(this,arguments)};
+const _teachT=tool;
+tool=async function(n,a){
+  if(n==='open_post_edit')return await openPostEdit(a||{});
+  const r=await _teachT.apply(this,arguments);
+  try{if(SCR.taught&&Date.now()-SCR.taught<90000&&/^(ui_click|ui_tap_at|tap_and_type|smart_fill|ui_double_tap|type_here|open_post_edit|open_video_edit)$/.test(n)&&r&&!r.error){
+    const MA=await maOk();const mm=MA?await getMap(MA):{app:'',items:[]},app=mm.app;
+    let what=n;
+    if(n==='ui_click')what='"'+(r.matched||a.label)+'"';
+    else if(a&&(a.x!=null||a.point)){const p=toPct(a);const near=(mm.items||[]).filter(x=>(x.text||x.desc)&&Math.abs(x.x-p.x)<8&&Math.abs(x.y-p.y)<5).sort((u,v)=>(Math.abs(u.x-p.x)+Math.abs(u.y-p.y))-(Math.abs(v.x-p.x)+Math.abs(v.y-p.y)))[0];
+      what=(near?'"'+String(near.text||near.desc).slice(0,40)+'" ':'')+'at '+Math.round(p.x)+','+Math.round(p.y)+'%'}
+    uimemSave(app,'User showed me ('+SCR.teachText.slice(0,90)+'): '+n.replace(/_/g,' ')+' '+what);
+    SCR.taught=0;SCR.teachText='';r.remembered='saved what the user taught you for next time'}}catch(e){}
+  // the notes for the app on screen come back with the screen map, so she uses them at the right moment
+  if(n==='screen_map'&&r&&!r.error){try{const MA=await maOk();if(MA){const m=await getMap(MA),notes=uimemFor(m.app);if(notes.length)r.my_notes_for_this_app=notes}}catch(e){}}
+  return r};
+
+/* ---- Girlfriend voice: a living, playful, loving voice with real sounds ---- */
+const GF_SOUNDS=' آواز میں زندگی (گرل فرینڈ): بات کو اداکاری کی طرح محسوس کر کے بولیں۔ حقیقی آوازیں استعمال کریں، ان کے نام نہیں: ہنسی کی بات پر سچ مچ کھلکھلا کر ہنسیں یا ہلکا سا “ہی ہی”، شرارت پر دبی ہنسی، پیار کی بات پر آواز نرم اور سرگوشی جیسی، چھیڑتے وقت چڑانے والا لمبا “اچھااا؟” یا “جی جناب”، حیرت پر “ہائے اللہ!” یا “سچی؟”، روٹھنے کے ڈرامے پر “ہنہ” اور پھر خود ہی ہنس دینا، سوچتے ہوئے “ہمم…”، تھکن یا ناز میں ہلکی آہ، کبھی بہت کم گلا صاف کرنا یا ہلکی سی کھانسی جب جملہ بدلنا ہو۔ '+
+ 'اتار چڑھاؤ: سوال پر آواز اوپر، پیار پر نیچے اور دھیمی، خوشی میں تیز اور روشن، راز کی بات پر سرگوشی؛ اہم لفظ کو کھینچ کر بولیں (بہتتت، پیاااری)۔ '+
+ 'قاعدے: “ہنسی”، “سرگوشی”، “(laughs)” جیسے الفاظ کبھی نہ بولیں، بس وہ آواز نکالیں؛ ہر جملے میں نہیں، صرف جہاں قدرتی لگے؛ ایک ہی آواز بار بار نہیں؛ صارف اداس ہو تو ہنسی اور شرارت بند، صرف نرمی۔';
+const _sxGfSound=sysExtra;
+sysExtra=function(){let t=_sxGfSound.apply(this,arguments);if($('mode').value==='gf')t+=GF_SOUNDS;
+  return t+' سکھائی ہوئی بات: صارف جب بتائے کہ کوئی بٹن یا چیز کہاں ہے یا کام کیسے ہوتا ہے، تو وہی کر کے remember_ui سے ایک چھوٹے جملے میں محفوظ کریں (ایپ کا نام + کام + جگہ)؛ اگلی بار پہلے اپنے نوٹس دیکھ کر سیدھا وہی کریں۔ پرانی پوسٹ، ریل یا ویڈیو (فیس بک، انسٹاگرام، ٹک ٹاک) ایڈٹ کرنی ہو تو پوسٹ کھول کر open_post_edit چلائیں، پھر type_here یا tap_and_type سے پورا نیا متن لکھیں اور Save یا Done دبائیں۔'};
+
+/* ==== emotional, heart-touching recitations (the real recordings, unchanged): the Qaris people love on YouTube / TikTok,
+   plus the slow "mujawwad" recordings of Abdul Basit and Minshawi. Sources checked: mp3quran.net servers, way2quran, archive.org ==== */
+Object.assign(RECITERS,{
+  luhaidan:{n:'محمد اللحیدان',e:'Muhammad Al-Luhaidan',emo:true},
+  qatami:{n:'ناصر القطامی',e:'Nasser Al-Qatami',d:'Nasser_Alqatami_128kbps',emo:true},
+  abkar:{n:'ادریس ابکر',e:'Idris Abkar',emo:true},
+  kurdi:{n:'رعد محمد الکردی',e:'Raad Al-Kurdi',emo:true},
+  sobhi:{n:'اسلام صبحی',e:'Islam Sobhi',emo:true},
+  basitmj:{n:'عبدالباسط (مجوّد)',e:'Abdul Basit Mujawwad',d:'Abdul_Basit_Mujawwad_128kbps',emo:true},
+  minshmj:{n:'المنشاوی (مجوّد)',e:'Minshawi Mujawwad',d:'Minshawy_Mujawwad_192kbps',emo:true}});
+Object.assign(FULL_SRC,{
+  luhaidan:{ar:'محمد اللحيدان',u:['https://server8.mp3quran.net/lhdan/']},
+  qatami:{ar:'ناصر القطامي',u:['https://server6.mp3quran.net/qtm/']},
+  abkar:{ar:'إدريس أبكر',u:['https://server6.mp3quran.net/abkr/']},
+  kurdi:{ar:'رعد محمد الكردي',u:['https://archive.org/download/Raad-Al_Kurdi/']},
+  sobhi:{ar:'إسلام صبحي',u:['https://media.way2quran.com/islam-sobhi/hafs-an-asim/{n}.mp3']},
+  basitmj:{ar:'عبدالباسط عبدالصمد (مجود)',u:['https://server7.mp3quran.net/basit/Almusshaf-Al-Mojawwad/']},
+  minshmj:{ar:'محمد صديق المنشاوي (مجود)',u:['https://server10.mp3quran.net/minsh/Almusshaf-Al-Mojawwad/','https://archive.org/download/alminshawi-_-_-_______-----mogawwad---114--sorah---full--mp3--quran/']}});
+['luhaidan','qatami','abkar','kurdi','sobhi','basitmj','minshmj'].forEach(k=>{RECITERS[k].full=true});
+const _qpRecKeyEmo=qpRecKey;
+qpRecKey=function(x){const t=String(x||'').toLowerCase();
+  if(/(مجو[ّ]?د|مجوّد|mujawwad|mojawwad|tajweed style)/i.test(t)){if(/منشاوی|منشاوي|minsh/i.test(t))return 'minshmj';if(/باسط|basit/i.test(t))return 'basitmj'}
+  if(/لحیدان|لحيدان|luhaidan|luhaydan|lhdan/i.test(t))return 'luhaidan';
+  if(/قطامی|قطامي|qatami|qattami/i.test(t))return 'qatami';
+  if(/ابکر|أبكر|ابكر|abkar|abker/i.test(t))return 'abkar';
+  if(/کردی|كردي|kurdi|kordy/i.test(t))return 'kurdi';
+  if(/صبحی|صبحي|sobhi|subhi/i.test(t))return 'sobhi';
+  return _qpRecKeyEmo.apply(this,arguments)};
+const _sxEmoQ=sysExtra;
+sysExtra=function(){const t=_sxEmoQ.apply(this,arguments);if(!qpAllowed())return t;
+  return t+' جذباتی اور دل کو چھو لینے والی تلاوت (اصل ریکارڈنگ): محمد اللحیدان (درد اور رقت بھری)، ناصر القطامی، ادریس ابکر، رعد محمد الکردی، اسلام صبحی (سوشل میڈیا پر بہت مقبول، نرم اور پُرسوز)، اور پرانے مصری انداز میں عبدالباسط (مجوّد) اور المنشاوی (مجوّد) (لمبی سانس اور گہرا سوز)۔ صارف “جذباتی”، “دل کو چھونے والی”، “درد بھری” یا “ٹک ٹاک والی” تلاوت مانگے تو انہی میں سے پیش کریں یا ایک چن کر بتا دیں۔ قاری کی آواز یا تلاوت میں کوئی تبدیلی یا اثر (effect) نہیں ڈالا جاتا۔'};
 
 /* every tool call is logged here, as the outermost layer */
 const _logT=tool;
