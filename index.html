@@ -3661,6 +3661,100 @@ const GF_REAL=' حقیقی جذبات (اصلی لڑکی کی طرح): '+
 const _sxReal=sysExtra;
 sysExtra=function(){const t=_sxReal.apply(this,arguments);return $('mode').value==='gf'?t+GF_REAL:t};
 
+/* ==== Quran card: exact, never guessed (it is the Quran).
+   1) exact verse timings for the very same recording → one continuous recording, card follows the real timings;
+   2) otherwise, when the Qari's verse-by-verse files exist (EveryAyah) → verse by verse, gapless (the next verses
+      are preloaded), the card changes the moment each verse's own audio starts;
+   3) neither → the card shows the whole passage and does not claim which verse is being recited.
+   The pause-listening and length-based guessing are switched off. ==== */
+qsAttachListener=function(){QP.liveA=null};
+qsCorsOk=async function(){return false};
+QP.exactCache={};
+const _mp3qT=mp3qTiming;
+mp3qTiming=async function(info,su){const key=(info&&info.servers?qsPath(info.servers[info.sv||0]):'')+'|'+su;
+  if(key in QP.exactCache)return QP.exactCache[key];const t=await _mp3qT.apply(this,arguments);QP.exactCache[key]=t||null;return QP.exactCache[key]};
+// the card changes at once (the old fade waited 180 ms)
+const _qpShowB=qpShowAyah;
+qpShowAyah=function(){
+  if(QP.mode==='surah'&&QP.noSync){qpShowPassage();return}
+  const it=QP.list[QP.idx];if(!it)return;
+  const T=QP.texts[it.s];
+  const ar=it.b?'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ':(T&&T.ar[it.a-1]?T.ar[it.a-1]+' ﴿'+qpDigits(it.a)+'﴾':'…');
+  const ur=it.b?'اللہ کے نام سے جو بڑا مہربان نہایت رحم والا ہے':(T&&T.ur[it.a-1]?T.ur[it.a-1]:'');
+  const A=$('qpA'),U=$('qpU');
+  if(A.textContent!==ar){A.textContent=ar;U.textContent=ur;A.scrollTop=0;A.style.opacity=U.style.opacity='0.55';requestAnimationFrame(()=>{A.style.opacity=U.style.opacity='1'})}
+  $('qpT').textContent=QP.title;$('qpR').textContent='قاری: '+RECITERS[QP.rec].n;
+  $('qpN').textContent=it.b?'':((/^پارہ/.test(QP.title)?'سورۃ '+(SURAH_UR[it.s]||it.s)+' · ':'')+'آیت '+qpDigits(it.a));
+  const real=QP.list.filter(x=>!x.b),pos=QP.list.slice(0,QP.idx+1).filter(x=>!x.b).length;
+  $('qpBar').style.width=Math.round(pos/Math.max(1,real.length)*100)+'%';
+  $('qpPlay').textContent=QP.state==='playing'?'⏸':'▶'};
+// no exact timing anywhere: the whole passage, honestly, without a "current verse"
+function qpShowPassage(){
+  const seg=QP.segs&&QP.segs[QP.si];if(!seg)return;const T=QP.texts[seg.s];const key=QP.rec+'|'+seg.s+'|'+seg.from+'-'+seg.to+'|'+(T?1:0);
+  $('qpPlay').textContent=QP.state==='playing'?'⏸':'▶';
+  if(QP.passageKey===key)return;QP.passageKey=key;
+  const A=$('qpA'),U=$('qpU');
+  let txt='';if(T){for(let a=seg.from;a<=seg.to;a++)if(T.ar[a-1])txt+=T.ar[a-1]+' ﴿'+qpDigits(a)+'﴾ '}
+  A.textContent=(seg.from===1&&seg.s!==1&&seg.s!==9?'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ ':'')+(txt||'…');A.scrollTop=0;A.style.opacity='1';
+  U.textContent='اس قاری کی اس ریکارڈنگ کے لیے آیات کا درست وقت دستیاب نہیں، اس لیے پوری آیات دکھائی جا رہی ہیں (اوپر نیچے کر کے ساتھ پڑھیں)۔';U.style.opacity='1';
+  $('qpT').textContent=QP.title;$('qpR').textContent='قاری: '+RECITERS[QP.rec].n;
+  $('qpN').textContent=seg.s?('سورۃ '+(SURAH_UR[seg.s]||seg.s)):''}
+// decide per surah: exact continuous, verse by verse, or the whole passage
+const _qsDecide=qsPlaySeg;
+qsPlaySeg=async function(){
+  const seg=QP.segs&&QP.segs[QP.si];const F=FULL_SRC[QP.rec];
+  if(!seg||!F)return _qsDecide.apply(this,arguments);
+  const tok=QP.token;
+  if(QP.si===0){try{$('qpN').textContent='';$('qpA').textContent='…';$('qpU').textContent=''}catch(e){}}
+  const t=await mp3qTiming({servers:F.u.slice(),sv:0},seg.s);
+  if(tok!==QP.token)return;
+  await qpLoadText(seg.s);if(tok!==QP.token)return;
+  if(t){QP.noSync=false;dbg('quran: exact timings ('+QP.rec+', surah '+seg.s+')');return _qsDecide.apply(this,arguments)}
+  if(RECITERS[QP.rec]&&RECITERS[QP.rec].d){
+    const list=[];QP.segs.slice(QP.si).forEach(g=>{if(g.from===1&&g.s!==1&&g.s!==9)list.push({s:g.s,a:0,b:true});for(let x=g.from;x<=g.to;x++)list.push({s:g.s,a:x})});
+    if(QP.audio){try{QP.audio.onended=QP.audio.onerror=QP.audio.ontimeupdate=null;QP.audio.pause()}catch(e){}}
+    QP.mode='ayah';QP.list=list;QP.idx=0;QP.vbvFrom=QP.rec;dbg('quran: verse by verse, exact card ('+QP.rec+')');
+    return qpPlayCurrent()}
+  QP.noSync=true;QP.passageKey='';dbg('quran: no exact verse timing for '+QP.rec+' surah '+seg.s+': whole passage shown');
+  return _qsDecide.apply(this,arguments)};
+// exact timings: the card checks the position 20 times a second (the player itself reports only ~4 times)
+setInterval(function(){try{if(QP.state==='playing'&&QP.mode==='surah'&&!QP.noSync&&QP.audio&&!QP.audio.paused)QP.audio.dispatchEvent(new Event('timeupdate'))}catch(e){}},50);
+// gapless verse-by-verse player: the next two verses are already loaded when the current one ends
+const VB={pre:{},owner:0};
+function vbvUrls(it){const R=RECITERS[QP.rec]||{};const s=it.b?1:it.s,a=it.b?1:it.a,u=[];if(R.d)u.push(qpUrl(R.d,s,a));if(R.d2)u.push(qpUrl(R.d2,s,a));return u}
+function vbvMake(idx){
+  if(VB.pre[idx])return VB.pre[idx];const it=QP.list[idx];if(!it)return null;
+  const o={au:new Audio(),urls:vbvUrls(it),k:0,started:false,dead:false};if(!o.urls.length)return null;
+  o.au.preload='auto';try{o.au.volume=Math.min(1,Math.max(0.2,(+$('vol').value||2)/2))}catch(e){}
+  o.load=function(){if(o.k>=o.urls.length){o.dead=true;return false}o.au.src=o.urls[o.k++];try{o.au.load()}catch(e){}return true};
+  o.au.onerror=function(){if(!o.started){if(!o.load()&&o.onDead)o.onDead()}};
+  o.load();VB.pre[idx]=o;return o}
+function vbvClear(keep){Object.keys(VB.pre).forEach(k=>{if(keep.indexOf(+k)<0){const o=VB.pre[k];try{o.au.onended=o.au.onplaying=null;o.au.pause();o.au.removeAttribute('src');o.au.load()}catch(e){}delete VB.pre[k]}})}
+const _qpPlayB=qpPlayCurrent;
+qpPlayCurrent=function(){
+  if(QP.mode!=='ayah'||!(RECITERS[QP.rec]&&RECITERS[QP.rec].d))return _qpPlayB.apply(this,arguments);
+  const it=QP.list[QP.idx];if(!it){vbvClear([]);qpFinish();return}
+  const my=++QP.token,idx=QP.idx;
+  vbvClear([idx,idx+1,idx+2]);
+  Object.keys(VB.pre).forEach(k=>{if(+k!==idx){try{VB.pre[k].au.pause()}catch(e){}}});
+  const o=vbvMake(idx);if(!o)return _qpPlayB.apply(this,arguments);
+  QP.audio=o.au;
+  qpLoadText(it.s).then(function(){if(my===QP.token&&o.started)qpShowAyah()});
+  o.onDead=function(){if(my!==QP.token)return;
+    if(idx<=1&&FULL_SRC[QP.rec]){vbvClear([]);   // the Qari's verse files are not there: play his full recording instead
+      dbg('quran: verse files missing for '+QP.rec+', using the full recording');const segs=[];QP.list.slice(idx).filter(x=>!x.b).forEach(x=>{const g=segs[segs.length-1];if(g&&g.s===x.s)g.to=x.a;else segs.push({s:x.s,from:x.a,to:x.a})});
+      QP.mode='surah';QP.segs=segs;QP.si=0;QP.noSync=true;QP.passageKey='';QP.info=null;_qsDecide();return}
+    toast('یہ آیت اس قاری کی آواز میں نہیں ملی، العفاسی کی آواز میں · This verse: Alafasy');const r=QP.rec;QP.rec='alafasy';_qpPlayB();QP.rec=r};
+  o.au.onplaying=function(){if(my!==QP.token)return;o.started=true;qpShowAyah()};   // the card changes exactly when the verse's own audio starts
+  o.au.onended=function(){if(my!==QP.token||QP.state!=='playing')return;QP.idx++;qpPlayCurrent()};
+  if(o.dead){o.onDead();return}
+  try{o.au.currentTime=0}catch(e){}
+  o.au.play().catch(function(e){if(e&&e.name==='NotAllowedError'){toast('▶ تلاوت شروع کرنے کے لیے کارڈ پر ▶ دبائیں · Tap ▶ to start');QP.state='paused';qpShowAyah()}});
+  vbvMake(idx+1);vbvMake(idx+2)};
+const _sxQSync=sysExtra;
+sysExtra=function(){const t=_sxQSync.apply(this,arguments);if(!qpAllowed())return t;
+  return t+' قرآن کارڈ: جن قاریوں کی آیت بہ آیت ریکارڈنگ موجود ہے (العفاسی، السدیس، الشریم، عبدالباسط اور ان کی مجوّد، المنشاوی اور ان کی مجوّد، الحصری، ماہر المعیقلی، سعد الغامدی، الحذیفی، یاسر الدوسری، ناصر القطامی) ان کے ساتھ کارڈ ہر آیت پر بالکل ساتھ بدلتا ہے۔ محمد اللحیدان، ادریس ابکر، رعد الکردی اور اسلام صبحی کے لیے آیات کا درست وقت دستیاب نہ ہو تو کارڈ پوری آیات دکھاتا ہے؛ صارف آیت بہ آیت ساتھ چلنے والا کارڈ چاہے تو پہلی فہرست میں سے قاری تجویز کریں۔'};
+
 /* every tool call is logged here, as the outermost layer */
 const _logT=tool;
 tool=async function(n,a){
