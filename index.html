@@ -775,15 +775,29 @@ async function scanNow(){
 
 /* ===== Website builder and post drafts. The app writes the page or the caption with Gemini (your own key). Nothing is posted by itself: you share it and the app you choose posts it. ===== */
 function gemKey(){const k=document.getElementById('key');return k?String(k.value||'').trim():''}
+/* Google retires model names over time (gemini-2.5-flash now answers 404 for new keys): try the current ones in order,
+   remember the first that works, and drop the "thinking" setting if a model does not accept it */
+const GEM_MODELS=['gemini-flash-latest','gemini-3.8-flash','gemini-3.6-flash','gemini-3-flash-preview','gemini-3.5-flash-lite','gemini-2.5-flash'];
+async function gemCall(body,opt){opt=opt||{};const key=gemKey();if(!key)throw new Error('Gemini API key missing');
+  let saved='';try{saved=localStorage.getItem('mayra_gem_model')||''}catch(e){}
+  const list=(saved&&GEM_MODELS.includes(saved)?[saved]:[]).concat(GEM_MODELS.filter(m=>m!==saved));let last='';
+  for(const mdl of list){
+    let noThink=false;try{noThink=!!localStorage.getItem('mayra_gem_nothink_'+mdl)}catch(e){}
+    for(const fast of (opt.fast&&!noThink?[true,false]:[false])){
+      const b=JSON.parse(JSON.stringify(body));if(fast){b.generationConfig=Object.assign({},b.generationConfig||{},{thinkingConfig:/2\.5/.test(mdl)?{thinkingBudget:0}:{thinkingLevel:'minimal'}})}
+      const ctl=new AbortController(),to=setTimeout(()=>ctl.abort(),opt.timeout||20000);
+      try{const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+mdl+':generateContent?key='+encodeURIComponent(key),{method:'POST',signal:ctl.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
+        if(r.ok){const j=await r.json();try{if(saved!==mdl)localStorage.setItem('mayra_gem_model',mdl)}catch(e){}return j}
+        last=mdl+' '+r.status;if(r.status===400&&fast){try{localStorage.setItem('mayra_gem_nothink_'+mdl,'1')}catch(e){}continue}if(r.status===404||r.status===400)break;if(r.status===429||r.status===403)throw new Error('Gemini '+r.status);break}
+      catch(e){if(e.name==='AbortError')throw new Error('took too long');if(/Gemini 4(29|03)/.test(e.message))throw e;last=String(e.message||e);break}
+      finally{clearTimeout(to)}}}
+  throw new Error('no Gemini model answered ('+last+')')}
 async function gemText(prompt,search){
   const key=gemKey();
   if(!key)throw new Error('Gemini API key missing');
   const body={contents:[{parts:[{text:prompt}]}]};
   if(search)body.tools=[{google_search:{}}];
-  const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+encodeURIComponent(key),{
-    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-  if(!r.ok)throw new Error('Gemini '+r.status);
-  const j=await r.json();
+  const j=await gemCall(body,{timeout:60000});
   const parts=(j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts)||[];
   return parts.map(function(p){return p.text||''}).join('');
 }
@@ -3036,8 +3050,10 @@ GOALS.caption=GOALS.description;GOALS.hashtags=GOALS.description;
 const EXPANDERS=/^(show more|see more|more options|more|advanced settings|additional info|additional details|add to your post|all options|expand|details|⋯|…|مزید|اور دکھائیں|مزید دکھائیں|مزید اختیارات|और देखें|अधिक|المزيد|عرض المزيد)$/i;
 function itemWords(x){return (String(x.text||'')+' '+String(x.desc||'')+' '+String(x.hint||'')).toLowerCase().trim()}
 function shortItem(x){const t=String(x.text||x.hint||x.desc||'').trim();return (x.box?'[box] ':x.scroll?'[list] ':x.tap?'[btn] ':'')+(t?'"'+(t.length>45?t.slice(0,45)+'…':t)+'"':'(no text)')+(x.hint&&x.text?' hint "'+String(x.hint).slice(0,30)+'"':'')+(x.id?' id:'+x.id:'')+' @'+x.x+','+x.y+(x.on?' (on)':'')}
+const STATUSBAR_RX=/^(clock|battery_percentage_view|battery|wifi_signal|mobile_signal|statusIcons|notification_icon_area|system_icons)$/i;
+function notStatusBar(x){if(+x.y>5)return true;const id=String(x.id||''),t=String(x.text||x.desc||'');return !(STATUSBAR_RX.test(id)||/notification:?$/i.test(t)||/^\d{1,2}:\d{2}$/.test(t)||/^\d{1,3}%$/.test(t)||/battery|signal|wi-?fi/i.test(t))}
 async function getMap(MA){
-  if(MA.uiMap){try{const m=await MA.uiMap();return{app:m.app||'',items:m.items||[]}}catch(e){}}
+  if(MA.uiMap){try{const m=await MA.uiMap();return{app:m.app||'',items:(m.items||[]).filter(notStatusBar)}}catch(e){}}
   try{const r=await MA.uiRead();return{app:'',items:(r.items||[]).map((x,i)=>({text:x.text,desc:x.desc,box:x.editable,tap:x.clickable,x:50,y:x.at==='top'?8:x.at==='bottom'?94:20+i}))}}catch(e){return{app:'',items:[]}}}
 function summarizeMap(m){
   const it=m.items||[];
@@ -3470,9 +3486,11 @@ async function tapThenType(a){
   const MA=await maOk();if(!MA)return{error:'Accessibility is not enabled'};
   const p=toPct(a),text=String(a.text||'');if(!(p.x>=0&&p.x<=100&&p.y>=0&&p.y<=100))return{error:'give x,y in % (or point [y,x] 0-1000)'};
   SCR.lastUi=Date.now();try{await MA.uiTapAt({x:p.x,y:p.y})}catch(e){}
-  await waitFocusBox(MA,900);
+  await waitFocusBox(MA,600);
+  {const t1=Date.now();for(;;){const rd=await keyboard('','read');if(rd&&rd.ok)break;if(Date.now()-t1>2600)break;await zz(220)}}
   const k=await keyboard(text,a.mode||'replace');
   if(k.ok){const got=String(k.text||'');const okText=!text||got.includes(text.trim().slice(0,20));SCR.force=true;
+    if(!okText&&!got.trim()&&/,/.test(text))return{status:'written: the box is empty again because it turned the words into tags (chips), which is normal for a Tags box. Look at the picture to see the tags.',box_text_now:''};
     return okText?{status:'written and checked',box_text_now:got.slice(0,300)}:{status:'written, but the box now says something else: check the picture',box_text_now:got.slice(0,300)}}
   if(k.ready===false||k.error)dbg('keyboard mode not ready: '+(k.error||'no box with a cursor'));
   return null}
@@ -3480,7 +3498,8 @@ const _vEdit=tool;
 tool=async function(n,a){
   if(n==='open_video_edit')return await openVideoEdit(a||{});
   if(n==='type_here'){SCR.lastUi=Date.now();const k=await keyboard(a&&a.text,(a&&a.mode)||'replace');SCR.force=true;
-    if(k.ok)return{status:(a&&a.mode)==='read'?'read':'written',box_text_now:String(k.text||'').slice(0,400)};
+    if(k.ok){const got=String(k.text||'');if((a&&a.mode)!=='read'&&!got.trim()&&/,/.test(String(a&&a.text||'')))return{status:'written: the box turned the words into tags (chips), so it looks empty; that is normal. Check the tags in the picture, do not write them again.',box_text_now:''};
+      return{status:(a&&a.mode)==='read'?'read':'written',box_text_now:got.slice(0,400)}}
     return{error:k.error||'no box has the cursor right now: tap the box first (ui_tap_at / tap_and_type), then type_here'}}
   if(n==='ui_tap_at'&&a&&(a.point||a.box_2d)){const p=toPct(a);a=Object.assign({},a,{x:p.x,y:p.y})}
   if(n==='tap_and_type'){const r=await tapThenType(a||{});if(r)return r;const p=toPct(a);a=Object.assign({},a,{x:p.x,y:p.y})}
@@ -3924,18 +3943,14 @@ async function locateOnScreen(target){
     'It must be something a person can tap (button, icon, tab, menu item, text box, list row). If several look similar, choose the one that best fits the description '+
     '(for example the Like of the main post or video, not of a comment; the main Title box, not a search box). '+
     'Answer with JSON only: {"found":true or false,"box_2d":[ymin,xmin,ymax,xmax] scaled 0-1000,"label":"what it is, in a few words"}.';
-  const ctl=new AbortController(),to=setTimeout(()=>ctl.abort(),9000);
-  try{const res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+encodeURIComponent(key),{method:'POST',signal:ctl.signal,headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({contents:[{parts:[{inline_data:{mime_type:'image/jpeg',data:r.data}},{text:prompt}]}],generationConfig:{temperature:0,responseMimeType:'application/json',thinkingConfig:{thinkingBudget:0}}})});
-    if(!res.ok)return{error:'vision '+res.status};
-    const j=await res.json(),txt=(((j.candidates||[])[0]||{}).content||{}).parts?j.candidates[0].content.parts.map(p=>p.text||'').join(''):'';
+  try{const j=await gemCall({contents:[{parts:[{inline_data:{mime_type:'image/jpeg',data:r.data}},{text:prompt}]}],generationConfig:{temperature:0,responseMimeType:'application/json'}},{fast:true,timeout:12000});
+    const txt=(((j.candidates||[])[0]||{}).content||{}).parts?j.candidates[0].content.parts.map(p=>p.text||'').join(''):'';
     let o=null;try{o=JSON.parse(txt)}catch(e){const m=txt.match(/\{[\s\S]*\}/);if(m)try{o=JSON.parse(m[0])}catch(x){}}
     if(Array.isArray(o))o=o[0];
     if(!o||!o.found||!Array.isArray(o.box_2d)||o.box_2d.length!==4)return{found:false,label:o&&o.label||''};
     const b=o.box_2d.map(Number);if(b.some(v=>!isFinite(v)))return{found:false};
     return{found:true,x:Math.max(0,Math.min(100,(b[1]+b[3])/20)),y:Math.max(0,Math.min(100,(b[0]+b[2])/20)),label:String(o.label||'')}}
-  catch(e){return{error:e.name==='AbortError'?'vision took too long':String(e.message||e)}}
-  finally{clearTimeout(to)}}
+  catch(e){return{error:String(e.message||e)}}}
 async function tapOn(a){
   const target=String(a&&a.target||'').trim();if(!target)return{error:'say what to tap, for example "the Title text box"'};
   const MA=await maOk();if(!MA)return{error:'Accessibility is not enabled'};SCR.lastUi=Date.now();
@@ -3988,6 +4003,124 @@ const SOCIAL_MAP=' جہاں کون سا بٹن ہوتا ہے (مطلب سے، ج
  'طریقہ: پہلے ui_click اسی نام سے (Like، Comment، Share، Subscribe، Follow)؛ choices آئیں تو pick میں اسی پوسٹ یا ویڈیو والا نمبر؛ نہ ملے تو tap_on واضح بیان کے ساتھ (مثلاً "the heart Like button on the right side of the reel")۔ ویڈیو کے بیچ میں کبھی نہ دبائیں، اور یوٹیوب یا فیس بک فیڈ میں ڈبل ٹیپ نہیں۔ کام کے بعد تصویر میں دیکھ کر تصدیق کریں: لائک کے بعد بٹن بھر جاتا یا رنگین ہو جاتا ہے (دل سرخ، انگوٹھا بھرا، نام "Unlike"/"Liked" ہو جاتا ہے)، سبسکرائب کے بعد "Subscribed"، فالو کے بعد "Following"؛ پہلے سے لائک ہو تو دوبارہ نہ دبائیں ورنہ لائک ہٹ جائے گا۔ کمنٹ بھیجنے سے پہلے صارف کا متن ٹھیک لکھا ہو، پھر ui_send۔';
 const _sxSocial=sysExtra;
 sysExtra=function(){const t=_sxSocial.apply(this,arguments);if($('mode').value==='te')return t;return t+SOCIAL_MAP};
+
+/* ==== the YouTube app's Edit screen, step by step (it hides its boxes from Accessibility, so every step uses tap_on) ==== */
+const YT_EDIT_FLOW=' یوٹیوب ایپ میں پرانی ویڈیو کا SEO: پہلی ترجیح ہمیشہ youtube_seo (ایک ہی بار، سب خود کرتا ہے)؛ نیچے والا دستی طریقہ صرف تب جب youtube_seo کسی حصے میں ناکام ہو، اور صرف اسی حصے کے لیے: '+
+ '1) Videos لسٹ پر open_video_edit۔ 2) ویڈیو دیکھیں (watch_video) اور نیا ٹائٹل، ڈسکرپشن اور ٹیگز سوچیں۔ '+
+ '3) ٹائٹل: tap_on(target="the Title text under the video preview", text=نیا ٹائٹل)۔ ٹائٹل دبانے سے اکثر الگ لکھنے والا صفحہ کھلتا ہے؛ لکھنے کے بعد اوپر والا ✓/Done یا واپس کا تیر دبائیں (tap_on "the back arrow at the top left" یا ui_global back)۔ '+
+ '4) ڈسکرپشن: tap_on(target="the Description row under the title", text=ڈسکرپشن آخر میں 3-5 ہیش ٹیگ کے ساتھ)، پھر اسی طرح واپس۔ '+
+ '5) ٹیگز: پہلے "Show more" دبائیں (ui_click، نہ ملے تو tap_on "Show more")، پھر جو قطار Tags کھولتی ہو (اکثر "Attributes" جس کے نیچے "AI use, Tags" لکھا ہو، یا سیدھا "Tags") اسے tap_on سے کھولیں، Tags خانے میں tap_on(target="the Tags text box", text="tag1, tag2, tag3,") ایک ہی بار کاما کے ساتھ لکھیں؛ ہر ٹیگ چِپ بن جاتا ہے اور خانہ خالی نظر آتا ہے، یہ ٹھیک ہے، دوبارہ نہ لکھیں۔ پھر واپس۔ '+
+ '6) آخر میں Edit صفحے پر اوپر دائیں "Save" (ui_click یا tap_on "Save at the top right") اور تصویر میں تصدیق کریں۔ '+
+ 'ہر لکھنے کے بعد جواب میں box_text_now یا تصویر دیکھیں؛ ایک ہی چیز بار بار نہ لکھیں۔ tap_on غلطی دے تو تصویر دیکھ کر tap_and_type سے x,y دیں۔';
+const _sxYtEdit=sysExtra;
+sysExtra=function(){const t=_sxYtEdit.apply(this,arguments);if($('mode').value==='te')return t;return t+YT_EDIT_FLOW};
+
+/* ==== youtube_seo: the whole YouTube-app SEO job done by the app itself, with eyes. Mayra only decides the words.
+   Each step: a fresh screenshot is read by the vision model (where is the title / description / Show more / tags /
+   Save / Done on THIS phone right now), the app taps, waits for the keyboard, writes, reads it back, closes the small
+   editor screen, opens Show more or scrolls when something is not visible, and finally presses Save. ==== */
+const SEO_SCAN='This is a screenshot of the YouTube app on an Android phone. Describe what is on it as JSON only, with these keys: '+
+ '"screen": "video_details" (the Edit video page with the title, description, visibility...), "text_editor" (a page or sheet for editing ONE field, with a text box), "tags_page" (a page whose main part is the Tags input), "videos_list", or "other"; '+
+ '"keyboard_open": true or false; '+
+ 'and for each of these a box [ymin,xmin,ymax,xmax] scaled 0-1000, or null when it is not visible: '+
+ '"title_field" (on the details page: the title text or Title row; on an editor: null), "description_field" (the Description row or text, or "Add description"), '+
+ '"show_more" ("Show more" / "More options" / "Advanced settings" that reveals more fields), "tags_entry" (the row that leads to tags, e.g. "Tags", "Attributes", "AI use, Tags"), '+
+ '"text_field" (the editable text box on an editor page or tags page), "save" (the Save button of the details page), "done" (Done / ✓ / Save / OK of an editor page), "back" (the back arrow at the top left). Do not guess: null when not visible.';
+let seoScans=0;
+async function seoScan(){seoScans++;
+  // the picture that is already being streamed is used when it was taken after the last tap (no extra wait)
+  let r=null;if(SCR.rawLatest&&(SCR.lastFrameAt||0)>(SCR.seoTapAt||0)+350&&Date.now()-(SCR.lastFrameAt||0)<900)r={ok:true,data:SCR.rawLatest};
+  if(!r){r=await snapOnce();if(!(r&&r.ok&&r.data)){await zz(500);r=await snapOnce()}}
+  if(!(r&&r.ok&&r.data))return{error:'no screenshot'};
+  const img=await shrinkJpeg(r.data,820);
+  try{const j=await gemCall({contents:[{parts:[{inline_data:{mime_type:'image/jpeg',data:img}},{text:SEO_SCAN}]}],generationConfig:{temperature:0,responseMimeType:'application/json',maxOutputTokens:400}},{fast:true,timeout:12000});
+    const txt=(((j.candidates||[])[0]||{}).content||{}).parts?j.candidates[0].content.parts.map(p=>p.text||'').join(''):'';
+    let o=null;try{o=JSON.parse(txt)}catch(e){const m=txt.match(/\{[\s\S]*\}/);if(m)try{o=JSON.parse(m[0])}catch(x){}}
+    if(Array.isArray(o))o=o[0];return o||{error:'unreadable answer'}}catch(e){return{error:String(e.message||e)}}}
+function seoCenter(b){if(!Array.isArray(b)||b.length!==4)return null;const v=b.map(Number);if(v.some(x=>!isFinite(x)))return null;return{x:Math.max(0,Math.min(100,(v[1]+v[3])/20)),y:Math.max(0,Math.min(100,(v[0]+v[2])/20))}}
+// tap, then go on as soon as the phone reacts (not a fixed pause)
+async function seoTap(MA,b,maxWait){const p=seoCenter(b);if(!p)return false;let sg='';try{sg=uiSig(await getMap(MA))}catch(e){}
+  try{await MA.uiTapAt({x:p.x,y:p.y})}catch(e){return false}SCR.lastUi=SCR.seoTapAt=Date.now();
+  try{await waitChange(MA,sg,maxWait||900)}catch(e){}await zz(120);return true}
+async function seoKeyboardReady(maxMs){const t0=Date.now();for(;;){const k=await keyboard('','read');if(k&&k.ok)return true;if(Date.now()-t0>maxMs)return false;await zz(150)}}
+async function seoWrite(text,isTags){const k=await keyboard(text,'replace');if(!(k&&k.ok))return{ok:false,why:k&&k.error||'keyboard not ready'};
+  const got=String(k.text||'');const ok=isTags?true:normT(got).includes(normT(text).slice(0,24));return{ok:ok,got:got}}
+// leave a small editor page: Done / ✓ if seen, else its back arrow; a details page with the keyboard up only closes the keyboard
+async function seoBackToDetails(MA,steps,sc){
+  for(let i=0;i<3;i++){sc=sc||await seoScan();if(sc.error){steps.push('look failed: '+sc.error);return null}
+    if(sc.screen==='video_details'){if(sc.keyboard_open){try{await MA.uiGlobal({action:'back'})}catch(e){}steps.push('closed the keyboard');await zz(350)}return sc}
+    if(sc.done&&await seoTap(MA,sc.done)){steps.push('tapped Done')}
+    else if(sc.back&&await seoTap(MA,sc.back)){steps.push('tapped the back arrow')}
+    else{try{await MA.uiGlobal({action:'back'})}catch(e){}steps.push('pressed back');await zz(500)}
+    sc=null}
+  sc=await seoScan();return sc.screen==='video_details'?sc:null}
+// leave the editor page(s) quickly: Done / ✓ or the back arrow seen in the last look of that page, once per page opened
+async function seoLeave(MA,last,depth,steps){
+  if(!last||last.screen==='video_details'){last=await seoScan();if(last.error)return}
+  for(let d=0;d<depth;d++){
+    if(last.screen==='video_details'){if(last.keyboard_open){try{await MA.uiGlobal({action:'back'})}catch(e){}steps.push('closed the keyboard')}return}
+    const box=(d===0&&last.done)?last.done:last.back;
+    if(box){await seoTap(MA,box,1000);steps.push(box===last.done?'tapped Done':'tapped the back arrow')}
+    else{try{await MA.uiGlobal({action:'back'})}catch(e){}steps.push('pressed back');await zz(450)}
+    if(d===0&&box===last.done&&last.back)last=Object.assign({},last,{done:null})}}   // a second page goes back with its back arrow
+// one field: tap where it was seen, wait for the keyboard, write, check, come back
+async function seoField(MA,box,text,label,steps,isTags){
+  await seoTap(MA,box,1200);steps.push('tapped '+label);
+  let ready=await seoKeyboardReady(1100),sc=null,depth=1;
+  if(!ready){sc=await seoScan();
+    if(isTags&&sc.screen!=='tags_page'&&!sc.text_field&&sc.tags_entry){await seoTap(MA,sc.tags_entry,1200);steps.push('opened the tags row');depth=2;sc=null;ready=await seoKeyboardReady(900)}
+    if(!ready){sc=sc&&sc.text_field?sc:await seoScan();
+      if(sc.text_field){await seoTap(MA,sc.text_field);steps.push('tapped the '+label+' box');ready=await seoKeyboardReady(2000)}}}
+  if(!ready){steps.push(label+': no box took the cursor');await seoBackToDetails(MA,steps,sc);return{ok:false}}
+  const w=await seoWrite(text,isTags);steps.push(label+(w.ok?' written and checked':' NOT confirmed ('+(w.why||('box shows: '+String(w.got).slice(0,60)))+')'));
+  await seoLeave(MA,sc,depth,steps);return{ok:w.ok}}
+async function youtubeSeo(a){
+  const MA=await maOk();if(!MA)return{error:'Accessibility is not enabled'};if(!gemKey())return{error:'Gemini key missing'};
+  if(!MA.uiKeyboard)return{error:'this needs the newer app build (keyboard mode)'};
+  const title=String(a.title||'').trim(),desc=String(a.description||'').trim();
+  let tags=a.tags;if(Array.isArray(tags))tags=tags.join(', ');tags=String(tags||'').replace(/#/g,'').split(/[,\n]+/).map(x=>x.trim()).filter(Boolean).slice(0,25);
+  if(!title&&!desc&&!tags.length)return{error:'give title, description and/or tags'};
+  const t0=Date.now(),steps=[],done={};seoScans=0;SCR.lastUi=Date.now();
+  let sc=await seoScan();if(sc.error)return{error:'could not look at the screen: '+sc.error};
+  if(sc.screen!=='video_details'){
+    if(sc.screen==='text_editor'||sc.screen==='tags_page')sc=await seoBackToDetails(MA,steps,sc)||{};
+    if(sc.screen!=='video_details'){const o=await openVideoEdit({title:a.video||''});steps.push('open edit: '+(o.status||o.error));sc=await seoScan()}
+    if(sc.screen!=='video_details')return{error:'the Edit video page is not open',steps:steps,think:'Open your channel → Videos, then call youtube_seo again (with video = a few words of its title).'}}
+  const top=sc;                                   // the details page as first seen: its places are reused
+  let saveBox=top.save;
+  if(title&&top.title_field){const r=await youtubeField('title_field',title,'title',false);done.title=r}
+  else if(title)done.title=await youtubeField('title_field',title,'title',false,true);
+  if(desc)done.description=await youtubeField('description_field',desc,'description',false,!top.description_field);
+  if(tags.length)done.tags=await youtubeField('tags_entry',tags.join(', ')+',','tags',true,true);
+  async function youtubeField(key,text,label,isTags,mustLook){
+    let s2=mustLook?null:top;
+    if(!s2||!s2[key]){let opened=false;s2=null;
+      for(let i=0;i<5;i++){const c=await seoScan();if(c.error){steps.push('look failed: '+c.error);return false}
+        if(c.save)saveBox=c.save;if(c[key]){s2=c;break}
+        if(!opened&&c.show_more){opened=true;await seoTap(MA,c.show_more,1200);steps.push('opened Show more');
+          if(isTags){try{MA.uiScroll?await MA.uiScroll({dir:'down'}):await MA.uiSwipe({dir:'up'})}catch(e){}SCR.seoTapAt=Date.now();steps.push('scrolled down');await zz(350)}continue}
+        try{MA.uiScroll?await MA.uiScroll({dir:'down'}):await MA.uiSwipe({dir:'up'})}catch(e){}SCR.seoTapAt=Date.now();steps.push('scrolled down');await zz(450)}}
+    if(!s2){steps.push(label+': not found on the page');return false}
+    const r=await seoField(MA,s2[key],text,label,steps,isTags);return r.ok}
+  // save
+  let saved=false;
+  for(let i=0;i<3&&!saved;i++){
+    if(!saveBox){const c=await seoScan();if(c.screen==='text_editor'||c.screen==='tags_page'){await seoBackToDetails(MA,steps,c);continue}
+      if(c.screen!=='video_details')break;saveBox=c.save;if(!saveBox){try{MA.uiScroll&&await MA.uiScroll({dir:'up'})}catch(e){}SCR.seoTapAt=Date.now();steps.push('scrolled up to find Save');continue}}
+    await seoTap(MA,saveBox,1500);steps.push('tapped Save');
+    const c=await seoScan();if(c.screen==='text_editor'||c.screen==='tags_page'){steps.push('an editor page was still open');await seoBackToDetails(MA,steps,c);saveBox=null;continue}
+    saved=c.screen!=='video_details'||!c.save;if(!saved){steps.push('Save did not close the page yet');saveBox=c.save}}
+  SCR.force=true;
+  const ok=Object.values(done).every(Boolean)&&saved,secs=Math.round((Date.now()-t0)/1000);
+  dbg('youtube_seo: '+JSON.stringify(done)+' saved='+saved+' in '+secs+'s with '+seoScans+' looks · '+steps.join(' › ').slice(0,400));
+  return{status:ok?'all done and saved':'finished with problems',written:done,saved:saved,steps:steps,seconds:secs,
+    tell_user:ok?undefined:'Tell the user honestly which part did not work (see written / saved). Do not say everything is done.'}}
+try{TOOLS[0].functionDeclarations.push({name:'youtube_seo',description:'YouTube APP: change an existing video\'s title, description and tags in ONE call. The app does every step itself with its eyes (finds the boxes on this phone, opens Show more, scrolls, writes, checks, closes the small editor pages, presses Save). Call it when the Edit video page is open (or the Videos list: give video = a few words of the title). First watch the video and decide the words. description: with 3-5 hashtags at the end. tags: comma separated, without #. It takes some seconds: tell the user one short line first.',parameters:{type:O,properties:{title:{type:S},description:{type:S},tags:{type:S},video:{type:S}}}})}catch(e){}
+const _ytSeoT=tool;
+tool=async function(n,a){if(n==='youtube_seo')return await youtubeSeo(a||{});return _ytSeoT.apply(this,arguments)};
+const _sxYtSeo=sysExtra;
+sysExtra=function(){const t=_sxYtSeo.apply(this,arguments);if($('mode').value==='te')return t;
+  return t+' یوٹیوب ایپ میں ویڈیو کا ٹائٹل، ڈسکرپشن، ہیش ٹیگ یا ٹیگز بدلنے ہوں (SEO): خود قدم قدم مت کریں۔ open_video_edit کے بعد ویڈیو دیکھیں (watch_video)، الفاظ طے کریں، صارف کو ایک چھوٹا جملہ بولیں ("ابھی سب لگا دیتی ہوں")، اور پھر صرف youtube_seo ایک بار چلائیں (title، description آخر میں 3-5 ہیش ٹیگ کے ساتھ، tags کاما سے)؛ یہ خود Show more کھولتا، اسکرول کرتا، لکھتا، چیک کرتا اور Save کرتا ہے۔ اس کے جواب میں written اور saved دیکھ کر سچ بتائیں۔ صارف سے کبھی نہ کہیں کہ وہ خود ٹائٹل، ڈسکرپشن یا Show more دبائے۔'};
 
 /* every tool call is logged here, as the outermost layer */
 const _logT=tool;
