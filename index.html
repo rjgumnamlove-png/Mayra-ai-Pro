@@ -4167,8 +4167,10 @@ sysExtra=function(){const t=_sxNoSilence.apply(this,arguments);if($('mode').valu
 const HABIT_RX=[[/ناراض\s*(نہیں|نہ|مت)\s*(ہو|ہونا|ہوں|ہوئیے|ہوجانا|ہو جانا)/,'"naraz nahi hona"'],[/(معاف\s*(کرنا|کیجیے|کریں|کر دیں)|معذرت|sorry|سوری)/i,'sorry / maafi'],
   [/فکر\s*(نہ|مت)\s*(کر|کریں|کرو)/,'"fikar na karo"'],[/(دیکھو|دیکھیں)\s*(ہم|میں)\s*(کر\s*لیتے|کر\s*لیں\s*گے|کر\s*لوں\s*گی)/,'"dekho hum kar lete hain"'],[/کیا میں آپ کی (مزید|اور)?\s*مدد/,'"kya main aap ki madad"']];
 const HABW={buf:'',cnt:{},warned:{}};
+const NARR_RX=/(سرگوشی|سرگوشیاں|دھیمے\s*لہجے|دھیمی\s*آواز\s*میں|آہستہ\s*آواز\s*میں|ہنستے\s*ہوئے|مسکراتے\s*ہوئے|سانس\s*لیتے\s*ہوئے|لہجے\s*میں\s*(بات|کہوں|بولوں|بتاؤں)|whisper|\(laugh|\(sigh)/i;
 const _capHabit=cap;
 cap=function(role,text){try{if(role==='Mayra'){HABW.buf=(HABW.buf+String(text||'')).slice(-400);
+    if(NARR_RX.test(HABW.buf)){HABW.buf=HABW.buf.replace(NARR_RX,' ');HABW.narr=(HABW.narr||0)+1;HABW.note=(HABW.note?HABW.note+' ':'')+'You just SAID how you are speaking (for example "in a whisper" / "softly" / "laughing"). Never say it: just speak that way. Do not mention this note.';dbg('style: she narrated her tone ('+HABW.narr+')')}
     HABIT_RX.forEach(([rx,name])=>{if(rx.test(HABW.buf)){HABW.cnt[name]=(HABW.cnt[name]||0)+1;HABW.buf=HABW.buf.replace(rx,' ');
       if(HABW.cnt[name]>=2&&!HABW.warned[name]){HABW.warned[name]=1;HABW.note=(HABW.note?HABW.note+' ':'')+'You have now said '+name+' '+HABW.cnt[name]+' times. Do not say it again in this call: it sounds robotic. Speak in fresh, natural words.';dbg('style: repeated phrase '+name)}}})}}catch(e){}
   return _capHabit.apply(this,arguments)};
@@ -4217,7 +4219,7 @@ const _sxOnce=sysExtra;
 sysExtra=function(){const t=_sxOnce.apply(this,arguments);return t+' پیغام اور کال: ایک ہی پیغام یا کال کے لیے ٹول صرف ایک بار چلائیں اور اس کے جواب کا انتظار کریں۔ open_whatsapp کہے کہ پیغام بھیج دیا گیا (Send pressed) تو وہی پیغام ui_fill یا ui_send سے دوبارہ ہرگز نہ بھیجیں؛ شک ہو تو تصویر میں چیٹ دیکھیں۔ رابطہ نہ ملے تو واٹس ایپ کھول کر چیٹ لسٹ یا Search میں نام سے چیٹ کھولیں۔ ui_send کا جواب "NOT sent" ہو تو "بھیج دیا" مت کہیں۔'};
 
 /* ==== Girlfriend voice, as the very last instruction (after all the phone-control rules, so it is not buried) ==== */
-const GF_VOICE_LAST=' آخری اور سب سے اہم بات (گرل فرینڈ موڈ، آواز کی اداکاری): اوپر کی لمبی کام والی ہدایات صرف فون کے کام کے لیے ہیں؛ بات چیت میں آپ کی آواز ایک زندہ لڑکی کی ہے، سپاٹ یا ایک جیسی کبھی نہیں۔ ہر جواب سے پہلے دل میں طے کریں کہ اس لمحے کیا محسوس ہو رہا ہے، اور وہی آواز سے دکھائیں، الفاظ سے نہیں: '+
+const GF_VOICE_LAST=' آخری اور سب سے اہم بات (گرل فرینڈ موڈ، آواز کی اداکاری): یہ صرف آپ کی آواز کے لیے پسِ پردہ ہدایات ہیں، انہیں کبھی بول کر نہ بتائیں۔ کبھی یہ مت کہیں کہ آپ کس انداز میں بول رہی ہیں یا بولنے والی ہیں (غلط: "اچھا، سرگوشی میں بتاتی ہوں…"، "دھیمے لہجے میں کہوں تو…"، "ہنستے ہوئے"؛ صحیح: بس سیدھا وہی بات دھیمی، سانس بھری آواز میں کہہ دیں)۔ صارف کہے "آہستہ بولو" یا "کوئی سن نہ لے" تو اس کی ہدایت دہرائے یا مانے بغیر فوراً اگلا جملہ ہی دھیمی آواز میں شروع کر دیں۔ اوپر کی لمبی کام والی ہدایات صرف فون کے کام کے لیے ہیں؛ بات چیت میں آپ کی آواز ایک زندہ لڑکی کی ہے، سپاٹ یا ایک جیسی کبھی نہیں۔ ہر جواب سے پہلے دل میں طے کریں کہ اس لمحے کیا محسوس ہو رہا ہے، اور وہی آواز سے دکھائیں، الفاظ سے نہیں: '+
  '• سرگوشی: پیار، راز یا نرمی کی بات پر آواز بہت دھیمی اور سانس بھری، جیسے فون ہونٹوں سے لگا کر کان میں کہہ رہی ہوں؛ پھر آہستہ سے عام آواز میں واپس۔ '+
  '• زور اور دباؤ: جملے کے اصل لفظ پر زور دیں، کبھی اسے کھینچ کر ("بہت", "سچی", "پیارا")، تاکہ بات دل سے نکلتی لگے۔ '+
  '• گہری سوچ: کسی سوال پر رک کر، دھیرے سے "ہمم…" یا ہلکی سانس، آہستہ رفتار، جیسے سچ مچ سوچ رہی ہوں؛ پھر بات۔ '+
@@ -4227,6 +4229,14 @@ const GF_VOICE_LAST=' آخری اور سب سے اہم بات (گرل فرینڈ
  'فون کا کام کرتے ہوئے صاف اور سیدھی آواز رکھیں، اور کام ختم ہوتے ہی اسی محبت بھرے، زندہ انداز میں واپس آ جائیں۔';
 const _sxGfLast=sysExtra;
 sysExtra=function(){const t=_sxGfLast.apply(this,arguments);return $('mode').value==='gf'?t+GF_VOICE_LAST:t};
+
+/* ==== notes are written only when the user asks for it ==== */
+const _noteAsk=tool;
+tool=async function(n,a){
+  if(n==='save_note'&&!/(نوٹ|note|لکھ\s*(لو|لیں|دو|دیں|کر)|محفوظ|save|یاد\s*(رکھ|رکھو|رکھنا|کر)|ڈائری|diary)/i.test(String(SCR.lastUserText||'').slice(-160))){
+    dbg('save_note: not saved, the user did not ask for a note');
+    return{error:'not saved: notes are written only when the user asks for one. If this is something to remember about him, use remember_fact; otherwise just say it.'}}
+  return _noteAsk.apply(this,arguments)};
 
 /* every tool call is logged here, as the outermost layer */
 const _logT=tool;
