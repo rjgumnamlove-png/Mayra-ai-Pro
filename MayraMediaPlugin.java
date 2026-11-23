@@ -28,6 +28,15 @@ import com.getcapacitor.annotation.PermissionCallback;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Collections;
+import java.util.Calendar;
+import android.app.AppOpsManager;
+import android.app.usage.UsageStats;
+import android.app.usage.UsageStatsManager;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
+import com.getcapacitor.JSArray;
 
 @CapacitorPlugin(
         name = "MayraMedia",
@@ -198,6 +207,84 @@ public class MayraMediaPlugin extends Plugin {
             ArrayList<String> parts = mgr.divideMessage(text);
             mgr.sendMultipartTextMessage(number, null, parts, null, null);
             call.resolve();
+        } catch (Exception e) {
+            call.reject(String.valueOf(e.getMessage()));
+        }
+    }
+
+    // ---------- which apps the user spends time on: only with Android's "Usage access", which the user turns on himself ----------
+    private boolean usageAllowed() {
+        try {
+            AppOpsManager ao = (AppOpsManager) getContext().getSystemService(Context.APP_OPS_SERVICE);
+            int uid = android.os.Process.myUid();
+            String me = getContext().getPackageName();
+            int mode = Build.VERSION.SDK_INT >= 29
+                    ? ao.unsafeCheckOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, uid, me)
+                    : ao.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, uid, me);
+            return mode == AppOpsManager.MODE_ALLOWED;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    @PluginMethod
+    public void usageStatus(PluginCall call) {
+        JSObject o = new JSObject();
+        o.put("allowed", usageAllowed());
+        call.resolve(o);
+    }
+
+    @PluginMethod
+    public void openUsageSettings(PluginCall call) {
+        try {
+            Intent i = new Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS);
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(i);
+            call.resolve();
+        } catch (Exception e) {
+            call.reject(String.valueOf(e.getMessage()));
+        }
+    }
+
+    // the apps with the most screen time from midnight "days" days ago until now (Mayra itself, the home screen and system UI left out)
+    @PluginMethod
+    public void appUsage(PluginCall call) {
+        if (!usageAllowed()) { call.reject("not allowed"); return; }
+        try {
+            Integer dObj = call.getInt("days", 1);
+            int days = Math.max(1, Math.min(30, dObj == null ? 1 : dObj));
+            Calendar c = Calendar.getInstance();
+            c.set(Calendar.HOUR_OF_DAY, 0); c.set(Calendar.MINUTE, 0); c.set(Calendar.SECOND, 0); c.set(Calendar.MILLISECOND, 0);
+            c.add(Calendar.DAY_OF_YEAR, -(days - 1));
+            long start = c.getTimeInMillis(), end = System.currentTimeMillis();
+            UsageStatsManager um = (UsageStatsManager) getContext().getSystemService(Context.USAGE_STATS_SERVICE);
+            Map<String, UsageStats> m = um.queryAndAggregateUsageStats(start, end);
+            PackageManager pm = getContext().getPackageManager();
+            String me = getContext().getPackageName(), home = "";
+            try {
+                ResolveInfo ri = pm.resolveActivity(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME), 0);
+                if (ri != null && ri.activityInfo != null) home = ri.activityInfo.packageName;
+            } catch (Exception ignored) { }
+            List<UsageStats> list = new ArrayList<>(m.values());
+            Collections.sort(list, (a, b) -> Long.compare(b.getTotalTimeInForeground(), a.getTotalTimeInForeground()));
+            JSArray arr = new JSArray();
+            for (UsageStats u : list) {
+                if (arr.length() >= 10) break;
+                String pkg = u.getPackageName();
+                long ms = u.getTotalTimeInForeground();
+                if (ms < 60000 || pkg == null || pkg.equals(me) || pkg.equals(home) || pkg.contains("launcher") || pkg.contains("systemui")) continue;
+                String label = "";
+                try { label = String.valueOf(pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0))); } catch (Exception ignored) { }
+                JSObject o = new JSObject();
+                o.put("pkg", pkg);
+                o.put("label", label);
+                o.put("minutes", Math.round(ms / 60000.0));
+                arr.put(o);
+            }
+            JSObject r = new JSObject();
+            r.put("apps", arr);
+            r.put("days", days);
+            call.resolve(r);
         } catch (Exception e) {
             call.reject(String.valueOf(e.getMessage()));
         }

@@ -14,6 +14,11 @@ const perms = [
 ];
 let add = '';
 for (const p of perms) if (!x.includes('"' + p + '"')) add += '    <uses-permission android:name="' + p + '" />\n';
+// app usage time (Android "Usage access"): only works after the user turns it on for Mayra in Settings himself
+if (!x.includes('android.permission.PACKAGE_USAGE_STATS')) {
+  if (!x.includes('xmlns:tools=')) x = x.replace('<manifest ', '<manifest xmlns:tools="http://schemas.android.com/tools" ');
+  add += '    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />\n';
+}
 if (!x.includes('android.hardware.camera')) add += '    <uses-feature android:name="android.hardware.camera" android:required="false" />\n';
 if (!x.includes('<queries>')) {
   add += `    <queries>

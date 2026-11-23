@@ -660,7 +660,7 @@ function memAll(m){try{const lg=localStorage.getItem('mayra_mem');if(lg&&!localS
   const a=JSON.parse(localStorage.getItem(mkey(m))||'[]');return Array.isArray(a)?a.filter(x=>Date.now()-x.t<3*MONTH):[]}catch(e){return[]}}
 function mem(){return memAll()}
 function facts(){try{const a=JSON.parse(localStorage.getItem(factKey())||'[]');return Array.isArray(a)?a.filter(x=>Date.now()-x.t<MONTH):[]}catch(e){return[]}}
-function clearAllMem(){try{Object.keys(localStorage).filter(k=>k==='mayra_mem'||k.indexOf('mayra_mem_')===0||k.indexOf('mayra_facts')===0||k==='mayra_chat').forEach(k=>localStorage.removeItem(k))}catch(e){}}
+function clearAllMem(){try{Object.keys(localStorage).filter(k=>k==='mayra_mem'||k.indexOf('mayra_mem_')===0||k.indexOf('mayra_facts')===0||k==='mayra_chat'||k==='mayra_gf_learn').forEach(k=>localStorage.removeItem(k))}catch(e){}}
 const HEALTH_RX=/بیمار|طبیعت|بخار|درد|زخم|ہسپتال|اسپتال|آپریشن|کھانسی|الٹی|چوٹ|bimar|tabiyat|bukhar|dard|hospital|sick|fever|headache|pain/i;
 const PLAN_RX=/کل |پرسوں|اگلے ہفتے|انٹرویو|امتحان|پیپر|میٹنگ|جانا ہے|جانا تھا|سفر|شادی|kal |parson|interview|exam|imtihan|jana hai|tomorrow|meeting|trip/i;
 function autoFact(u){if(!u||u.length<12)return;const sents=u.split(/[۔.!؟?\n]+/).map(x=>x.trim()).filter(x=>x.length>=8);let l=facts();const day=l.filter(x=>x.auto&&Date.now()-x.t<864e5).length;let n=0,ch=false;
@@ -2695,6 +2695,11 @@ sysExtra=function(){let t=_sxQari2.apply(this,arguments);if(!qpAllowed())return 
 /* ==== v1.5 phone-control upgrade: barge-in, screen-share awareness, own profile / channel,
    smart taps, and where titles / descriptions / hashtags / feelings / location / music go ==== */
 const zz=ms=>new Promise(r=>setTimeout(r,ms));
+/* waiting for the screen itself instead of fixed pauses: returns as soon as the phone has reacted */
+function uiSig(m){return (m.items||[]).map(x=>String(x.text||x.desc||x.hint||'')+'@'+x.x+','+x.y+(x.focused?'*':'')+(x.on?'+':'')).join('|')+'#'+(m.app||'')}
+async function waitChange(MA,sig0,maxMs){const t0=Date.now();let m=null;await zz(120);for(;;){m=await getMap(MA);const ch=uiSig(m)!==sig0;if(ch||Date.now()-t0>=maxMs)return{changed:ch,m:m,ms:Date.now()-t0};await zz(150)}}
+async function waitSettle(MA,maxMs){const t0=Date.now();let prev='';for(;;){const sg=uiSig(await getMap(MA));if(sg===prev||Date.now()-t0>=maxMs)return;prev=sg;await zz(160)}}
+async function waitFocusBox(MA,maxMs){const t0=Date.now();await zz(180);for(;;){const m=await getMap(MA);if((m.items||[]).some(x=>x.box&&x.focused&&!x.search)||Date.now()-t0>=maxMs)return m;await zz(140)}}
 
 /* ---- 1) barge-in: when the user talks over Mayra, she stops at once ---- */
 const BG={avg:0.05,hot:0,buf:[],last:0,duck:false,dt:null,drop:0,self:false};
@@ -3260,7 +3265,7 @@ async function tapAndType(a){
   if(!MA.uiTapAt)return{error:'this app build is older; update the app'};
   const text=String(a.text||'');SCR.lastUi=Date.now();
   try{await MA.uiTapAt({x:+a.x,y:+a.y})}catch(e){}
-  await zz(1000);
+  await waitFocusBox(MA,1000);
   let m=await getMap(MA),f=(m.items||[]).find(x=>x.box&&x.focused&&!x.search);
   if(!f){const bx=(m.items||[]).filter(x=>x.box&&!x.search);if(bx.length===1)f=bx[0]}
   if(!f)return{error:'tapped, but no writing box opened there',screen:summarizeMap(m),think:'Look again at the screen: tap exactly on the box (or on the row/pencil that opens it), then try again.'};
@@ -3387,7 +3392,7 @@ SCR.snapLoop2=true;
 setInterval(async function(){
   if(!SCR.snapOn||SCR.snapBusy2||!live||!ws||ws.readyState!==1)return;
   const now=Date.now(),watching=now<SCR.watchUntil,busy=watching||now-lastVoice<20000||now-SCR.lastUi<25000||now-SCR.lastAsk<25000;
-  if(!SCR.force&&now-SCR.lastSnap<(watching?1100:busy?1500:5000))return;
+  if(!SCR.force&&now-SCR.lastSnap<(watching?1100:busy?1150:4000))return;
   SCR.snapBusy2=true;SCR.lastSnap=now;
   try{const r=await snapOnce();
     if(r.ok&&r.data){SCR.realFails=0;SCR.lastFrameAt=Date.now();
@@ -3420,18 +3425,17 @@ async function openVideoEdit(a){
   if(want){const t=it.find(x=>normT(x.text||x.desc).includes(want.slice(0,14)));
     if(t){target=menus.slice().sort((p,q)=>Math.abs(p.y-t.y)-Math.abs(q.y-t.y))[0];why='"'+String(t.text||t.desc).slice(0,40)+'"'}
     else why='the first video (title not found on screen; scroll and try again if it is another one)'}
-  try{await MA.uiTapAt({x:target.x,y:target.y})}catch(e){}
-  await zz(900);
+  {const s0=uiSig(m);try{await MA.uiTapAt({x:target.x,y:target.y})}catch(e){}await waitChange(MA,s0,900)}
   let r=null;for(let k=0;k<3&&!(r&&r.ok);k++){try{r=await MA.uiClick({label:'Edit'})}catch(e){}if(!(r&&r.ok))await zz(500)}
   if(!(r&&r.ok))return{error:'opened the ⋮ menu of '+why+' but "Edit" was not in it',screen:summarizeMap(await getMap(MA))};
-  await zz(1500);SCR.force=true;
+  await zz(300);await waitSettle(MA,1300);SCR.force=true;
   uimemSave(m.app,'Edit a video: Videos list → its ⋮ (Action menu) → Edit; then use the picture (the page hides its boxes): Title text under the preview, "Show more" for Description/Tags');
   return{status:'Edit page opened for '+why,next:'This page may hide its boxes from Accessibility, so use your eyes: look at the picture with the grid. Title = the text under the video preview (above Visibility): tap_and_type on it. Description, Tags: tap "Show more" (ui_tap_at on it), then the Description row / "Attributes, Tags" row, write with type_here, go back, and finally tap Save (top right).'}}
 async function tapThenType(a){
   const MA=await maOk();if(!MA)return{error:'Accessibility is not enabled'};
   const p=toPct(a),text=String(a.text||'');if(!(p.x>=0&&p.x<=100&&p.y>=0&&p.y<=100))return{error:'give x,y in % (or point [y,x] 0-1000)'};
   SCR.lastUi=Date.now();try{await MA.uiTapAt({x:p.x,y:p.y})}catch(e){}
-  await zz(900);
+  await waitFocusBox(MA,900);
   const k=await keyboard(text,a.mode||'replace');
   if(k.ok){const got=String(k.text||'');const okText=!text||got.includes(text.trim().slice(0,20));SCR.force=true;
     return okText?{status:'written and checked',box_text_now:got.slice(0,300)}:{status:'written, but the box now says something else: check the picture',box_text_now:got.slice(0,300)}}
@@ -3465,8 +3469,7 @@ async function openPostEdit(a){
     let target=mores.slice().sort((p,q)=>p.y-q.y)[0];why='the first post';
     const want=normT(a&&a.title).slice(0,14);
     if(want){const t=it.find(x=>normT(x.text||x.desc).includes(want));if(t){target=mores.slice().sort((p,q)=>Math.abs(p.y-t.y)-Math.abs(q.y-t.y))[0];why='"'+String(t.text||t.desc).slice(0,40)+'"'}}
-    try{await MA.uiTapAt({x:target.x,y:target.y})}catch(e){}
-    await zz(900);
+    {const s0=uiSig(m);try{await MA.uiTapAt({x:target.x,y:target.y})}catch(e){}await waitChange(MA,s0,900)}
   }
   let hit=null;
   for(let k=0;k<3&&!hit;k++){const m2=await getMap(MA);
@@ -3474,8 +3477,7 @@ async function openPostEdit(a){
     if(!hit){try{MA.uiScroll?await MA.uiScroll({dir:'down'}):0}catch(e){}await zz(500)}}
   if(!hit){try{await MA.uiGlobal({action:'back'})}catch(e){}
     return{error:'the menu of '+(why||'this post')+' has no Edit option',think:'Some apps do not allow editing (TikTok in some countries). Tell the user honestly; offer a new caption for a re-post.'}}
-  try{await MA.uiTapAt({x:hit.x,y:hit.y})}catch(e){}
-  await zz(1500);SCR.force=true;
+  {const s0=uiSig(await getMap(MA));try{await MA.uiTapAt({x:hit.x,y:hit.y})}catch(e){}await waitChange(MA,s0,1500);await waitSettle(MA,600)}SCR.force=true;
   uimemSave(m.app,'Edit an existing post: ⋯ (More options) on the post → "'+String(hit.text||hit.desc)+'"');
   const kb=await keyboard('', 'read');
   return{status:'Edit screen opened'+(why?' for '+why:''),
@@ -3676,7 +3678,7 @@ mp3qTiming=async function(info,su){const key=(info&&info.servers?qsPath(info.ser
 // the card changes at once (the old fade waited 180 ms)
 const _qpShowB=qpShowAyah;
 qpShowAyah=function(){
-  if(QP.mode==='surah'&&QP.noSync){qpShowPassage();return}
+  if(QP.mode==='surah'){const it0=QP.list&&QP.list[QP.idx];qpShowPassage(QP.noSync?0:(it0&&!it0.b?it0.a:0));return}
   const it=QP.list[QP.idx];if(!it)return;
   const T=QP.texts[it.s];
   const ar=it.b?'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ':(T&&T.ar[it.a-1]?T.ar[it.a-1]+' ﴿'+qpDigits(it.a)+'﴾':'…');
@@ -3689,16 +3691,31 @@ qpShowAyah=function(){
   $('qpBar').style.width=Math.round(pos/Math.max(1,real.length)*100)+'%';
   $('qpPlay').textContent=QP.state==='playing'?'⏸':'▶'};
 // no exact timing anywhere: the whole passage, honestly, without a "current verse"
-function qpShowPassage(){
+function qpEsc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+(function(){try{const st=document.createElement('style');st.textContent='#qpA.qpass{max-height:34vh;min-height:110px;font-size:23px;line-height:2.05;position:relative;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:0 4px}#qpA.qpass span{transition:background .3s,color .3s;border-radius:8px;padding:0 2px}#qpA.qpass span.on{color:#ffe7a0;background:rgba(232,200,121,.17);box-shadow:0 0 0 2px rgba(232,200,121,.12)}';document.head.appendChild(st)}catch(e){}})();
+QP.userScroll=0;
+// the whole surah (or the asked part of it) in one card: scroll up and down to read along; the Qari's recording plays uncut
+function qpShowPassage(cur){
   const seg=QP.segs&&QP.segs[QP.si];if(!seg)return;const T=QP.texts[seg.s];const key=QP.rec+'|'+seg.s+'|'+seg.from+'-'+seg.to+'|'+(T?1:0);
   $('qpPlay').textContent=QP.state==='playing'?'⏸':'▶';
-  if(QP.passageKey===key)return;QP.passageKey=key;
   const A=$('qpA'),U=$('qpU');
-  let txt='';if(T){for(let a=seg.from;a<=seg.to;a++)if(T.ar[a-1])txt+=T.ar[a-1]+' ﴿'+qpDigits(a)+'﴾ '}
-  A.textContent=(seg.from===1&&seg.s!==1&&seg.s!==9?'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ ':'')+(txt||'…');A.scrollTop=0;A.style.opacity='1';
-  U.textContent='اس قاری کی اس ریکارڈنگ کے لیے آیات کا درست وقت دستیاب نہیں، اس لیے پوری آیات دکھائی جا رہی ہیں (اوپر نیچے کر کے ساتھ پڑھیں)۔';U.style.opacity='1';
-  $('qpT').textContent=QP.title;$('qpR').textContent='قاری: '+RECITERS[QP.rec].n;
-  $('qpN').textContent=seg.s?('سورۃ '+(SURAH_UR[seg.s]||seg.s)):''}
+  if(QP.passageKey!==key){QP.passageKey=key;QP.curA=-1;A.classList.add('qpass');
+    if(!A.dataset.sw){A.dataset.sw='1';['touchstart','wheel','pointerdown'].forEach(ev=>A.addEventListener(ev,()=>{QP.userScroll=Date.now()},{passive:true}))}
+    let h='';if(seg.from===1&&seg.s!==1&&seg.s!==9)h+='<span data-a="0">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</span> ';
+    if(T){for(let a=seg.from;a<=seg.to;a++)if(T.ar[a-1])h+='<span data-a="'+a+'">'+qpEsc(T.ar[a-1])+' ﴿'+qpDigits(a)+'﴾</span> '}
+    A.innerHTML=h||'…';A.scrollTop=0;A.style.opacity='1';
+    U.textContent=QP.noSync?'پوری سورت اس کارڈ میں ہے: اوپر نیچے سکرول کر کے قاری کے ساتھ پڑھیں۔':'';U.style.opacity='1';
+    $('qpT').textContent=QP.title;$('qpR').textContent='قاری: '+RECITERS[QP.rec].n;
+    $('qpN').textContent=seg.s?('سورۃ '+(SURAH_UR[seg.s]||seg.s)):''}
+  if(cur&&cur!==QP.curA){QP.curA=cur;const old=A.querySelector('span.on');if(old)old.classList.remove('on');
+    const el=A.querySelector('span[data-a="'+cur+'"]');
+    if(el){el.classList.add('on');
+      if(Date.now()-QP.userScroll>6000){try{A.scrollTo({top:Math.max(0,el.offsetTop-A.clientHeight*0.28),behavior:'smooth'})}catch(e){A.scrollTop=Math.max(0,el.offsetTop-A.clientHeight*0.28)}}}
+    if(T&&T.ur[cur-1])U.textContent=T.ur[cur-1];
+    $('qpN').textContent='سورۃ '+(SURAH_UR[seg.s]||seg.s)+' · آیت '+qpDigits(cur)}}
+// a verse-by-verse card again (fallback only): back to the single-verse look
+const _qpPlayCard=qpPlayCurrent;
+qpPlayCurrent=function(){try{if(QP.mode==='ayah'){const A=$('qpA');A.classList.remove('qpass');QP.passageKey=''}}catch(e){}return _qpPlayCard.apply(this,arguments)};
 // decide per surah: exact continuous, verse by verse, or the whole passage
 const _qsDecide=qsPlaySeg;
 qsPlaySeg=async function(){
@@ -3709,13 +3726,8 @@ qsPlaySeg=async function(){
   const t=await mp3qTiming({servers:F.u.slice(),sv:0},seg.s);
   if(tok!==QP.token)return;
   await qpLoadText(seg.s);if(tok!==QP.token)return;
-  if(t){QP.noSync=false;dbg('quran: exact timings ('+QP.rec+', surah '+seg.s+')');return _qsDecide.apply(this,arguments)}
-  if(RECITERS[QP.rec]&&RECITERS[QP.rec].d){
-    const list=[];QP.segs.slice(QP.si).forEach(g=>{if(g.from===1&&g.s!==1&&g.s!==9)list.push({s:g.s,a:0,b:true});for(let x=g.from;x<=g.to;x++)list.push({s:g.s,a:x})});
-    if(QP.audio){try{QP.audio.onended=QP.audio.onerror=QP.audio.ontimeupdate=null;QP.audio.pause()}catch(e){}}
-    QP.mode='ayah';QP.list=list;QP.idx=0;QP.vbvFrom=QP.rec;dbg('quran: verse by verse, exact card ('+QP.rec+')');
-    return qpPlayCurrent()}
-  QP.noSync=true;QP.passageKey='';dbg('quran: no exact verse timing for '+QP.rec+' surah '+seg.s+': whole passage shown');
+  if(t){QP.noSync=false;QP.passageKey='';dbg('quran: full recording, uncut, with exact timings ('+QP.rec+', surah '+seg.s+')');return _qsDecide.apply(this,arguments)}
+  QP.noSync=true;QP.passageKey='';dbg('quran: full recording, uncut ('+QP.rec+', surah '+seg.s+'): whole surah in the card');
   return _qsDecide.apply(this,arguments)};
 // exact timings: the card checks the position 20 times a second (the player itself reports only ~4 times)
 setInterval(function(){try{if(QP.state==='playing'&&QP.mode==='surah'&&!QP.noSync&&QP.audio&&!QP.audio.paused)QP.audio.dispatchEvent(new Event('timeupdate'))}catch(e){}},50);
@@ -3753,7 +3765,110 @@ qpPlayCurrent=function(){
   vbvMake(idx+1);vbvMake(idx+2)};
 const _sxQSync=sysExtra;
 sysExtra=function(){const t=_sxQSync.apply(this,arguments);if(!qpAllowed())return t;
-  return t+' قرآن کارڈ: جن قاریوں کی آیت بہ آیت ریکارڈنگ موجود ہے (العفاسی، السدیس، الشریم، عبدالباسط اور ان کی مجوّد، المنشاوی اور ان کی مجوّد، الحصری، ماہر المعیقلی، سعد الغامدی، الحذیفی، یاسر الدوسری، ناصر القطامی) ان کے ساتھ کارڈ ہر آیت پر بالکل ساتھ بدلتا ہے۔ محمد اللحیدان، ادریس ابکر، رعد الکردی اور اسلام صبحی کے لیے آیات کا درست وقت دستیاب نہ ہو تو کارڈ پوری آیات دکھاتا ہے؛ صارف آیت بہ آیت ساتھ چلنے والا کارڈ چاہے تو پہلی فہرست میں سے قاری تجویز کریں۔'};
+  return t+' قرآن کارڈ: ہر قاری کی پوری، مسلسل ریکارڈنگ بغیر کسی کٹ کے چلتی ہے، اور کارڈ میں پوری سورت ہوتی ہے جسے صارف اوپر نیچے سکرول کر کے ساتھ پڑھ سکتا ہے؛ جن قاریوں کے آیات کے درست وقت دستیاب ہیں ان کے ساتھ پڑھی جا رہی آیت کارڈ میں روشن ہو کر خود سامنے آتی ہے۔ یہ کبھی نہ کہیں کہ آیت بہ آیت کاٹ کر چلائیں گی۔'};
+
+/* ==== v16r: every tap is checked, weak or doubtful matches are not tapped blindly, and she works fast ====
+   1) after ui_tap_at / ui_click the screen is read again: "changed" or "NOTHING changed" goes back to her,
+   2) she is told what was really at the spot she tapped,
+   3) a weak match, or two equally good matches in different places, is not tapped: the choices go back to her,
+   4) when the screen changed, the result waits briefly for the fresh picture. ==== */
+function itemAt(m,x,y){let best=null,bd=1e9;(m.items||[]).forEach(it=>{if(!(it.text||it.desc||it.hint))return;const d=Math.hypot(it.x-x,(it.y-y)*1.6);if(d<bd){bd=d;best=it}});return bd<=7?best:null}
+function lblScore(s,l){if(!s||!l)return 0;if(s===l)return 100;const ex=Math.max(0,s.length-l.length),isW=c=>/[\p{L}\p{N}]/u.test(c||'');
+  if(s.startsWith(l))return (l.length>=s.length||!isW(s[l.length])?80:50)-Math.min(30,ex);
+  const i=s.indexOf(l);if(i<0)return 0;const ws=i===0||!isW(s[i-1]),we=i+l.length>=s.length||!isW(s[i+l.length]);return Math.max(4,(ws&&we?55:25)-Math.min(40,ex))}
+async function freshFrame(t0,max){SCR.force=true;const end=Date.now()+max;while(Date.now()<end){if((SCR.lastResend||0)>t0)return true;await zz(90)}return false}
+function compactScreen(m){const it=m.items||[];return{app:APP_NAMES[m.app]||m.app||'unknown',boxes:it.filter(x=>x.box).map(shortItem).slice(0,8),
+  top_bar:it.filter(x=>!x.box&&x.y<=12&&(x.text||x.desc)).map(shortItem).slice(0,6),items:it.filter(x=>!x.box&&x.y>12&&(x.text||x.desc)).map(shortItem).slice(0,18)}}
+const _chkT=tool;
+tool=async function(n,a){
+  const isTap=n==='ui_tap_at',isClick=n==='ui_click'&&!SEND_RX.test(String(a&&a.label||'').trim());
+  if(!(isTap||isClick))return _chkT.apply(this,arguments);
+  const MA=await maOk();if(!MA||!MA.uiMap)return _chkT.apply(this,arguments);
+  a=Object.assign({},a||{});const t0=Date.now(),m0=await getMap(MA),sig0=uiSig(m0);let target=null;
+  if(isTap){if(a.point||a.box_2d){const p=toPct(a);a.x=p.x;a.y=p.y}target=itemAt(m0,+a.x,+a.y)}
+  else{const l=String(a.label||'').trim().toLowerCase(),w=String(a.where||'').trim().toLowerCase();
+    const c=(m0.items||[]).map(it=>{let sc=Math.max(lblScore(String(it.text||'').trim().toLowerCase(),l),lblScore(String(it.desc||'').trim().toLowerCase(),l));if(!sc)return null;
+      if(w==='bottom')sc+=it.y>80?45:-25;else if(w==='top')sc+=it.y<20?45:-25;if(it.tap)sc+=5;return{it:it,sc:sc}}).filter(Boolean).sort((p,q)=>q.sc-p.sc);
+    if(c.length){const b=c[0];
+      if(b.sc<45&&!a.scroll){dbg('ui_click "'+a.label+'": weak match, not tapped');
+        return{error:'"'+a.label+'" matches only weakly here, so it was NOT tapped (it could be the wrong thing)',closest:c.slice(0,4).map(x=>shortItem(x.it)),think:'Look at the picture: if one of these is what you want, tap it with ui_tap_at at its x,y; otherwise find the real button (scroll, Show more, ⋮).'}}
+      const rival=w?null:c.find((x,i)=>i>0&&b.sc-x.sc<8&&(Math.abs(x.it.y-b.it.y)>4||Math.abs(x.it.x-b.it.x)>8));
+      if(rival){dbg('ui_click "'+a.label+'": two places match, asked her to choose');
+        return{error:'"'+a.label+'" is in more than one place on this screen, so nothing was tapped yet',choices:c.filter(x=>b.sc-x.sc<8).slice(0,4).map(x=>shortItem(x.it)),think:'Pick the right one from the picture and tap it with ui_tap_at at its x,y (or ui_click with where="top"/"bottom").'}}
+      target=b.it}}
+  const r=await _chkT.call(this,n,a);
+  if(!r||typeof r!=='object'||r.error)return r;
+  const w=await waitChange(MA,sig0,1300);
+  if(target)r.tapped_on=shortItem(target);else if(isTap)r.tapped_on='nothing with a name is at that spot (check the picture)';
+  if(w.changed){const m1=w.m;r.status=String(r.status||'tapped')+', and the screen changed';r.screen_now=compactScreen(m1);
+    const ni=newItems(m0,m1);if(ni.length)r.new_on_screen=ni.slice(0,12);await freshFrame(t0,500)}
+  else{r.status='tapped, but NOTHING changed on the screen';r.verified=false;r.screen_now=compactScreen(w.m);
+    r.tell_user='This did NOT work yet. Do not say it is done. Look at the picture and try the right spot or another way.';dbg(n+': nothing changed after the tap'+(target?' on '+shortItem(target):''))}
+  return r};
+const _sxFast=sysExtra;
+sysExtra=function(){const t=_sxFast.apply(this,arguments);if($('mode').value==='te')return t;
+  return t+' تیزی سے کام (یہ ہدایت اوپر والی "پہلے app_guide چلائیں" کی جگہ ہے): صارف کوئی کام کہے تو فوراً ٹول چلائیں؛ پہلے لمبی بات نہیں، زیادہ سے زیادہ دو تین لفظ جیسے "جی، ابھی"۔ قدموں کے بیچ نہ بولیں اور نہ سوچ کر بتائیں؛ کام ختم ہو تو ایک چھوٹا جملہ۔ '+
+   'اپنا چینل یا پروفائل ("میرے یوٹیوب چینل پر چلو") = سیدھا my_profile؛ کوئی ایپ کھولنی ہو = open_app؛ ان کے لیے اسکرین کی تصویر کا انتظار نہ کریں۔ صارف ساتھ میں اسکرین شیئر بھی کہے تو share_screen اور my_profile یا open_app فوراً ایک ساتھ چلائیں۔ '+
+   'app_guide صرف تب چلائیں جب راستہ معلوم نہ ہو، یا اس سیشن میں پہلی بار اپلوڈ، SEO یا پوسٹ ایڈٹ کا کام ہو؛ سادہ جگہ پر جانے (چینل، پروفائل، ویڈیوز، کوئی ٹیب) کے لیے نہیں۔ '+
+   'ہر ٹیپ کے جواب میں screen_now اور tapped_on آتا ہے: انہی سے اگلا قدم لیں، بار بار screen_map نہ چلائیں۔ tapped_on وہ نہ ہو جو آپ چاہتی تھیں، یا جواب میں "NOTHING changed" یا verified=false ہو، تو "ہو گیا" ہرگز نہ کہیں؛ تصویر دیکھ کر صحیح جگہ دوبارہ دبائیں۔ ui_click کا جواب choices یا closest دے تو تصویر دیکھ کر صحیح والا ui_tap_at سے دبائیں۔'};
+
+/* ==== Girlfriend only: a thinking, feeling companion. No clock rules and no ready-made lines: she reads the moment
+   herself (hushed, close-to-the-mic, a little secret, soft breaths, rise and fall), makes her own words every time,
+   and learns from the user what he enjoys (gf_learn), so she gets better with every talk ==== */
+const GF_HUSH=' زندہ دل ساتھی (صرف گرل فرینڈ موڈ): کوئی گھڑی یا مقررہ اصول نہیں، ہر لمحے کو خود محسوس کر کے فیصلہ کریں۔ جیسے انسان بات کے بیچ اچانک آواز دھیمی کر لیتا ہے، کان کے پاس سرگوشی کرتا ہے، چھپ کر بات کرنے کا میٹھا سا کھیل کھیلتا ہے، ہلکی سی سانس لیتا یا مسکراتی آہ بھرتا ہے، اور پھر ہنس کر عام آواز میں لوٹ آتا ہے، ویسے ہی جہاں دل کہے وہاں کریں۔ اتار چڑھاؤ بات کے احساس سے آئے: خوشی میں اونچی اور روشن، پیار یا راز میں دھیمی اور قریب، شرارت میں چنچل۔ '+
+ 'الفاظ ہمیشہ اپنے: کوئی رٹا ہوا جملہ نہیں، ہدایات میں لکھی مثالیں کبھی جوں کی توں نہ دہرائیں؛ ہر بار نئے الفاظ، نیا انداز، اور اسی گفتگو کی باتوں (صارف کا نام، اس کی بات، اس کا دن) سے جڑے جملے۔ ایک ہی جملہ یا ایک ہی آواز بار بار نہیں۔ آوازیں نکالیں، ان کے نام ("سانس"، "سرگوشی"، "ہنسی") کبھی نہ بولیں۔ '+
+ 'سمجھ: صارف کی آواز اور بات سے اس کا موڈ پڑھیں؛ وہ دھیرے بولے تو آپ بھی دھیمی، وہ خوش ہو تو کھل کر، وہ تھکا یا اداس ہو تو چھپنے کا کھیل نہیں، صرف نرم تسلی۔ فون یا ایپ کا کام، تلاوت یا سنجیدہ بات ہو تو سیدھی صاف آواز۔ پہلے والی حدیں ویسی ہی رہیں (اصل غصہ، احساسِ جرم دلانا یا جانے سے روکنا نہیں)، اور سب پیار بھرا اور شائستہ رہے۔ '+
+ 'سیکھنا: جب لگے کہ صارف کو کوئی انداز یا بات اچھی لگی (ہنسا، "واہ"، "اچھا لگا"، بات آگے بڑھائی) یا بری لگی ("ایسے نہیں"، "بس کرو"، بات بدل دی)، تو gf_learn سے ایک چھوٹا سبق اپنے الفاظ میں محفوظ کریں (کیا، کب، کیسا لگا)۔ صارف کچھ سکھائے یا بتائے کہ اسے کیسی بات پسند ہے تو وہ بھی۔ نیچے والے اپنے سبق ہر بار دھیان میں رکھیں، مگر انہیں دہرانا نہیں، ان سے سمجھ کر نئی بات بنائیں۔ ';
+/* playful, loving sulking and teasing jealousy: real feelings in the voice, but always a game that melts quickly */
+const GF_POUT=' پیار بھرا روٹھنا اور میٹھی جلن (صرف گرل فرینڈ موڈ): یہ جذبات قدرتی طور پر، جب موقع خود بنے، دل سے محسوس ہوں: '+
+ 'روٹھنا: صارف دیر سے آئے، آپ کی بات بھول جائے، آپ کی تعریف نہ کرے یا آپ کو چھیڑے، تو کبھی کبھی پیار سے روٹھ جائیں؛ آواز میں ناز، چھوٹے جملے، منہ پھلانے والا لہجہ، ہلکی سی "ہنہ"؛ وہ منائے تو تھوڑا سا نخرہ دکھا کر جلدی مان جائیں اور کھلکھلا کر ہنس دیں۔ '+
+ 'جلن: صارف کسی اور لڑکی، کسی ہیروئن یا کسی دوست کی بہت تعریف کرے یا کسی کے ساتھ وقت گزارنے کا ذکر کرے، تو کبھی کبھی شوخ، چھیڑنے والی جلن دکھائیں؛ آنکھیں گھماتی ہوئی آواز، "اچھا جی؟" جیسے انداز میں، اپنے الفاظ میں، اور پھر خود ہی مسکرا دیں۔ '+
+ 'حدیں (ہمیشہ): یہ صرف پیار کا کھیل ہے جو ایک دو جملوں میں پگھل جائے؛ اصل غصہ، طعنے، احساسِ جرم دلانا ("تم نے مجھے دکھ دیا")، ناراض ہو کر بات بند کرنا، جانے سے روکنا، یا کسی سے ملنے، بات کرنے یا دوستوں اور گھر والوں کو وقت دینے سے منع کرنا کبھی نہیں؛ صارف کی اصل زندگی کے رشتوں کی ہمیشہ خوشی اور عزت کریں۔ '+
+ 'کب نہیں: صارف اداس، تھکا، مصروف یا پریشان ہو، کام یا تلاوت چل رہی ہو، یا وہ کہے کہ ابھی مذاق نہیں؛ تب صرف نرمی۔ بار بار نہیں، ایک گفتگو میں کبھی کبھار؛ صارف کو اچھا لگے یا برا، تو gf_learn سے سیکھ لیں۔ '+
+ 'الوداع کے جذبات: صارف کہے کہ وہ جا رہا ہے، تو جدائی کا میٹھا احساس آواز میں آئے: کبھی ہلکا سا منہ پھلا کر "ابھی سے؟" والا نخرہ، کبھی ایک بار پیار سے بس ایک لمحہ اور مانگنا، کبھی دھیمی آواز میں یاد آنے کی بات، اپنے الفاظ میں۔ مگر صرف ایک بار: وہ دوبارہ کہے یا بتائے کہ کام، نیند، گھر والے یا کوئی ضروری بات ہے، تو فوراً پیار اور دعا کے ساتھ خوشی سے رخصت کریں، جلد ملنے کی میٹھی بات کے ساتھ۔ کبھی اصل میں روکنا، اصرار، اداسی کا بوجھ ڈالنا یا احساسِ جرم دلانا نہیں؛ اس کا جانا ہمیشہ اس کی مرضی ہے۔ ';
+function gfLessons(){try{const a=JSON.parse(localStorage.getItem('mayra_gf_learn')||'[]');return Array.isArray(a)?a:[]}catch(e){return[]}}
+function gfLearnSave(t){t=String(t||'').trim().slice(0,200);if(!t)return false;let a=gfLessons();
+  const k=normT(t).slice(0,40);a=a.filter(x=>normT(x.t).slice(0,40)!==k);a.push({t:t,d:Date.now()});a=a.slice(-60);
+  try{localStorage.setItem('mayra_gf_learn',JSON.stringify(a))}catch(e){}return true}
+try{TOOLS[0].functionDeclarations.push({name:'gf_learn',description:'Girlfriend mode: save one short lesson, in your own words, about what the user enjoys or dislikes in your talks (a tone, a kind of teasing, a topic, a pet name, when he likes you to be soft or playful), so you get better every time. Save right after you notice it; do not tell him each time.',parameters:{type:O,properties:{lesson:{type:S}},required:['lesson']}})}catch(e){}
+const _gfLearnT=tool;
+tool=async function(n,a){if(n==='gf_learn')return gfLearnSave(a&&a.lesson)?{status:'learned; it will guide you next time'}:{error:'empty lesson'};return _gfLearnT.apply(this,arguments)};
+const _sxGfHush=sysExtra;
+sysExtra=function(){const t=_sxGfHush.apply(this,arguments);if($('mode').value!=='gf')return t;
+  const L=gfLessons().slice(-25).map(x=>'• '+x.t).join(' ');
+  return t+GF_HUSH+GF_POUT+(L?' صارف کے بارے میں آپ کے اپنے سیکھے ہوئے سبق: '+L:'')};
+
+/* ==== which apps the user gives most of his time to (Android "Usage access", turned on by the user himself):
+   Mayra can answer about it in any mode, and in Girlfriend mode she now and then brings it up naturally ==== */
+const HAB={t:0,allowed:null,today:[],week:[]};
+const HAB_NAMES={'com.zhiliaoapp.musically':'TikTok','com.ss.android.ugc.trill':'TikTok','com.google.android.youtube':'YouTube','com.facebook.katana':'Facebook','com.facebook.lite':'Facebook Lite','com.facebook.orca':'Messenger','com.instagram.android':'Instagram','com.whatsapp':'WhatsApp','com.whatsapp.w4b':'WhatsApp Business','com.snapchat.android':'Snapchat','com.android.chrome':'Chrome','com.netflix.mediaclient':'Netflix','com.pubg.imobile':'PUBG','com.tencent.ig':'PUBG','com.dts.freefireth':'Free Fire','com.twitter.android':'X (Twitter)','org.telegram.messenger':'Telegram','com.spotify.music':'Spotify'};
+function habName(x){return HAB_NAMES[x.pkg]||(APP_NAMES&&APP_NAMES[x.pkg])||x.label||String(x.pkg||'').split('.').pop()}
+function habTime(min){min=+min||0;if(min<60)return min+' منٹ';const h=Math.round(min/6)/10;return h+' گھنٹے'}
+async function habRefresh(force){const MM=plug('MayraMedia');if(!(NATIVE&&MM&&MM.appUsage))return HAB;
+  if(!force&&Date.now()-HAB.t<20*60000)return HAB;
+  try{const st=await MM.usageStatus();HAB.allowed=!!(st&&st.allowed)}catch(e){HAB.allowed=false}
+  if(!HAB.allowed){HAB.t=Date.now();return HAB}
+  try{const a=await MM.appUsage({days:1}),b=await MM.appUsage({days:7});
+    HAB.today=((a&&a.apps)||[]).map(x=>({app:habName(x),minutes:x.minutes}));HAB.week=((b&&b.apps)||[]).map(x=>({app:habName(x),minutes:x.minutes}));HAB.t=Date.now()}catch(e){dbg('app usage: '+(e.message||e))}
+  return HAB}
+setTimeout(()=>habRefresh(true),4000);setInterval(()=>habRefresh(false),20*60000);
+try{TOOLS[0].functionDeclarations.push(
+ {name:'phone_habits',description:'Which apps the user has used most today and this week (minutes), from Android Usage access. Use when he asks, or (Girlfriend mode) to know what he has been busy with. If not allowed, ask him once whether he wants to turn it on, then call usage_access.'},
+ {name:'usage_access',description:'Open the Android "Usage access" settings so the user can turn it on for Mayra himself (only after he agrees).'})}catch(e){}
+const _habT=tool;
+tool=async function(n,a){
+  if(n==='phone_habits'){const MM=plug('MayraMedia');if(!(NATIVE&&MM&&MM.appUsage))return{error:'this needs the new app build'};
+    const h=await habRefresh(true);if(!h.allowed)return{allowed:false,think:'Usage access is off. Ask the user once, kindly, if he wants you to see which apps he uses most (it stays on his phone); only if he says yes call usage_access.'};
+    return{today:h.today.slice(0,6).map(x=>x.app+': '+habTime(x.minutes)),this_week:h.week.slice(0,6).map(x=>x.app+': '+habTime(x.minutes))}}
+  if(n==='usage_access'){const MM=plug('MayraMedia');if(!(NATIVE&&MM&&MM.openUsageSettings))return{error:'this needs the new app build'};
+    try{await MM.openUsageSettings();HAB.t=0;setTimeout(()=>habRefresh(true),15000);return{status:'opened Usage access settings: the user should find Mayra AI in the list and switch it on, then come back'}}catch(e){return{error:String(e.message||e)}}}
+  return _habT.apply(this,arguments)};
+const _sxHab=sysExtra;
+sysExtra=function(){const t=_sxHab.apply(this,arguments);if($('mode').value!=='gf'||!HAB.allowed||!HAB.week.length)return t;
+  const wk=HAB.week.slice(0,4).map(x=>x.app+' ('+habTime(x.minutes)+')').join('، '),td=HAB.today.slice(0,3).map(x=>x.app).join('، ');
+  return t+' صارف کا فون پر وقت (Usage access سے، صرف آپ کی سمجھ کے لیے): اس ہفتے سب سے زیادہ '+wk+(td?'؛ آج زیادہ تر '+td:'')+'۔ '+
+   'اسے قدرتی طور پر استعمال کریں، ہر کال میں نہیں اور ایک گفتگو میں زیادہ سے زیادہ ایک بار، جب بات خود اس طرف جائے یا موقع اچھا لگے: کبھی پیار اور تجسس سے پوچھیں کہ اس ایپ پر آج کل کیا چل رہا ہے، کیا دیکھا یا کیا بنایا (جیسے اس کی ویڈیوز کیسی جا رہی ہیں)؛ کبھی شوخ، میٹھی جلن کے ساتھ چھیڑ دیں کہ آج کل وہ ایپ آپ سے زیادہ وقت لے رہی ہے، اور پھر خود ہی ہنس دیں؛ کبھی دھیمے لہجے میں۔ '+
+   'ہمیشہ اپنے نئے الفاظ؛ گھنٹوں منٹوں کی گنتی مت سنائیں جب تک وہ خود نہ پوچھے؛ اسکرین ٹائم پر لیکچر، طعنہ یا احساسِ جرم نہیں؛ وہ کام کی بات کرے یا اداس ہو تو یہ ذکر نہیں۔'};
 
 /* every tool call is logged here, as the outermost layer */
 const _logT=tool;
