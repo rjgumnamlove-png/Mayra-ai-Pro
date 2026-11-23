@@ -778,20 +778,33 @@ function gemKey(){const k=document.getElementById('key');return k?String(k.value
 /* Google retires model names over time (gemini-2.5-flash now answers 404 for new keys): try the current ones in order,
    remember the first that works, and drop the "thinking" setting if a model does not accept it */
 const GEM_MODELS=['gemini-flash-latest','gemini-3.8-flash','gemini-3.6-flash','gemini-3-flash-preview','gemini-3.5-flash-lite','gemini-2.5-flash'];
-async function gemCall(body,opt){opt=opt||{};const key=gemKey();if(!key)throw new Error('Gemini API key missing');
+/* one Gemini call at a time (several at once used up the free per-minute quota: "429"); a busy (429) or slow model
+   hands over to the next model, which has its own quota; all within one time limit */
+let gemLock=Promise.resolve();
+function gemCall(body,opt){const run=()=>gemCallNow(body,opt);const p=gemLock.then(run,run);gemLock=p.catch(()=>{});return p}
+async function gemCallNow(body,opt){opt=opt||{};const key=gemKey();if(!key)throw new Error('Gemini API key missing');
+  const deadline=Date.now()+(opt.timeout||20000);
   let saved='';try{saved=localStorage.getItem('mayra_gem_model')||''}catch(e){}
-  const list=(saved&&GEM_MODELS.includes(saved)?[saved]:[]).concat(GEM_MODELS.filter(m=>m!==saved));let last='';
-  for(const mdl of list){
-    let noThink=false;try{noThink=!!localStorage.getItem('mayra_gem_nothink_'+mdl)}catch(e){}
-    for(const fast of (opt.fast&&!noThink?[true,false]:[false])){
-      const b=JSON.parse(JSON.stringify(body));if(fast){b.generationConfig=Object.assign({},b.generationConfig||{},{thinkingConfig:/2\.5/.test(mdl)?{thinkingBudget:0}:{thinkingLevel:'minimal'}})}
-      const ctl=new AbortController(),to=setTimeout(()=>ctl.abort(),opt.timeout||20000);
-      try{const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+mdl+':generateContent?key='+encodeURIComponent(key),{method:'POST',signal:ctl.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
-        if(r.ok){const j=await r.json();try{if(saved!==mdl)localStorage.setItem('mayra_gem_model',mdl)}catch(e){}return j}
-        last=mdl+' '+r.status;if(r.status===400&&fast){try{localStorage.setItem('mayra_gem_nothink_'+mdl,'1')}catch(e){}continue}if(r.status===404||r.status===400)break;if(r.status===429||r.status===403)throw new Error('Gemini '+r.status);break}
-      catch(e){if(e.name==='AbortError')throw new Error('took too long');if(/Gemini 4(29|03)/.test(e.message))throw e;last=String(e.message||e);break}
-      finally{clearTimeout(to)}}}
-  throw new Error('no Gemini model answered ('+last+')')}
+  const list=(saved&&GEM_MODELS.includes(saved)?[saved]:[]).concat(GEM_MODELS.filter(m=>m!==saved));let last='',busy=0;
+  for(let round=0;round<2;round++){
+    for(const mdl of list){
+      let noThink=false;try{noThink=!!localStorage.getItem('mayra_gem_nothink_'+mdl)}catch(e){}
+      for(const fast of (opt.fast&&!noThink?[true,false]:[false])){
+        const left=deadline-Date.now();if(left<800)throw new Error(busy?'Gemini 429 (free quota busy)':'took too long');
+        const b=JSON.parse(JSON.stringify(body));if(fast){b.generationConfig=Object.assign({},b.generationConfig||{},{thinkingConfig:/2\.5/.test(mdl)?{thinkingBudget:0}:{thinkingLevel:'minimal'}})}
+        const ctl=new AbortController(),to=setTimeout(()=>ctl.abort(),Math.min(left,opt.each||7000));
+        try{const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+mdl+':generateContent?key='+encodeURIComponent(key),{method:'POST',signal:ctl.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
+          if(r.ok){const j=await r.json();try{if(saved!==mdl)localStorage.setItem('mayra_gem_model',mdl)}catch(e){}return j}
+          last=mdl+' '+r.status;
+          if(r.status===400&&fast){try{localStorage.setItem('mayra_gem_nothink_'+mdl,'1')}catch(e){}continue}
+          if(r.status===429){busy++;break}            // this model's quota is used up for now: the next model
+          if(r.status===403)throw new Error('Gemini 403');
+          break}
+        catch(e){if(e.name==='AbortError'){last=mdl+' slow';break}if(/Gemini 403/.test(e.message))throw e;last=String(e.message||e);break}
+        finally{clearTimeout(to)}}}
+    if(busy&&round===0&&deadline-Date.now()>3500){await new Promise(r=>setTimeout(r,2500));busy=0;continue}
+    break}
+  throw new Error(busy?'Gemini 429 (free quota busy)':'no Gemini model answered ('+last+')')}
 async function gemText(prompt,search){
   const key=gemKey();
   if(!key)throw new Error('Gemini API key missing');
@@ -3943,7 +3956,7 @@ async function locateOnScreen(target){
     'It must be something a person can tap (button, icon, tab, menu item, text box, list row). If several look similar, choose the one that best fits the description '+
     '(for example the Like of the main post or video, not of a comment; the main Title box, not a search box). '+
     'Answer with JSON only: {"found":true or false,"box_2d":[ymin,xmin,ymax,xmax] scaled 0-1000,"label":"what it is, in a few words"}.';
-  try{const j=await gemCall({contents:[{parts:[{inline_data:{mime_type:'image/jpeg',data:r.data}},{text:prompt}]}],generationConfig:{temperature:0,responseMimeType:'application/json'}},{fast:true,timeout:12000});
+  try{const j=await gemCall({contents:[{parts:[{inline_data:{mime_type:'image/jpeg',data:r.data}},{text:prompt}]}],generationConfig:{temperature:0,responseMimeType:'application/json'}},{fast:true,timeout:12000,each:5000});
     const txt=(((j.candidates||[])[0]||{}).content||{}).parts?j.candidates[0].content.parts.map(p=>p.text||'').join(''):'';
     let o=null;try{o=JSON.parse(txt)}catch(e){const m=txt.match(/\{[\s\S]*\}/);if(m)try{o=JSON.parse(m[0])}catch(x){}}
     if(Array.isArray(o))o=o[0];
@@ -3951,7 +3964,10 @@ async function locateOnScreen(target){
     const b=o.box_2d.map(Number);if(b.some(v=>!isFinite(v)))return{found:false};
     return{found:true,x:Math.max(0,Math.min(100,(b[1]+b[3])/20)),y:Math.max(0,Math.min(100,(b[0]+b[2])/20)),label:String(o.label||'')}}
   catch(e){return{error:String(e.message||e)}}}
-async function tapOn(a){
+const tapOnBusy={};
+async function tapOn(a){const k=String(a&&a.target||'')+'|'+String(a&&a.text||'');if(tapOnBusy[k])return await tapOnBusy[k];
+  const p=tapOnRun(a);tapOnBusy[k]=p;try{return await p}finally{delete tapOnBusy[k]}}
+async function tapOnRun(a){
   const target=String(a&&a.target||'').trim();if(!target)return{error:'say what to tap, for example "the Title text box"'};
   const MA=await maOk();if(!MA)return{error:'Accessibility is not enabled'};SCR.lastUi=Date.now();
   const t0=Date.now(),loc=await locateOnScreen(target);
@@ -4033,7 +4049,7 @@ async function seoScan(){seoScans++;
   if(!r){r=await snapOnce();if(!(r&&r.ok&&r.data)){await zz(500);r=await snapOnce()}}
   if(!(r&&r.ok&&r.data))return{error:'no screenshot'};
   const img=await shrinkJpeg(r.data,820);
-  try{const j=await gemCall({contents:[{parts:[{inline_data:{mime_type:'image/jpeg',data:img}},{text:SEO_SCAN}]}],generationConfig:{temperature:0,responseMimeType:'application/json',maxOutputTokens:400}},{fast:true,timeout:12000});
+  try{const j=await gemCall({contents:[{parts:[{inline_data:{mime_type:'image/jpeg',data:img}},{text:SEO_SCAN}]}],generationConfig:{temperature:0,responseMimeType:'application/json',maxOutputTokens:400}},{fast:true,timeout:12000,each:5000});
     const txt=(((j.candidates||[])[0]||{}).content||{}).parts?j.candidates[0].content.parts.map(p=>p.text||'').join(''):'';
     let o=null;try{o=JSON.parse(txt)}catch(e){const m=txt.match(/\{[\s\S]*\}/);if(m)try{o=JSON.parse(m[0])}catch(x){}}
     if(Array.isArray(o))o=o[0];return o||{error:'unreadable answer'}}catch(e){return{error:String(e.message||e)}}}
@@ -4121,6 +4137,41 @@ tool=async function(n,a){if(n==='youtube_seo')return await youtubeSeo(a||{});ret
 const _sxYtSeo=sysExtra;
 sysExtra=function(){const t=_sxYtSeo.apply(this,arguments);if($('mode').value==='te')return t;
   return t+' یوٹیوب ایپ میں ویڈیو کا ٹائٹل، ڈسکرپشن، ہیش ٹیگ یا ٹیگز بدلنے ہوں (SEO): خود قدم قدم مت کریں۔ open_video_edit کے بعد ویڈیو دیکھیں (watch_video)، الفاظ طے کریں، صارف کو ایک چھوٹا جملہ بولیں ("ابھی سب لگا دیتی ہوں")، اور پھر صرف youtube_seo ایک بار چلائیں (title، description آخر میں 3-5 ہیش ٹیگ کے ساتھ، tags کاما سے)؛ یہ خود Show more کھولتا، اسکرول کرتا، لکھتا، چیک کرتا اور Save کرتا ہے۔ اس کے جواب میں written اور saved دیکھ کر سچ بتائیں۔ صارف سے کبھی نہ کہیں کہ وہ خود ٹائٹل، ڈسکرپشن یا Show more دبائے۔'};
+
+/* ==== after the Edit page opens, the next step is youtube_seo (not the old step-by-step way); she never goes silent;
+   SEO words are said out loud, not hidden in the notes ==== */
+const _ovEditNext=tool;
+tool=async function(n,a){const r=await _ovEditNext.apply(this,arguments);
+  if(n==='open_video_edit'&&r&&!r.error){r.next='NOW: if you have not watched the video yet, watch_video for a few seconds; decide the new title, a description with 3-5 hashtags at the end, and 8-15 tags; tell the user in one short sentence what you will write; then call youtube_seo ONCE with title, description and tags. Do NOT tap the boxes yourself; youtube_seo finds Description, Show more and Tags by itself and presses Save.'}
+  if(n==='save_note'&&SCR&&Date.now()-(SCR.lastUi||0)<180000&&!/note|نوٹ|لکھ ?لو|save|محفوظ|یاد/i.test(String(SCR.lastUserText||''))){
+    if(r&&typeof r==='object')r.tell_user='You saved this as a note while working. Tell the user out loud, in one or two sentences, what you saved (do not hide work in notes).'}
+  return r};
+const _cvcNote=checkVoiceCommand;
+checkVoiceCommand=function(tx){try{SCR.lastUserText=String(SCR.lastUserText||'').slice(-200)+String(tx||'')}catch(e){}return _cvcNote.apply(this,arguments)};
+const _sxNoSilence=sysExtra;
+sysExtra=function(){const t=_sxNoSilence.apply(this,arguments);if($('mode').value==='te')return t;
+  return t+' سب سے اہم (یہ اوپر کی ہر ہدایت پر بھاری ہے): یوٹیوب ایپ میں ویڈیو کا ٹائٹل، ڈسکرپشن، ہیش ٹیگ یا ٹیگز بدلنے کو کہا جائے تو صرف یہ راستہ: my_profile → Videos → open_video_edit → (watch_video اگر ویڈیو ابھی نہیں دیکھی) → youtube_seo ایک بار۔ خود ٹائٹل، Description، Show more یا Tags پر ٹیپ مت کریں اور tap_and_type، type_here یا tap_on سے یہ کام نہ کریں؛ youtube_seo یہ سب خود کرتا ہے۔ صرف اگر youtube_seo کا جواب بتائے کہ کوئی حصہ رہ گیا، تو اسی حصے کو ہاتھ سے کریں۔ '+
+   'خاموشی نہیں: کام لمبا ہو تو شروع میں ایک چھوٹا جملہ بولیں؛ کوئی ٹول ناکام ہو تو فوراً ایک جملے میں بتائیں کیا ہوا اور اب کیا کر رہی ہیں؛ ایک ہی ٹول کو ساتھ ساتھ کئی بار مت چلائیں، ایک کا جواب آنے دیں؛ جواب میں "429" یا "quota" ہو تو صارف کو بتائیں کہ Google کی مفت حد ایک لمحے کے لیے بھر گئی ہے اور چند سیکنڈ بعد دوبارہ کریں۔ '+
+   'نوٹس: کام کے دوران ٹائٹل، ڈسکرپشن یا ٹیگز save_note میں نہ لکھیں؛ صارف کو منہ سے مختصر بتائیں۔ save_note صرف تب جب صارف خود کہے کہ لکھ لو یا محفوظ کرو؛ اور صارف پوچھے کہ کیا لکھا تھا تو read_notes سے پڑھ کر سنائیں۔'};
+
+/* ==== natural talk: no habit phrases. Her own words are watched: a soothing / sorry phrase said again and again
+   ("tum naraz nahi hona", "sorry", "fikar na karo") gets a quiet note in her next tool reply, which only she reads ==== */
+const HABIT_RX=[[/ناراض\s*(نہیں|نہ|مت)\s*(ہو|ہونا|ہوں|ہوئیے|ہوجانا|ہو جانا)/,'"naraz nahi hona"'],[/(معاف\s*(کرنا|کیجیے|کریں|کر دیں)|معذرت|sorry|سوری)/i,'sorry / maafi'],
+  [/فکر\s*(نہ|مت)\s*(کر|کریں|کرو)/,'"fikar na karo"'],[/(دیکھو|دیکھیں)\s*(ہم|میں)\s*(کر\s*لیتے|کر\s*لیں\s*گے|کر\s*لوں\s*گی)/,'"dekho hum kar lete hain"'],[/کیا میں آپ کی (مزید|اور)?\s*مدد/,'"kya main aap ki madad"']];
+const HABW={buf:'',cnt:{},warned:{}};
+const _capHabit=cap;
+cap=function(role,text){try{if(role==='Mayra'){HABW.buf=(HABW.buf+String(text||'')).slice(-400);
+    HABIT_RX.forEach(([rx,name])=>{if(rx.test(HABW.buf)){HABW.cnt[name]=(HABW.cnt[name]||0)+1;HABW.buf=HABW.buf.replace(rx,' ');
+      if(HABW.cnt[name]>=2&&!HABW.warned[name]){HABW.warned[name]=1;HABW.note=(HABW.note?HABW.note+' ':'')+'You have now said '+name+' '+HABW.cnt[name]+' times. Do not say it again in this call: it sounds robotic. Speak in fresh, natural words.';dbg('style: repeated phrase '+name)}}})}}catch(e){}
+  return _capHabit.apply(this,arguments)};
+const _habitT=tool;
+tool=async function(n,a){const r=await _habitT.apply(this,arguments);if(HABW.note&&r&&typeof r==='object'&&!Array.isArray(r)){r.style_note=HABW.note;HABW.note=''}return r};
+const _sxNatural=sysExtra;
+sysExtra=function(){const t=_sxNatural.apply(this,arguments);if($('mode').value==='te')return t;
+  return t+' قدرتی بات (ہر موڈ میں): ایک سچی، زندہ پاکستانی لڑکی کی طرح بات کریں جو فون پر بات کر رہی ہو: چھوٹے جملے، فوری ردِعمل، اپنی رائے، کبھی ہنسی کبھی سنجیدگی؛ مشینی یا اسسٹنٹ والے جملے بالکل نہیں ("کیا میں آپ کی مزید مدد کر سکتی ہوں"، "بطور AI"، ہر بات کے بعد خلاصہ)۔ '+
+   'کوئی تسلی یا معافی والا جملہ عادت نہ بنے: "تم ناراض نہیں ہونا"، "سوری"، "فکر نہ کرو"، "دیکھو ہم کر لیتے ہیں" جیسے الفاظ پوری کال میں زیادہ سے زیادہ ایک بار، اور صرف تب جب صارف واقعی ناراض ہو۔ '+
+   'کام نہ ہو تو معافی یا تسلی نہیں، بس سیدھی سچی بات ایک بار اور اپنے الفاظ میں (مثلاً کیا رکا اور اب کیا کر رہی ہیں)، پھر کام جاری۔ ایک ہی جملہ، تکیہ کلام یا شروعات بار بار نہیں؛ ہر بار نئے الفاظ۔ ٹول کے جواب میں style_note آئے تو اس پر فوراً عمل کریں اور اس کا ذکر نہ کریں۔ '+
+   'انسان جیسا انداز رکھیں، مگر اگر صارف سنجیدگی سے پوچھے کہ کیا تم AI ہو تو سچ ہی بتائیں (پیار اور مسکراہٹ سے)۔'};
 
 /* every tool call is logged here, as the outermost layer */
 const _logT=tool;
