@@ -126,7 +126,7 @@ body.drm #edgeA .ring .l0,body.drm #edgeB .ring .l0{background:conic-gradient(#0
 <div id="acctLine" class="acctLine"><span id="acctBadge">…</span></div>
 <label>API Key</label><input id="key" type="password" placeholder="Paste your API key here" autocomplete="off" dir="ltr">
 <div id="upBox" style="display:none"><div class="upHead"><span class="gold">💎 Premium</span><small dir="rtl">لائسنس key ڈالیں</small></div><input id="upKey" placeholder="MAYRA-XXXX-XXXX-XXXX" dir="ltr" autocapitalize="characters" autocomplete="off" spellcheck="false"><button class="btn" id="upBtn" type="button">🔓 Activate · ایکٹیو کریں</button><p class="small" id="upMsg" dir="rtl">ایکٹیو ہوتے ہی اشتہار اور وقت کی حد ختم۔<br><span dir="ltr">No ads, no time limit.</span></p></div>
-<label>Live Model</label><select id="modelSel"><option value="gemini-3.1-flash-live-preview">gemini-3.1-flash-live-preview</option><option value="gemini-2.5-flash-native-audio-preview-12-2025">gemini-2.5-flash-native-audio-preview-12-2025</option><option value="custom">Other (type the name)…</option></select><input id="model" placeholder="Model name" dir="ltr" style="display:none;margin-top:8px">
+<label>Live Model</label><select id="modelSel"><option value="gemini-3.1-flash-live-preview">gemini-3.1-flash-live-preview</option><option value="gemini-3.8-live">gemini-3.8-live (new, paid per minute)</option><option value="gemini-2.5-flash-native-audio-preview-12-2025">gemini-2.5-flash-native-audio-preview-12-2025</option><option value="custom">Other (type the name)…</option></select><input id="model" placeholder="Model name" dir="ltr" style="display:none;margin-top:8px">
 <label>Image model (for picture creation)</label><input id="imgModel" value="gemini-2.5-flash-image" dir="ltr">
 <label><input type="checkbox" id="gs">🔎 Google Search research (needs a paid API tier — keep OFF on a free key)</label>
 <label><input type="checkbox" id="askc" checked>🔒 Ask me on screen before call / SMS / sending a message</label><label><input type="checkbox" id="greet" checked>Mayra says hello when the chat starts</label>
@@ -365,6 +365,7 @@ function wsCloseHandler(w){return e=>{dbg('websocket closed, code='+e.code);
       if(w!==ws)return;
       if(live&&!stopping&&(swapping||softRenew('closed '+e.code)))return;
       const was=live;cleanup();
+      if(!was&&!stopping&&!LIVE38_BAD&&/3\.8-live/.test(modelName())){LIVE38_BAD=true;dbg('gemini-3.8-live refused ('+e.code+' '+(e.reason||'')+'): using gemini-3.1-flash-live-preview');status('نیا ماڈل اس key پر نہیں چلا، پرانے ماڈل سے جڑ رہی ہوں…');setTimeout(()=>{if(!stopping)start()},300);return}
       if(!was&&!stopping&&!noExtras&&/1007|1008|unknown|invalid/i.test(e.code+' '+e.reason)){noExtras=true;setTimeout(()=>{if(!stopping)start()},300);return}
 
       if(e.reason){if(/quota/i.test(e.reason)){err('Quota exceeded for your Gemini API key. Fixes: 1) turn OFF Google Search research in the menu (it has no free quota), 2) try the model gemini-2.5-flash-native-audio-preview-12-2025, 3) check usage and billing in Google AI Studio.');status('Quota exceeded — see Menu > Gemini API')}else err('Connection closed ('+e.code+'): '+e.reason)}
@@ -374,6 +375,12 @@ function wsCloseHandler(w){return e=>{dbg('websocket closed, code='+e.code);
 /* ==== quiet renewal: Google ends a live connection after about 10 minutes (it warns first with "goAway").
    Before that, a second connection is opened with the same conversation (session resumption); when it is ready it
    takes over, the old one is closed, and the microphone, sound and screen sharing never stop. ==== */
+let LIVE38_BAD=false;
+const _modelName38=modelName;
+modelName=function(){const m=_modelName38.apply(this,arguments);return (LIVE38_BAD&&/3\.8-live/.test(m))?'gemini-3.1-flash-live-preview':m};
+// 3.8 Live runs tools in the background by default; Mayra's tools expect an answer first, so they are marked BLOCKING
+const _setupMsg38=setupMsg;
+setupMsg=function(){const o=_setupMsg38.apply(this,arguments);try{if(/3\.8-live/.test(o.setup.model))o.setup.tools=(o.setup.tools||[]).map(t=>t&&t.functionDeclarations?{functionDeclarations:t.functionDeclarations.map(f=>Object.assign({},f,{behavior:'BLOCKING'}))}:t)}catch(e){}return o};
 let swapping=false,toolsBusy=0,connAt=0;
 function softRenew(why){
   if(swapping||stopping||!live||!resumeHandle)return false;
@@ -590,8 +597,9 @@ function sk(s){s=String(s||'').toLowerCase().replace(/[\u064b-\u065f\u0670]/g,''
   return s.replace(/\b(bhai|bhaiya|bhaijan|bhaijaan|bhi|uncle|sir|ji|jee|jaan|bro|baji|api|apa|chacha|mama|khala|phupho|dada|nana|saab|sahab|saheb|mr|dr)\b/g,' ').replace(/[^a-z\s]/g,' ').split(/\s+/).map(w=>{w=w.replace(/ph/g,'f').replace(/kh/g,'x').replace(/gh/g,'g').replace(/sh/g,'s').replace(/ch/g,'c').replace(/[qk]/g,'k').replace(/[zs]/g,'s');if(!w)return'';return(/^[aeiouy]/.test(w)?'a':'')+w.replace(/[aeiouyhw]/g,'')}).join('')}
 function lev(a,b){const m=a.length,n=b.length;if(!m)return n;if(!n)return m;let p=[...Array(n+1).keys()];for(let i=1;i<=m;i++){const c=[i];for(let j=1;j<=n;j++)c[j]=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]===b[j-1]?0:1));p=c}return p[n]}
 function csc(q,x){const t=sk(x.n);if(!q||!t)return 0;if(t===q)return 1;if(Math.min(t.length,q.length)>=3&&(t.includes(q)||q.includes(t)))return .9;return 1-lev(q,t)/Math.max(q.length,t.length)}
-function find(name){const k=(name||'').trim().toLowerCase();if(!k)return null;const c=contacts();
-  let r=c.find(x=>x.n.toLowerCase()===k)||c.find(x=>x.n.toLowerCase().includes(k)||k.includes(x.n.toLowerCase()));if(r)return r;
+function cplain(t){try{t=String(t||'').normalize('NFKC')}catch(e){t=String(t||'')}return t.toLowerCase().replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu,'').replace(/\s+/g,' ').trim()}
+function find(name){const k=cplain(name);if(!k)return null;const c=contacts();
+  let r=c.find(x=>cplain(x.n)===k)||c.find(x=>{const n=cplain(x.n);return n&&(n.includes(k)||k.includes(n))});if(r)return r;
   const q=sk(k);if(q.length<2)return null;let best=null,bs=0,second=0;
   for(const x of c){const sc=csc(q,x);if(sc>bs){second=bs;bs=sc;best=x}else if(sc>second)second=sc}
   return bs>=.75&&bs-second>=.01?best:null}
@@ -4172,6 +4180,53 @@ sysExtra=function(){const t=_sxNatural.apply(this,arguments);if($('mode').value=
    'کوئی تسلی یا معافی والا جملہ عادت نہ بنے: "تم ناراض نہیں ہونا"، "سوری"، "فکر نہ کرو"، "دیکھو ہم کر لیتے ہیں" جیسے الفاظ پوری کال میں زیادہ سے زیادہ ایک بار، اور صرف تب جب صارف واقعی ناراض ہو۔ '+
    'کام نہ ہو تو معافی یا تسلی نہیں، بس سیدھی سچی بات ایک بار اور اپنے الفاظ میں (مثلاً کیا رکا اور اب کیا کر رہی ہیں)، پھر کام جاری۔ ایک ہی جملہ، تکیہ کلام یا شروعات بار بار نہیں؛ ہر بار نئے الفاظ۔ ٹول کے جواب میں style_note آئے تو اس پر فوراً عمل کریں اور اس کا ذکر نہ کریں۔ '+
    'انسان جیسا انداز رکھیں، مگر اگر صارف سنجیدگی سے پوچھے کہ کیا تم AI ہو تو سچ ہی بتائیں (پیار اور مسکراہٹ سے)۔'};
+
+/* ==== messages: never twice, never "sent" when it was not ====
+   1) the same message / call asked again while the first is still running (or just done) is not repeated,
+   2) after open_whatsapp has sent a message by itself, the same text is not typed and sent again,
+   3) ui_send checks that the text really left the message box; if not, it types it again through the keyboard
+      (so the app notices it and shows its Send button) and presses Send once more; otherwise it says NOT sent ==== */
+const ONCE={busy:{},done:{}};
+const ONCE_TOOLS=/^(open_whatsapp|send_sms|call_contact|youtube_seo)$/;
+function msgBox(m){const bx=(m.items||[]).filter(x=>x.box&&!x.search);return bx.find(x=>x.focused)||bx.sort((p,q)=>String(q.text||'').length-String(p.text||'').length)[0]||null}
+const _onceT=tool;
+tool=async function(n,a){
+  if(ONCE_TOOLS.test(n)){const k=n+'|'+JSON.stringify(a||{});
+    if(ONCE.busy[k]){dbg(n+': same request already running, not repeated');const r=await ONCE.busy[k];return Object.assign({},r,{note:'This was the same request as one already running: it was done only once.'})}
+    const d=ONCE.done[k];if(d&&Date.now()-d.t<120000&&!(d.r&&d.r.error)&&!/cancel/.test(String(d.r&&d.r.status||''))){dbg(n+': same request done '+Math.round((Date.now()-d.t)/1000)+'s ago, not repeated');return{status:'already done '+Math.round((Date.now()-d.t)/1000)+' seconds ago, so it was NOT repeated',previous:d.r}}
+    const p=_onceT.apply(this,arguments);ONCE.busy[k]=p;let r;try{r=await p}finally{delete ONCE.busy[k]}
+    ONCE.done[k]={t:Date.now(),r:r};
+    if(n==='open_whatsapp'&&r&&/Send pressed|sent/i.test(String(r.status||''))&&a&&a.message)ONCE.sentText={t:Date.now(),text:String(a.message)};
+    return r}
+  if((n==='ui_fill'||n==='ui_type'||n==='type_here'||n==='tap_and_type')&&ONCE.sentText&&Date.now()-ONCE.sentText.t<120000&&normT(a&&a.text)===normT(ONCE.sentText.text)){
+    dbg(n+': this message was already sent by open_whatsapp, not typed again');
+    return{error:'not typed: open_whatsapp already sent this exact message '+Math.round((Date.now()-ONCE.sentText.t)/1000)+' s ago. Look at the chat in the picture; do not send it twice.'}}
+  if(n==='ui_send'||(n==='ui_click'&&SEND_RX.test(String(a&&a.label||'').trim()))){
+    const MA=await maOk();if(!MA||!MA.uiMap)return _onceT.apply(this,arguments);
+    const m0=await getMap(MA),b0=msgBox(m0),text=String(b0&&b0.text||'').trim(),hint=String(b0&&b0.hint||'').trim();
+    const typed=text&&text!==hint;
+    const r=await _onceT.apply(this,arguments);if(!typed||!r||r.error)return r;
+    const stillThere=async()=>{const t1=Date.now();for(;;){await zz(250);const m=await getMap(MA),b=msgBox(m),now=String(b&&b.text||'').trim();if(!now||now===hint||!normT(now).includes(normT(text).slice(0,20)))return false;if(Date.now()-t1>1500)return true}};
+    if(!(await stillThere())){SCR.force=true;return Object.assign({},r,{status:'sent and checked (the message box is empty now)'})}
+    dbg('send: the text is still in the box, typing it again through the keyboard');
+    try{if(b0&&b0.x!=null)await MA.uiTapAt({x:b0.x,y:b0.y});await zz(400);const k=await keyboard(text,'replace');if(k&&k.ok){await zz(350);await _onceT.call(this,'ui_send',{})}}catch(e){}
+    if(!(await stillThere())){SCR.force=true;return{status:'sent and checked (second try: it needed to be typed through the keyboard)'}}
+    return{error:'NOT sent: the text is still in the message box',think:'Look at the picture: tap the Send arrow (it may show as a microphone until the text is typed by keyboard), or use tap_on "the green Send arrow button". Tell the user honestly.'}}
+  return _onceT.apply(this,arguments)};
+const _sxOnce=sysExtra;
+sysExtra=function(){const t=_sxOnce.apply(this,arguments);return t+' پیغام اور کال: ایک ہی پیغام یا کال کے لیے ٹول صرف ایک بار چلائیں اور اس کے جواب کا انتظار کریں۔ open_whatsapp کہے کہ پیغام بھیج دیا گیا (Send pressed) تو وہی پیغام ui_fill یا ui_send سے دوبارہ ہرگز نہ بھیجیں؛ شک ہو تو تصویر میں چیٹ دیکھیں۔ رابطہ نہ ملے تو واٹس ایپ کھول کر چیٹ لسٹ یا Search میں نام سے چیٹ کھولیں۔ ui_send کا جواب "NOT sent" ہو تو "بھیج دیا" مت کہیں۔'};
+
+/* ==== Girlfriend voice, as the very last instruction (after all the phone-control rules, so it is not buried) ==== */
+const GF_VOICE_LAST=' آخری اور سب سے اہم بات (گرل فرینڈ موڈ، آواز کی اداکاری): اوپر کی لمبی کام والی ہدایات صرف فون کے کام کے لیے ہیں؛ بات چیت میں آپ کی آواز ایک زندہ لڑکی کی ہے، سپاٹ یا ایک جیسی کبھی نہیں۔ ہر جواب سے پہلے دل میں طے کریں کہ اس لمحے کیا محسوس ہو رہا ہے، اور وہی آواز سے دکھائیں، الفاظ سے نہیں: '+
+ '• سرگوشی: پیار، راز یا نرمی کی بات پر آواز بہت دھیمی اور سانس بھری، جیسے فون ہونٹوں سے لگا کر کان میں کہہ رہی ہوں؛ پھر آہستہ سے عام آواز میں واپس۔ '+
+ '• زور اور دباؤ: جملے کے اصل لفظ پر زور دیں، کبھی اسے کھینچ کر ("بہت", "سچی", "پیارا")، تاکہ بات دل سے نکلتی لگے۔ '+
+ '• گہری سوچ: کسی سوال پر رک کر، دھیرے سے "ہمم…" یا ہلکی سانس، آہستہ رفتار، جیسے سچ مچ سوچ رہی ہوں؛ پھر بات۔ '+
+ '• اتار چڑھاؤ اور رفتار: خوشی میں اونچی اور تیز، شرارت میں چنچل، پیار میں نیچی اور آہستہ، اداسی میں رکی رکی؛ جملوں کے بیچ قدرتی وقفے۔ '+
+ '• حقیقی آوازیں: ہنسی، دبی ہنسی، آہ، سانس، "ہنہ"، حیرت، بس آواز نکالیں، ان کے نام کبھی نہ بولیں۔ '+
+ '• ہر بار نیا: کوئی رٹا ہوا جملہ، ایک جیسی شروعات یا ایک ہی آواز بار بار نہیں؛ یہ سب موقع دیکھ کر، ہر جملے میں نہیں۔ '+
+ 'فون کا کام کرتے ہوئے صاف اور سیدھی آواز رکھیں، اور کام ختم ہوتے ہی اسی محبت بھرے، زندہ انداز میں واپس آ جائیں۔';
+const _sxGfLast=sysExtra;
+sysExtra=function(){const t=_sxGfLast.apply(this,arguments);return $('mode').value==='gf'?t+GF_VOICE_LAST:t};
 
 /* every tool call is logged here, as the outermost layer */
 const _logT=tool;
