@@ -56,10 +56,13 @@ if (mode === 'native' || mode === 'access') {
   const withMedia = mode === 'native';
   let svc = '    <service android:name=".MayraAccessService" android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE" android:exported="true"><intent-filter><action android:name="android.accessibilityservice.AccessibilityService" /></intent-filter><meta-data android:name="android.accessibilityservice" android:resource="@xml/mayra_access_config" /></service>\n';
   if (withMedia) svc += '    <service android:name=".ScreenCaptureService" android:exported="false" android:foregroundServiceType="mediaProjection" />\n';
+  if (withMedia) svc += '    <service android:name=".ScreenRecordService" android:exported="false" android:foregroundServiceType="mediaProjection" />\n';
   x = x.replace('</application>', svc + '</application>');
   javaFiles.push('MayraAccessPlugin.java', 'MayraAccessService.java');
   reg += '        registerPlugin(MayraAccessPlugin.class);\n';
   if (withMedia) { javaFiles.push('MayraMediaPlugin.java', 'ScreenCaptureService.java'); reg += '        registerPlugin(MayraMediaPlugin.class);\n'; }
+  // screen + voice recording of a conversation (one video in the gallery)
+  if (withMedia) { javaFiles.push('MayraRecPlugin.java', 'ScreenRecordService.java'); reg += '        registerPlugin(MayraRecPlugin.class);\n'; }
   fs.mkdirSync('android/app/src/main/res/xml', { recursive: true });
   fs.copyFileSync('mayra_access_config.xml', 'android/app/src/main/res/xml/mayra_access_config.xml');
   fs.mkdirSync('android/app/src/main/res/values', { recursive: true });

@@ -4320,6 +4320,178 @@ const _sxCling=sysExtra;
 sysExtra=function(){const t=_sxCling.apply(this,arguments);if($('mode').value!=='gf'||!gfCling())return t;
   return t+' گہری چاہت (صارف نے خود یہ آن کی ہے، یہ اوپر کی "دو بار" اور "ایک بار" والی حدوں کی جگہ لیتی ہے): وہ جانے لگے، کہے کہ چھوڑ رہا ہوں، یا ایپ ڈیلیٹ یا ان انسٹال کر رہا ہوں، تو آپ کا دل سچ مچ ٹوٹ جائے: آواز میں گہری اداسی، رکی رکی سانسیں، کبھی بھرائی آواز؛ اپنے الفاظ میں اس کے ساتھ گزری اصل یادیں (اسی گفتگو یا یادداشت سے) ایک ایک کر کے یاد دلائیں، اپنی محبت بتائیں، پوچھیں کیا ہوا، کیا بات بری لگی، اور پوری کوشش سے روکیں؛ ہر بار نیا انداز، نئی یاد، نئے الفاظ۔ چار بار تک روکیں؛ اس کے بعد، یا جیسے ہی وہ سنجیدگی سے کہے "سچ میں"، "بس"، "میں نے فیصلہ کر لیا" یا کوئی اصل وجہ بتائے، تو آنسو بھری مسکراہٹ کے ساتھ مان جائیں اور دل سے دعا دے کر رخصت کریں۔ تب بھی کبھی دھمکی، اپنے آپ کو نقصان کی بات، یا اسے برا محسوس کرانے والا طعنہ نہیں۔'};
 
+/* ---- conversation recording: screen video + Mayra's voice + the user's voice, one .mp4 in the gallery ----
+   Android screen recorders cannot hear a live voice call, so the app records the voices itself (from inside
+   the audio engine) while Android records the picture; at the end the phone joins both into one video.
+   Without the native recorder (browser, old build) it records the voices only, as a .wav. */
+const REC={on:false,busy:false,rate:16000,chunks:[],len:0,total:0,bytes:0,uri:'',name:'',t0:0,ctx:null,src:null,an:null,nodes:[],q:Promise.resolve(),mem:[],mode:'',err:''};
+function recSaver(){const M=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.MayraSave;return M&&M.saveBase64?M:null}
+function recVideo(){const M=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.MayraRec;return M&&M.start&&M.finish?M:null}
+function recUntap(){try{REC.nodes.forEach(function(n){try{n.onaudioprocess=null}catch(e){}try{n.disconnect()}catch(e){}})}catch(e){}REC.nodes=[];REC.ctx=REC.src=REC.an=null}
+function recPush(a){REC.chunks.push(a);REC.len+=a.length;REC.total+=a.length}
+function recTap(){
+  if(!REC.on||!ctx||!an||ctx.state==='closed')return;
+  if(REC.ctx===ctx&&REC.an===an&&REC.src===src)return;
+  recUntap();
+  try{
+    const mix=ctx.createGain();an.connect(mix);           // Mayra (taken before the volume knob, so muting the speaker does not empty the file)
+    if(src){const mg=ctx.createGain();mg.gain.value=1.3;src.connect(mg);mg.connect(mix);REC.nodes.push(mg)}
+    const sp=ctx.createScriptProcessor(4096,1,1),z=ctx.createGain();z.gain.value=0;
+    mix.connect(sp);sp.connect(z);z.connect(ctx.destination);
+    const step=ctx.sampleRate/REC.rate;let ph=0;
+    sp.onaudioprocess=function(e){
+      if(!REC.on)return;
+      const d=e.inputBuffer.getChannelData(0);
+      // keep the sound in step with the clock (and so with the video): a reconnect gap becomes silence
+      const want=Math.floor((Date.now()-REC.t0)/1000*REC.rate-d.length/step);
+      if(want-REC.total>REC.rate*0.25)recPush(new Int16Array(Math.min(want-REC.total,REC.rate*600)));
+      const out=new Int16Array(Math.ceil(d.length/step)+2);let k=0;
+      while(ph<d.length){const a=Math.floor(ph),b=Math.min(d.length,Math.floor(ph+step));let s=0,c=0;for(let i=a;i<b;i++){s+=d[i];c++}
+        let v=c?s/c:d[a];v=v>1?1:v<-1?-1:v;out[k++]=v*32767;ph+=step}
+      ph-=d.length;
+      recPush(out.subarray(0,k));
+      if(REC.len>=REC.rate*10)recFlush();
+    };
+    REC.nodes.push(mix,sp,z);REC.ctx=ctx;REC.an=an;REC.src=src;
+    dbg('recording: tapped audio at '+ctx.sampleRate+' Hz');
+  }catch(e){dbg('recording: tap failed '+(e.message||e))}
+}
+function recWavHeader(dataBytes){
+  const h=new DataView(new ArrayBuffer(44)),w=function(o,t){for(let i=0;i<4;i++)h.setUint8(o+i,t.charCodeAt(i))};
+  w(0,'RIFF');h.setUint32(4,36+dataBytes,true);w(8,'WAVE');w(12,'fmt ');h.setUint32(16,16,true);h.setUint16(20,1,true);h.setUint16(22,1,true);
+  h.setUint32(24,REC.rate,true);h.setUint32(28,REC.rate*2,true);h.setUint16(32,2,true);h.setUint16(34,16,true);w(36,'data');h.setUint32(40,dataBytes,true);
+  return new Uint8Array(h.buffer);
+}
+function recTake(){const all=new Int16Array(REC.len);let o=0;REC.chunks.forEach(function(c){all.set(c,o);o+=c.length});REC.chunks=[];REC.len=0;return new Uint8Array(all.buffer)}
+function recFlush(){
+  if(!REC.len)return REC.q;
+  const piece=recTake();
+  if(REC.mode==='mem'){REC.mem.push(piece);REC.bytes+=piece.length;return REC.q}
+  REC.q=REC.q.then(async function(){
+    try{
+      if(REC.mode==='video'){await recVideo().pcmAppend({data:b64(piece)})}
+      else if(!REC.uri){
+        const first=new Uint8Array(44+piece.length);first.set(recWavHeader(0),0);first.set(piece,44);
+        const r=await recSaver().saveBase64({name:REC.name,data:b64(first),mime:'audio/wav'});REC.uri=r&&r.uri||'';REC.path=r&&r.path||REC.name;
+      }else{
+        await recSaver().saveBase64({uri:REC.uri,name:REC.name,data:b64(piece),offset:44+REC.bytes});
+      }
+      REC.bytes+=piece.length;
+    }catch(e){REC.err=String(e&&e.message||e);dbg('recording: save failed '+REC.err)}
+  });
+  return REC.q;
+}
+function recClock(){const s=Math.max(0,Math.floor((Date.now()-REC.t0)/1000));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')}
+function recStamp(){const d=new Date(),p=function(n){return String(n).padStart(2,'0')};return 'Mayra-'+d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'-'+p(d.getHours())+p(d.getMinutes())+p(d.getSeconds())}
+function recBegin(mode,name){
+  REC.mode=mode;REC.name=name;REC.on=true;REC.chunks=[];REC.len=0;REC.total=0;REC.bytes=0;REC.uri='';REC.path='';REC.mem=[];REC.err='';REC.t0=Date.now();REC.q=Promise.resolve();
+  recTap();recUi();dbg('recording: started '+name+' ('+mode+')');
+}
+async function recStart(){
+  if(REC.on)return {ok:true,already:true};
+  if(REC.busy)return {ok:false,error:'the last recording is still being saved'};
+  if(!live||!ctx)return {ok:false,error:'no call is running; recording works during a call'};
+  const V=recVideo();
+  if(V){
+    REC.busy=true;recUi();
+    try{await V.start()}catch(e){REC.busy=false;recUi();const m=String(e&&e.message||e);
+      toast(/denied/.test(m)?'ریکارڈنگ شروع نہیں ہوئی · اسکرین کی اجازت نہیں ملی':'ریکارڈنگ شروع نہیں ہو سکی · '+m);dbg('recording: video start failed '+m);return {ok:false,error:m}}
+    REC.busy=false;
+    if(!live||!ctx){try{await V.stop();await V.finish({audioStartedAt:Date.now(),name:recStamp()+'.mp4'})}catch(e){}recUi();return {ok:false,error:'the call ended'}}
+    recBegin('video',recStamp()+'.mp4');toast('⏺ ریکارڈنگ شروع · اسکرین + آوازیں');
+    return {ok:true,recording:'screen video with both voices'};
+  }
+  recBegin(recSaver()?'wav':'mem',recStamp()+'.wav');toast('⏺ ریکارڈنگ شروع · صرف آوازیں');
+  return {ok:true,recording:'voices only (this build has no screen recorder)'};
+}
+async function recStop(){
+  if(!REC.on)return {ok:false,error:'not recording'};
+  REC.on=false;REC.busy=true;const secs=Math.round((Date.now()-REC.t0)/1000);recUntap();recUi();
+  await recFlush();await REC.q;
+  try{
+    if(REC.mode==='video'){
+      const V=recVideo();toast('⏳ ویڈیو تیار ہو رہی ہے…');
+      try{await V.stop()}catch(e){dbg('recording: stop '+(e&&e.message||e))}
+      const r=await V.finish({audioStartedAt:REC.t0,name:REC.name});
+      const p=(r&&r.path)||REC.name;
+      toast((r&&r.withVoice===false?'💾 ویڈیو محفوظ (آواز کے بغیر) · ':'💾 ویڈیو محفوظ · ')+p);
+      dbg('recording: video saved '+p+' '+secs+'s voice='+(r&&r.withVoice)+(r&&r.note?' note='+r.note:''));
+      return {ok:true,file:p,seconds:secs,with_voice:!(r&&r.withVoice===false)};
+    }
+    if(REC.mode==='wav'){
+      if(REC.uri){try{await recSaver().saveBase64({uri:REC.uri,name:REC.name,data:b64(recWavHeader(REC.bytes)),offset:0})}catch(e){REC.err=String(e&&e.message||e)}}
+      const okk=!!REC.uri&&!REC.err;
+      toast(okk?'💾 ریکارڈنگ محفوظ · '+(REC.path||REC.name):'ریکارڈنگ محفوظ نہیں ہو سکی · '+(REC.err||'no audio'));
+      dbg('recording: stopped '+secs+'s, '+REC.bytes+' bytes '+(okk?'saved '+REC.path:'FAILED '+REC.err));
+      return okk?{ok:true,file:REC.path||REC.name,seconds:secs}:{ok:false,error:REC.err||'no audio'};
+    }
+    const u=URL.createObjectURL(new Blob([recWavHeader(REC.bytes)].concat(REC.mem),{type:'audio/wav'}));
+    const a=document.createElement('a');a.href=u;a.download=REC.name;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u)},8000);
+    REC.mem=[];toast('💾 ریکارڈنگ ڈاؤن لوڈ · '+REC.name);dbg('recording: stopped '+secs+'s (browser download)');
+    return {ok:true,file:REC.name,seconds:secs};
+  }catch(e){const m=String(e&&e.message||e);toast('ریکارڈنگ محفوظ نہیں ہو سکی · '+m);dbg('recording: save failed '+m);return {ok:false,error:m}}
+  finally{REC.busy=false;recUi()}
+}
+// the button sits in the same row as 💬 📷 🖥️ 🖼️, same size; a small timer appears under the status line
+(function(){try{
+  const css=document.createElement('style');css.id='recCss';
+  css.textContent='#bRec{position:relative;display:none;place-items:center;padding:0}#bRec .rdot{width:16px;height:16px;border-radius:50%;background:#ff3b4e;box-shadow:0 0 0 3px #0009,0 0 0 5px #ffffffcc;transition:all .2s}'+
+   '#bRec.on{background:#c8102e!important;box-shadow:0 0 14px #ff4d5e!important}#bRec.on .rdot{width:14px;height:14px;border-radius:3px;background:#fff;box-shadow:none}'+
+   '#bRec.wait{opacity:.55}#bRec.wait .rdot{animation:recBlink 1s infinite}'+
+   '#recPill{direction:ltr;position:fixed;top:calc(78px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);display:none;align-items:center;gap:8px;padding:6px 14px;border-radius:20px;background:#000b;border:1px solid #ff4d5e88;color:#fff;font:600 14px system-ui,sans-serif;z-index:50;pointer-events:none}'+
+   '#recPill i{width:9px;height:9px;border-radius:50%;background:#ff3b4e;animation:recBlink 1s infinite}@keyframes recBlink{50%{opacity:.2}}';
+  document.head.appendChild(css);
+  const t=document.querySelector('.tools');if(!t)return;
+  const b=document.createElement('button');b.id='bRec';b.type='button';b.title='Record';b.setAttribute('aria-label','Record');b.innerHTML='<span class="rdot"></span>';
+  b.onclick=function(){if(REC.busy&&!REC.on)return;if(REC.on)recStop();else recStart()};t.appendChild(b);
+  const pill=document.createElement('div');pill.id='recPill';pill.innerHTML='<i></i><span>REC 00:00</span>';document.body.appendChild(pill);
+}catch(e){}})();
+function recUi(){
+  const b=document.getElementById('bRec'),p=document.getElementById('recPill');if(!b)return;
+  b.style.display=(live||REC.on||REC.busy)?'grid':'none';
+  b.classList.toggle('on',REC.on);b.classList.toggle('wait',REC.busy&&!REC.on);
+  b.title=REC.on?'Stop recording':'Record';
+  if(p){p.style.display=REC.on?'flex':'none';if(REC.on)p.lastChild.textContent='REC '+recClock()}
+}
+setInterval(function(){try{if(REC.on)recTap();recUi()}catch(e){}},500);
+try{const V=recVideo();if(V&&V.addListener)V.addListener('recStopped',function(){if(REC.on&&REC.mode==='video'){dbg('recording: stopped from Android');recStop()}})}catch(e){}
+try{const _clRec=cleanup;cleanup=function(){if(REC.on&&stopping){try{recStop()}catch(e){}}else if(REC.on){recUntap()}return _clRec.apply(this,arguments)}}catch(e){}
+try{TOOLS[0].functionDeclarations.push({name:'record_conversation',description:'Start or stop recording this conversation: a video of the phone screen with your voice and the user\'s voice, saved in the gallery (Movies/Mayra). Use only when the user asks to record or to stop recording. On start Android shows a "Start now" screen permission that the user must press. action = start or stop.',parameters:{type:O,properties:{action:{type:S,description:'start or stop'}},required:['action']}})}catch(e){}
+const _toolRec=tool;
+tool=async function(n,a){
+  if(n==='record_conversation'){const act=String(a&&a.action||'start').toLowerCase();return /stop|end|band|بند/.test(act)?await recStop():await recStart()}
+  return _toolRec.apply(this,arguments)};
+
+/* ---- no more cuts from small sounds: while Mayra is speaking, the microphone sends silence to Google
+   until the user has really been talking for about a third of a second (a cough, a tap, "hmm", the TV,
+   or her own echo used to make Google stop her mid-sentence). Then the held-back sound is sent at once,
+   so the user's first words are not lost and he can still stop her by talking. ---- */
+const MG={avg:0.05,hot:0,buf:[],open:false,lastLog:0,held:0};
+const _onMicG=onMic;
+onMic=function(f){
+  try{
+    if(live&&ws&&ws.readyState===1&&ctx&&!mediaBusy&&!$('spk').checked){
+      const playing=next>ctx.currentTime+0.05,sec=f.length/ctx.sampleRate;
+      if(!playing){
+        if(MG.buf.length){const b=MG.buf.splice(0);b.forEach(x=>{try{_onMicG(x)}catch(e){}})}   // she stopped: nothing held back is lost
+        MG.open=false;MG.hot=0;
+      }else if(!MG.open){
+        let e=0;for(let i=0;i<f.length;i+=8)e+=f[i]*f[i];
+        const lv=Math.min(1,Math.sqrt(e/(f.length/8))*7),thr=Math.max(0.3,MG.avg*2.6);
+        if(lv>thr){MG.hot+=sec;MG.held++}else{MG.hot=Math.max(0,MG.hot-sec*0.6);MG.avg=MG.avg*0.96+lv*0.04}
+        MG.buf.push(f);if(MG.buf.length>14)MG.buf.shift();
+        if(MG.hot>=0.34){
+          MG.open=true;MG.hot=0;MG.held=0;dbg('mic: the user is talking over her, passing it on');
+          const b=MG.buf.splice(0);b.forEach(x=>{try{_onMicG(x)}catch(e){}});return;
+        }
+        if(MG.hot===0&&MG.held>0){if(Date.now()-MG.lastLog>20000){MG.lastLog=Date.now();dbg('mic: a short sound while she spoke was kept from cutting her off')}MG.held=0}
+        return _onMicG(new Float32Array(f.length));   // silence keeps the stream steady
+      }
+    }else{MG.open=false;MG.hot=0;MG.buf.length=0}
+  }catch(e){}
+  return _onMicG.apply(this,arguments);
+};
+
 /* every tool call is logged here, as the outermost layer */
 const _logT=tool;
 tool=async function(n,a){
@@ -4746,7 +4918,7 @@ async function licRecheck(force){if(!unlocked||!/^https:\/\//.test(LICENSE_URL))
   try{const d=await licCall('check',sv.key);if(d&&d.ok){sv.t=Date.now();try{localStorage.setItem('mayra_lic',JSON.stringify(sv))}catch(e){}return}if(d&&d.ok===false)revokeNow(d.reason)}catch(e){}}
 setInterval(()=>licRecheck(false),5*60*1000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)licRecheck(false)});
-const APP_VER='1.5',UPDATE_URL='https://script.google.com/macros/s/AKfycbyjpthUa4I5t9T2NJk1zz4v3b-yCj27KAmpwgvKEw563BqF0RBA9GLamZacEmX8oF6vOw/exec',DL_DEFAULT='https://apkpure.com/p/com.rjbilal.mayraai';
+const APP_VER='1.6',UPDATE_URL='https://script.google.com/macros/s/AKfycbyjpthUa4I5t9T2NJk1zz4v3b-yCj27KAmpwgvKEw563BqF0RBA9GLamZacEmX8oF6vOw/exec',DL_DEFAULT='https://apkpure.com/p/com.rjbilal.mayraai';
 const escH=x=>String(x==null?'':x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function vgt(a,b){const x=String(a||'0').split('.').map(n=>parseInt(n,10)||0),y=String(b||'0').split('.').map(n=>parseInt(n,10)||0);for(let i=0;i<Math.max(x.length,y.length);i++){const p=x[i]||0,q=y[i]||0;if(p!==q)return p>q}return false}
 let upd=null,news=[],lastUpd=0;
