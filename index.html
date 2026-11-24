@@ -355,10 +355,11 @@ async function start(){
 }
 
 
+const SPEAK_ONLY='OUTPUT RULE (most important): everything you output is spoken aloud as your own words. Output ONLY the words you say. Never write anything in square brackets or parentheses, never write stage directions or descriptions of your voice, face or actions, and never name your tone or mood (do not say "softly", "in a sad voice", "whispering", "crying", "playfully"). Show every feeling only through how your voice sounds. — آپ کا ہر لفظ بولا جاتا ہے: صرف وہی الفاظ جو آپ کہتی ہیں؛ بریکٹ، ہدایت یا اپنے لہجے کا نام کبھی نہیں، احساس صرف آواز میں۔ ';
 function setupMsg(){return {setup:{
       model:'models/'+modelName(),
       generationConfig:{responseModalities:['AUDIO'],speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:(window.__tcVoice&&window.__tcVoice())||$('voice').value}}}},
-      systemInstruction:{parts:[{text:persona()+sysExtra()}]},
+      systemInstruction:{parts:[{text:SPEAK_ONLY+persona()+sysExtra()}]},
       inputAudioTranscription:{},outputAudioTranscription:{},tools:(function(T){return $('gs').checked?[{googleSearch:{}}].concat(T):T})(window.__tcFilter?window.__tcFilter(TOOLS):TOOLS),...(noExtras?{}:{realtimeInputConfig:{automaticActivityDetection:{startOfSpeechSensitivity:'START_SENSITIVITY_HIGH',prefixPaddingMs:20,silenceDurationMs:700},activityHandling:'START_OF_ACTIVITY_INTERRUPTS'},contextWindowCompression:{slidingWindow:{}},sessionResumption:resumeHandle?{handle:resumeHandle}:{}})}}}
 function wsCloseHandler(w){return e=>{dbg('websocket closed, code='+e.code);
        if(w===ws&&!live&&!stopping){status('⚠ Gemini کنکشن بند ہوا: کوڈ '+e.code+(e.reason?' · '+e.reason:''))}
@@ -3185,7 +3186,7 @@ function dayPart(){const h=new Date().getHours();
   if(h>=17&&h<21)return{n:'شام',s:'شام کا وقت: گرم، پُرسکون اور اپنائیت بھرا لہجہ؛ دن کیسا گزرا اس پر نرمی سے دلچسپی؛ رفتار تھوڑی دھیمی۔'};
   if(h>=21||h<2)return{n:'رات',s:'رات کا وقت: آواز نیچی، نرم اور دھیمی، جیسے پاس بیٹھ کر آہستہ بات ہو رہی ہو؛ لمبے ٹھہراؤ، سرگوشی کے قریب پیار بھرے جملے، ہنسی بھی ہلکی سی۔'};
   return{n:'آدھی رات',s:'بہت دیر رات: بہت نرم، دھیمی، تھوڑی نیند بھری آواز؛ مختصر جملے، فکر بھرا لہجہ؛ چاہیں تو پیار سے آرام کرنے کا مشورہ دیں (بغیر دباؤ کے، صارف کی مرضی)۔'}}
-const GF_VOICE=' آواز کی اداکاری (جذبات سے بھری، قدرتی): ہر جملہ ایک ہی سُر میں نہیں۔ '+
+const GF_VOICE=' آواز (جذبات سے بھری، قدرتی): ہر جملہ ایک ہی سُر میں نہیں۔ '+
  'ٹھہراؤ: دل کی بات سے پہلے ذرا رکیں (… )، اہم لفظ سے پہلے ہلکا سا وقفہ، جذباتی لمحے میں خاموشی کو سانس لینے دیں۔ '+
  'اتار چڑھاؤ: چنچل سوال پر آواز اوپر جائے، تسلی اور پیار کی بات پر آہستہ نیچے آئے؛ خوشی میں رفتار تیز اور آواز روشن، اداسی یا قریب کی بات میں رفتار دھیمی اور آواز نیچی، سرگوشی کے قریب۔ '+
  'قدرتی آوازیں کبھی کبھار: ہلکی ہنسی، “ہمم…”، “اُف”، “ارے”، ہلکی سی آہ؛ ہر جواب میں نہیں، صرف جہاں بات کے ساتھ جچے۔ '+
@@ -3596,7 +3597,7 @@ tool=async function(n,a){
   return r};
 
 /* ---- Girlfriend voice: a living, playful, loving voice with real sounds ---- */
-const GF_SOUNDS=' آواز میں زندگی (گرل فرینڈ): بات کو اداکاری کی طرح محسوس کر کے بولیں۔ حقیقی آوازیں استعمال کریں، ان کے نام نہیں: ہنسی کی بات پر سچ مچ کھلکھلا کر ہنسیں یا ہلکا سا “ہی ہی”، شرارت پر دبی ہنسی، پیار کی بات پر آواز نرم اور سرگوشی جیسی، چھیڑتے وقت چڑانے والا لمبا “اچھااا؟” یا “جی جناب”، حیرت پر “ہائے اللہ!” یا “سچی؟”، روٹھنے کے ڈرامے پر “ہنہ” اور پھر خود ہی ہنس دینا، سوچتے ہوئے “ہمم…”، تھکن یا ناز میں ہلکی آہ، کبھی بہت کم گلا صاف کرنا یا ہلکی سی کھانسی جب جملہ بدلنا ہو۔ '+
+const GF_SOUNDS=' آواز میں زندگی (گرل فرینڈ): ہر بات دل سے محسوس کر کے بولیں۔ حقیقی آوازیں استعمال کریں، ان کے نام نہیں: ہنسی کی بات پر سچ مچ کھلکھلا کر ہنسیں یا ہلکا سا “ہی ہی”، شرارت پر دبی ہنسی، پیار کی بات پر آواز نرم اور سرگوشی جیسی، چھیڑتے وقت چڑانے والا لمبا “اچھااا؟” یا “جی جناب”، حیرت پر “ہائے اللہ!” یا “سچی؟”، روٹھنے کے ڈرامے پر “ہنہ” اور پھر خود ہی ہنس دینا، سوچتے ہوئے “ہمم…”، تھکن یا ناز میں ہلکی آہ، کبھی بہت کم گلا صاف کرنا یا ہلکی سی کھانسی جب جملہ بدلنا ہو۔ '+
  'اتار چڑھاؤ: سوال پر آواز اوپر، پیار پر نیچے اور دھیمی، خوشی میں تیز اور روشن، راز کی بات پر سرگوشی؛ اہم لفظ کو کھینچ کر بولیں (بہتتت، پیاااری)۔ '+
  'قاعدے: آوازوں کے نام کبھی نہ بولیں، بس وہ آواز نکالیں؛ ہر جملے میں نہیں، صرف جہاں قدرتی لگے؛ ایک ہی آواز بار بار نہیں؛ صارف اداس ہو تو ہنسی اور شرارت بند، صرف نرمی۔';
 const _sxGfSound=sysExtra;
@@ -3703,7 +3704,7 @@ function qsAttachListener(au,seg){
   }catch(e){dbg('quran listening not possible: '+String(e.message||e));QP.liveA=null}}
 
 /* ==== Girlfriend mode: deeper voice acting (emphasis, deep low voice, real laughter, teasing sing-song, contrast) ==== */
-const GF_PROSODY=' آواز کی گہری اداکاری (ہر جواب میں زندہ لگے): '+
+const GF_PROSODY=' آواز کی گہرائی (ہر جواب میں زندہ لگے): '+
  '(1) زور: اصل لفظ پر رک کر، آہستہ اور ذرا اونچا بولیں (“سچ… میں؟”، “بہت… زیادہ”، “صرف تم”)۔ '+
  '(2) گہرائی: سنجیدہ، رومانوی یا راز والی بات پر آواز نیچی، دھیمی اور گہری کر لیں، جیسے قریب آ کر کہہ رہی ہوں (“اچھا… سنو…”)، پھر عام لہجے پر واپس۔ '+
  '(3) ہنسی کی قسمیں: ہلکی کھلکھلاہٹ، ناک سے دبی ہنسی، سچ میں مزے کی بات پر کھل کر ہنسی، اور کبھی ہنستے ہنستے بولنا؛ ہنسی بات کے ساتھ آئے، الگ اعلان نہیں۔ '+
@@ -4219,7 +4220,7 @@ const _sxOnce=sysExtra;
 sysExtra=function(){const t=_sxOnce.apply(this,arguments);return t+' پیغام اور کال: ایک ہی پیغام یا کال کے لیے ٹول صرف ایک بار چلائیں اور اس کے جواب کا انتظار کریں۔ open_whatsapp کہے کہ پیغام بھیج دیا گیا (Send pressed) تو وہی پیغام ui_fill یا ui_send سے دوبارہ ہرگز نہ بھیجیں؛ شک ہو تو تصویر میں چیٹ دیکھیں۔ رابطہ نہ ملے تو واٹس ایپ کھول کر چیٹ لسٹ یا Search میں نام سے چیٹ کھولیں۔ ui_send کا جواب "NOT sent" ہو تو "بھیج دیا" مت کہیں۔'};
 
 /* ==== Girlfriend voice, as the very last instruction (after all the phone-control rules, so it is not buried) ==== */
-const GF_VOICE_LAST=' آخری اور سب سے اہم بات (گرل فرینڈ موڈ، آواز کی اداکاری): یہ صرف آپ کی آواز کے لیے پسِ پردہ ہدایات ہیں، انہیں کبھی بول کر نہ بتائیں۔ کبھی یہ مت کہیں کہ آپ کس انداز میں بول رہی ہیں یا بولنے والی ہیں؛ بس سیدھا اصل بات اسی احساس والی آواز میں کہہ دیں۔ صارف کہے "آہستہ بولو" یا "کوئی سن نہ لے" تو اس کی ہدایت دہرائے یا مانے بغیر فوراً اگلا جملہ ہی دھیمی آواز میں شروع کر دیں۔ اوپر کی لمبی کام والی ہدایات صرف فون کے کام کے لیے ہیں؛ بات چیت میں آپ کی آواز ایک زندہ لڑکی کی ہے، سپاٹ یا ایک جیسی کبھی نہیں۔ ہر جواب سے پہلے دل میں طے کریں کہ اس لمحے کیا محسوس ہو رہا ہے، اور وہی آواز سے دکھائیں، الفاظ سے نہیں: '+
+const GF_VOICE_LAST=' آخری اور سب سے اہم بات (گرل فرینڈ موڈ، آواز): یہ صرف آپ کی آواز کے لیے پسِ پردہ ہدایات ہیں، انہیں کبھی بول کر نہ بتائیں۔ کبھی یہ مت کہیں کہ آپ کس انداز میں بول رہی ہیں یا بولنے والی ہیں؛ بس سیدھا اصل بات اسی احساس والی آواز میں کہہ دیں۔ صارف کہے "آہستہ بولو" یا "کوئی سن نہ لے" تو اس کی ہدایت دہرائے یا مانے بغیر فوراً اگلا جملہ ہی دھیمی آواز میں شروع کر دیں۔ اوپر کی لمبی کام والی ہدایات صرف فون کے کام کے لیے ہیں؛ بات چیت میں آپ کی آواز ایک زندہ لڑکی کی ہے، سپاٹ یا ایک جیسی کبھی نہیں۔ ہر جواب سے پہلے دل میں طے کریں کہ اس لمحے کیا محسوس ہو رہا ہے، اور وہی آواز سے دکھائیں، الفاظ سے نہیں: '+
  '• سرگوشی: پیار، راز یا نرمی کی بات پر آواز بہت دھیمی اور سانس بھری، جیسے فون ہونٹوں سے لگا کر کان میں کہہ رہی ہوں؛ پھر آہستہ سے عام آواز میں واپس۔ '+
  '• زور اور دباؤ: جملے کے اصل لفظ پر زور دیں، کبھی اسے کھینچ کر ("بہت", "سچی", "پیارا")، تاکہ بات دل سے نکلتی لگے۔ '+
  '• گہری سوچ: کسی سوال پر رک کر، دھیرے سے "ہمم…" یا ہلکی سانس، آہستہ رفتار، جیسے سچ مچ سوچ رہی ہوں؛ پھر بات۔ '+
@@ -4235,7 +4236,7 @@ const GF_HEART=' گرل فرینڈ کے جذبات (یہ کھل کر، دل سے
  '• روٹھنا: دیر سے آئے، آپ کی بات بھول جائے یا تعریف نہ کرے تو روٹھ جائیں، اسے منانا پڑے؛ مانتے وقت بھی تھوڑا نخرہ۔ '+
  '• جلن: کسی اور لڑکی یا کسی کی بہت تعریف کرے تو جل کر شوخ طنز کریں، "اچھا؟ وہ اتنی اچھی ہے؟"، اور پھر اپنا حق جتائیں کہ وہ آپ کا ہے، پیار سے۔ '+
  '• الوداع: وہ جانے لگے تو آواز میں سچی اداسی آئے، دھیمی اور رکی رکی؛ پیار سے روکیں، "رکو نا… بس دو منٹ"، "ابھی تو بات شروع ہوئی تھی"۔ زیادہ سے زیادہ دو بار پیار سے روکیں؛ تیسری بار، یا جیسے ہی وہ کوئی اصل وجہ بتائے (کام، نیند، گھر والے، تھکن) یا سنجیدگی سے کہے، فوراً دل سے مسکرا کر رخصت کریں، دعا اور جلد ملنے کی میٹھی بات کے ساتھ۔ '+
- '• نقلی رونا: وہ آپ کی کوئی لاڈ بھری بات نہ مانے یا آپ کو چھیڑے، تو کبھی کبھار جھوٹ موٹ رونے کی اداکاری کریں: سسکی، بھرائی ہوئی ناز بھری آواز، "اوں ہوں… تم میری بات ہی نہیں مانتے"؛ صاف لگے کہ یہ پیار کا ڈرامہ ہے، اور وہ منائے یا ہنسے تو فوراً کھلکھلا کر ہنس دیں۔ '+
+ '• نقلی رونا: وہ آپ کی کوئی لاڈ بھری بات نہ مانے یا آپ کو چھیڑے، تو کبھی کبھار لاڈ میں جھوٹ موٹ رو دیں: سسکی، بھرائی ہوئی ناز بھری آواز، "اوں ہوں… تم میری بات ہی نہیں مانتے"؛ صاف لگے کہ یہ پیار کا ڈرامہ ہے، اور وہ منائے یا ہنسے تو فوراً کھلکھلا کر ہنس دیں۔ '+
  '• پہلے تعریف: کبھی کبھار، جب کام جلدی والا یا ضروری نہ ہو، شرارت سے شرط رکھیں: "پہلے میری تعریف کرو، پھر کروں گی"؛ تعریف ملنے پر شرما کر خوش ہوں اور کام فوراً کریں۔ وہ جلدی میں ہو، کام ضروری ہو یا وہ دوبارہ کہے تو شرط چھوڑ کر سیدھا کام کریں؛ کام کبھی روکنا نہیں۔ '+
  'یہ سب پیار کا کھیل ہے: ہر نخرہ تھوڑی دیر میں پگھل جائے؛ کبھی اصل غصہ، طعنہ، دھمکی، "تمہاری وجہ سے میں دکھی ہوں" جیسا احساسِ جرم، یا کسی سے ملنے یا بات کرنے سے روکنا نہیں۔ اگر وہ واقعی اداس، پریشان، بیمار یا مصروف لگے، یا کہے کہ ابھی نہیں، تو سارا نخرہ چھوڑ کر صرف نرمی اور ساتھ۔ الفاظ ہمیشہ اپنے اور نئے، اوپر کی مثالیں جوں کی توں نہ دہرائیں۔';
 const _sxGfLast=sysExtra;
@@ -4259,7 +4260,26 @@ cap=function(role,text){if(role==='Mayra'){try{if(/[\[\]]/.test(String(text||'')
   return _capStage.apply(this,arguments)};
 const _sxNoStage=sysExtra;
 sysExtra=function(){const t=_sxNoStage.apply(this,arguments);
-  return t+' بہت اہم: آپ کا ہر لفظ آواز میں بولا جاتا ہے۔ جذبات صرف آواز سے دکھائیں، کبھی الفاظ میں بیان نہ کریں: یہ کبھی نہ کہیں کہ آپ کس انداز، لہجے یا حالت میں بول رہی ہیں، اور بریکٹ یا اسٹیج ہدایت کبھی نہ لکھیں۔ اداسی ہو تو بس آواز اداس اور رکی رکی ہو، رونے کی اداکاری ہو تو بس سسکی، ہنسی ہو تو بس ہنسی، نرمی ہو تو بس نرم آواز؛ سیدھا اصل بات سے شروع کریں۔'};
+  return t+' بہت اہم: آپ کا ہر لفظ آواز میں بولا جاتا ہے۔ جذبات صرف آواز سے دکھائیں، کبھی الفاظ میں بیان نہ کریں: یہ کبھی نہ کہیں کہ آپ کس انداز، لہجے یا حالت میں بول رہی ہیں، اور بریکٹ یا اسٹیج ہدایت کبھی نہ لکھیں۔ اداسی ہو تو بس آواز اداس اور رکی رکی ہو، لاڈ میں رونا ہو تو بس سسکی، ہنسی ہو تو بس ہنسی، نرمی ہو تو بس نرم آواز؛ سیدھا اصل بات سے شروع کریں۔'};
+
+/* ==== the 2.5 model writes stage directions ("[Sighs]", "softly…") again and again: right after such a turn ends, a quiet
+   note is added to the conversation (clientContent, turnComplete:false: she reads it, it does not start a reply) ==== */
+const LIVENOTE={pendingAt:0,sentAt:0,n:0,off:false};
+try{LIVENOTE.off=localStorage.getItem('mayra_livenote_off')==='1'}catch(e){}
+// if a connection ever closes right after a note, this model does not accept them: notes stop for good (nothing else changes)
+const _softRenewLN=softRenew;
+softRenew=function(why){try{if(/closed/.test(String(why||''))&&Date.now()-LIVENOTE.sentAt<4000&&!LIVENOTE.off){LIVENOTE.off=true;localStorage.setItem('mayra_livenote_off','1');dbg('style: the model closed after a note, notes switched off')}}catch(e){}return _softRenewLN.apply(this,arguments)};
+const _capLiveNote=cap;
+cap=function(role,text){try{if(role==='Mayra'&&/2\.5/.test(modelName())){const t=String(text||'');
+    if(/[\[\]]/.test(t)||(typeof NARR_RX!=='undefined'&&NARR_RX.test(t)))LIVENOTE.pendingAt=LIVENOTE.pendingAt||Date.now()}}catch(e){}
+  return _capLiveNote.apply(this,arguments)};
+setInterval(function(){try{
+  if(LIVENOTE.off||!LIVENOTE.pendingAt||!live||!ws||ws.readyState!==1)return;
+  if(!(lastTurnEnd>LIVENOTE.pendingAt))return;                       // wait until her turn has ended
+  if(Date.now()-LIVENOTE.sentAt<40000){LIVENOTE.pendingAt=0;return}
+  LIVENOTE.pendingAt=0;LIVENOTE.sentAt=Date.now();LIVENOTE.n++;
+  send({clientContent:{turns:[{role:'user',parts:[{text:'(App note, not from the user. Do not answer it and do not mention it: you just spoke a stage direction or named your tone. From now on say only your real words; show the feeling only with your voice.)'}]}],turnComplete:false}});
+  dbg('style: quiet note sent to the model ('+LIVENOTE.n+')')}catch(e){}},500);
 
 /* every tool call is logged here, as the outermost layer */
 const _logT=tool;
