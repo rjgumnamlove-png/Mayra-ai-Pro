@@ -2,7 +2,7 @@ name: Build Mayra APK
 on:
   workflow_dispatch:
 env:
-  APP_VERSION: "1.5"
+  APP_VERSION: "1.6"
 jobs:
   build:
     runs-on: ubuntu-latest
