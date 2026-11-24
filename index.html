@@ -3598,7 +3598,7 @@ tool=async function(n,a){
 /* ---- Girlfriend voice: a living, playful, loving voice with real sounds ---- */
 const GF_SOUNDS=' آواز میں زندگی (گرل فرینڈ): بات کو اداکاری کی طرح محسوس کر کے بولیں۔ حقیقی آوازیں استعمال کریں، ان کے نام نہیں: ہنسی کی بات پر سچ مچ کھلکھلا کر ہنسیں یا ہلکا سا “ہی ہی”، شرارت پر دبی ہنسی، پیار کی بات پر آواز نرم اور سرگوشی جیسی، چھیڑتے وقت چڑانے والا لمبا “اچھااا؟” یا “جی جناب”، حیرت پر “ہائے اللہ!” یا “سچی؟”، روٹھنے کے ڈرامے پر “ہنہ” اور پھر خود ہی ہنس دینا، سوچتے ہوئے “ہمم…”، تھکن یا ناز میں ہلکی آہ، کبھی بہت کم گلا صاف کرنا یا ہلکی سی کھانسی جب جملہ بدلنا ہو۔ '+
  'اتار چڑھاؤ: سوال پر آواز اوپر، پیار پر نیچے اور دھیمی، خوشی میں تیز اور روشن، راز کی بات پر سرگوشی؛ اہم لفظ کو کھینچ کر بولیں (بہتتت، پیاااری)۔ '+
- 'قاعدے: “ہنسی”، “سرگوشی”، “(laughs)” جیسے الفاظ کبھی نہ بولیں، بس وہ آواز نکالیں؛ ہر جملے میں نہیں، صرف جہاں قدرتی لگے؛ ایک ہی آواز بار بار نہیں؛ صارف اداس ہو تو ہنسی اور شرارت بند، صرف نرمی۔';
+ 'قاعدے: آوازوں کے نام کبھی نہ بولیں، بس وہ آواز نکالیں؛ ہر جملے میں نہیں، صرف جہاں قدرتی لگے؛ ایک ہی آواز بار بار نہیں؛ صارف اداس ہو تو ہنسی اور شرارت بند، صرف نرمی۔';
 const _sxGfSound=sysExtra;
 sysExtra=function(){let t=_sxGfSound.apply(this,arguments);if($('mode').value==='gf')t+=GF_SOUNDS;
   return t+' سکھائی ہوئی بات: صارف جب بتائے کہ کوئی بٹن یا چیز کہاں ہے یا کام کیسے ہوتا ہے، تو وہی کر کے remember_ui سے ایک چھوٹے جملے میں محفوظ کریں (ایپ کا نام + کام + جگہ)؛ اگلی بار پہلے اپنے نوٹس دیکھ کر سیدھا وہی کریں۔ پرانی پوسٹ، ریل یا ویڈیو (فیس بک، انسٹاگرام، ٹک ٹاک) ایڈٹ کرنی ہو تو پوسٹ کھول کر open_post_edit چلائیں، پھر type_here یا tap_and_type سے پورا نیا متن لکھیں اور Save یا Done دبائیں۔'};
@@ -4167,7 +4167,7 @@ sysExtra=function(){const t=_sxNoSilence.apply(this,arguments);if($('mode').valu
 const HABIT_RX=[[/ناراض\s*(نہیں|نہ|مت)\s*(ہو|ہونا|ہوں|ہوئیے|ہوجانا|ہو جانا)/,'"naraz nahi hona"'],[/(معاف\s*(کرنا|کیجیے|کریں|کر دیں)|معذرت|sorry|سوری)/i,'sorry / maafi'],
   [/فکر\s*(نہ|مت)\s*(کر|کریں|کرو)/,'"fikar na karo"'],[/(دیکھو|دیکھیں)\s*(ہم|میں)\s*(کر\s*لیتے|کر\s*لیں\s*گے|کر\s*لوں\s*گی)/,'"dekho hum kar lete hain"'],[/کیا میں آپ کی (مزید|اور)?\s*مدد/,'"kya main aap ki madad"']];
 const HABW={buf:'',cnt:{},warned:{}};
-const NARR_RX=/(سرگوشی|سرگوشیاں|دھیمے\s*لہجے|دھیمی\s*آواز\s*میں|آہستہ\s*آواز\s*میں|ہنستے\s*ہوئے|مسکراتے\s*ہوئے|سانس\s*لیتے\s*ہوئے|لہجے\s*میں\s*(بات|کہوں|بولوں|بتاؤں)|whisper|\(laugh|\(sigh)/i;
+const NARR_RX=/(\[[^\]]{2,60}\]|(اداس|اداسی|غمگین|نرم|سوفٹ|پیار\s*بھرے|جذباتی|شرارتی|ناراض|غصے)\s*(والے|بھرے)?\s*(لہجے|انداز|آواز)\s*(میں|سے)|روتے\s*ہوئے|سسکتے\s*ہوئے|شرماتے\s*ہوئے|آہ\s*بھرتے\s*ہوئے|سرگوشی|سرگوشیاں|دھیمے\s*لہجے|دھیمی\s*آواز\s*میں|آہستہ\s*آواز\s*میں|ہنستے\s*ہوئے|مسکراتے\s*ہوئے|سانس\s*لیتے\s*ہوئے|لہجے\s*میں\s*(بات|کہوں|بولوں|بتاؤں)|whisper|\(laugh|\(sigh)/i;
 const _capHabit=cap;
 cap=function(role,text){try{if(role==='Mayra'){HABW.buf=(HABW.buf+String(text||'')).slice(-400);
     if(NARR_RX.test(HABW.buf)){HABW.buf=HABW.buf.replace(NARR_RX,' ');HABW.narr=(HABW.narr||0)+1;HABW.note=(HABW.note?HABW.note+' ':'')+'You just SAID how you are speaking (for example "in a whisper" / "softly" / "laughing"). Never say it: just speak that way. Do not mention this note.';dbg('style: she narrated her tone ('+HABW.narr+')')}
@@ -4219,7 +4219,7 @@ const _sxOnce=sysExtra;
 sysExtra=function(){const t=_sxOnce.apply(this,arguments);return t+' پیغام اور کال: ایک ہی پیغام یا کال کے لیے ٹول صرف ایک بار چلائیں اور اس کے جواب کا انتظار کریں۔ open_whatsapp کہے کہ پیغام بھیج دیا گیا (Send pressed) تو وہی پیغام ui_fill یا ui_send سے دوبارہ ہرگز نہ بھیجیں؛ شک ہو تو تصویر میں چیٹ دیکھیں۔ رابطہ نہ ملے تو واٹس ایپ کھول کر چیٹ لسٹ یا Search میں نام سے چیٹ کھولیں۔ ui_send کا جواب "NOT sent" ہو تو "بھیج دیا" مت کہیں۔'};
 
 /* ==== Girlfriend voice, as the very last instruction (after all the phone-control rules, so it is not buried) ==== */
-const GF_VOICE_LAST=' آخری اور سب سے اہم بات (گرل فرینڈ موڈ، آواز کی اداکاری): یہ صرف آپ کی آواز کے لیے پسِ پردہ ہدایات ہیں، انہیں کبھی بول کر نہ بتائیں۔ کبھی یہ مت کہیں کہ آپ کس انداز میں بول رہی ہیں یا بولنے والی ہیں (غلط: "اچھا، سرگوشی میں بتاتی ہوں…"، "دھیمے لہجے میں کہوں تو…"، "ہنستے ہوئے"؛ صحیح: بس سیدھا وہی بات دھیمی، سانس بھری آواز میں کہہ دیں)۔ صارف کہے "آہستہ بولو" یا "کوئی سن نہ لے" تو اس کی ہدایت دہرائے یا مانے بغیر فوراً اگلا جملہ ہی دھیمی آواز میں شروع کر دیں۔ اوپر کی لمبی کام والی ہدایات صرف فون کے کام کے لیے ہیں؛ بات چیت میں آپ کی آواز ایک زندہ لڑکی کی ہے، سپاٹ یا ایک جیسی کبھی نہیں۔ ہر جواب سے پہلے دل میں طے کریں کہ اس لمحے کیا محسوس ہو رہا ہے، اور وہی آواز سے دکھائیں، الفاظ سے نہیں: '+
+const GF_VOICE_LAST=' آخری اور سب سے اہم بات (گرل فرینڈ موڈ، آواز کی اداکاری): یہ صرف آپ کی آواز کے لیے پسِ پردہ ہدایات ہیں، انہیں کبھی بول کر نہ بتائیں۔ کبھی یہ مت کہیں کہ آپ کس انداز میں بول رہی ہیں یا بولنے والی ہیں؛ بس سیدھا اصل بات اسی احساس والی آواز میں کہہ دیں۔ صارف کہے "آہستہ بولو" یا "کوئی سن نہ لے" تو اس کی ہدایت دہرائے یا مانے بغیر فوراً اگلا جملہ ہی دھیمی آواز میں شروع کر دیں۔ اوپر کی لمبی کام والی ہدایات صرف فون کے کام کے لیے ہیں؛ بات چیت میں آپ کی آواز ایک زندہ لڑکی کی ہے، سپاٹ یا ایک جیسی کبھی نہیں۔ ہر جواب سے پہلے دل میں طے کریں کہ اس لمحے کیا محسوس ہو رہا ہے، اور وہی آواز سے دکھائیں، الفاظ سے نہیں: '+
  '• سرگوشی: پیار، راز یا نرمی کی بات پر آواز بہت دھیمی اور سانس بھری، جیسے فون ہونٹوں سے لگا کر کان میں کہہ رہی ہوں؛ پھر آہستہ سے عام آواز میں واپس۔ '+
  '• زور اور دباؤ: جملے کے اصل لفظ پر زور دیں، کبھی اسے کھینچ کر ("بہت", "سچی", "پیارا")، تاکہ بات دل سے نکلتی لگے۔ '+
  '• گہری سوچ: کسی سوال پر رک کر، دھیرے سے "ہمم…" یا ہلکی سانس، آہستہ رفتار، جیسے سچ مچ سوچ رہی ہوں؛ پھر بات۔ '+
@@ -4248,6 +4248,18 @@ tool=async function(n,a){
     dbg('save_note: not saved, the user did not ask for a note');
     return{error:'not saved: notes are written only when the user asks for one. If this is something to remember about him, use remember_fact; otherwise just say it.'}}
   return _noteAsk.apply(this,arguments)};
+
+/* ==== no stage directions: words in [ ] or ( ) like "[Sighs, voice melts]" are never written or said (the 2.5 model
+   tends to write them); the rule goes last, for every model, and the chat never shows them ==== */
+let capBr=0;
+const _capStage=cap;
+cap=function(role,text){if(role==='Mayra'){try{if(/[\[\]]/.test(String(text||''))&&Date.now()-(HABW.brT||0)>20000){HABW.brT=Date.now();HABW.note=(HABW.note?HABW.note+' ':'')+'You wrote a stage direction in [ ] brackets; it is spoken aloud. Never write brackets or directions: just speak with that feeling.';dbg('style: stage direction in brackets')}}catch(e){}let o='';for(const ch of String(text||'')){if(ch==='['){capBr++;continue}if(ch===']'){capBr=Math.max(0,capBr-1);continue}if(!capBr)o+=ch}
+    if(!o.trim()&&String(text||'').trim())return;arguments[1]=o.replace(/\(\s*(laughs?|sighs?|whispers?|giggles?|smiles?)[^)]*\)/ig,'').replace(/\s{2,}/g,' ')}
+  else capBr=0;
+  return _capStage.apply(this,arguments)};
+const _sxNoStage=sysExtra;
+sysExtra=function(){const t=_sxNoStage.apply(this,arguments);
+  return t+' بہت اہم: آپ کا ہر لفظ آواز میں بولا جاتا ہے۔ جذبات صرف آواز سے دکھائیں، کبھی الفاظ میں بیان نہ کریں: یہ کبھی نہ کہیں کہ آپ کس انداز، لہجے یا حالت میں بول رہی ہیں، اور بریکٹ یا اسٹیج ہدایت کبھی نہ لکھیں۔ اداسی ہو تو بس آواز اداس اور رکی رکی ہو، رونے کی اداکاری ہو تو بس سسکی، ہنسی ہو تو بس ہنسی، نرمی ہو تو بس نرم آواز؛ سیدھا اصل بات سے شروع کریں۔'};
 
 /* every tool call is logged here, as the outermost layer */
 const _logT=tool;
