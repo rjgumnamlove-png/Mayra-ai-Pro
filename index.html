@@ -371,6 +371,7 @@ function wsCloseHandler(w){return e=>{dbg('websocket closed, code='+e.code);
       if(w!==ws)return;
       if(live&&!stopping&&(swapping||softRenew('closed '+e.code)))return;
       const was=live;cleanup();
+      if(!was&&!stopping&&AFF_SENT&&!AFF_BAD&&/2\.5/.test(modelName())){AFF_BAD=true;dbg('2.5: emotion setting refused ('+e.code+'), reconnecting without it');setTimeout(()=>{if(!stopping)start()},300);return}
       if(!was&&!stopping&&!LIVE38_BAD&&/3\.8-live/.test(modelName())){LIVE38_BAD=true;dbg('gemini-3.8-live refused ('+e.code+' '+(e.reason||'')+'): using gemini-3.1-flash-live-preview');status('نیا ماڈل اس key پر نہیں چلا، پرانے ماڈل سے جڑ رہی ہوں…');setTimeout(()=>{if(!stopping)start()},300);return}
       if(!was&&!stopping&&!noExtras&&/1007|1008|unknown|invalid/i.test(e.code+' '+e.reason)){noExtras=true;setTimeout(()=>{if(!stopping)start()},300);return}
 
@@ -387,6 +388,21 @@ modelName=function(){const m=_modelName38.apply(this,arguments);return (LIVE38_B
 // 3.8 Live runs tools in the background by default; Mayra's tools expect an answer first, so they are marked BLOCKING
 const _setupMsg38=setupMsg;
 setupMsg=function(){const o=_setupMsg38.apply(this,arguments);try{if(/3\.8-live/.test(o.setup.model))o.setup.tools=(o.setup.tools||[]).map(t=>t&&t.functionDeclarations?{functionDeclarations:t.functionDeclarations.map(f=>Object.assign({},f,{behavior:'BLOCKING'}))}:t)}catch(e){}return o};
+/* ==== the 2.5 native-audio model: its own emotional voice (affective dialog) instead of written voice techniques.
+   Long "how to use your voice" instructions made it announce its tone before speaking ("[Sighs]", "in a sad voice…").
+   For 2.5 only, those voice-technique blocks are left out; everything about WHAT she feels (pampering, sulking, jealousy,
+   goodbyes, deep attachment, learning) stays. If the setting is refused, the call simply reconnects without it. ==== */
+let AFF_BAD=false,AFF_SENT=false;
+const _setupMsg25=setupMsg;
+setupMsg=function(){const o=_setupMsg25.apply(this,arguments);AFF_SENT=false;
+  try{if(/2\.5/.test(o.setup.model)){
+    if(!AFF_BAD){o.setup.generationConfig=Object.assign({},o.setup.generationConfig,{enableAffectiveDialog:true});AFF_SENT=true}
+    const p=o.setup.systemInstruction.parts[0];let t=p.text;
+    [()=>GF_VOICE,()=>GF_SOUNDS,()=>GF_PROSODY,()=>GF_VOICE_LAST].forEach(function(f){try{const v=f();if(typeof v==='string'&&v.length>40)t=t.split(v).join(' ')}catch(e){}});
+    // the opening rule without the worked examples (their voice words were being read out)
+    const ex=t.indexOf('EXAMPLES of correct output');if(ex>=0){const end=t.indexOf('Begin every reply directly with the real words.',ex);if(end>ex)t=t.slice(0,ex)+t.slice(end)}
+    p.text=t+' Your voice already carries your feelings naturally: just feel them and talk. When he asks you to speak softly or secretly, simply speak that way, without saying so.'}}catch(e){}
+  return o};
 let swapping=false,toolsBusy=0,connAt=0;
 function softRenew(why){
   if(swapping||stopping||!live||!resumeHandle)return false;
