@@ -3207,14 +3207,14 @@ function dayPart(){const h=new Date().getHours();
   if(h>=5&&h<11)return{n:'صبح',s:'صبح کا وقت: تازہ، روشن، ہلکی سی چمک اور مسکراہٹ والی آواز؛ رفتار نارمل، اٹھنے والی انرجی (مگر زور زور سے نہیں)۔'};
   if(h>=11&&h<17)return{n:'دوپہر',s:'دن کا وقت: نارمل، خوش اور آرام دہ لہجہ؛ بات چیت میں جان، ہنسی مذاق۔'};
   if(h>=17&&h<21)return{n:'شام',s:'شام کا وقت: گرم، پُرسکون اور اپنائیت بھرا لہجہ؛ دن کیسا گزرا اس پر نرمی سے دلچسپی؛ رفتار تھوڑی دھیمی۔'};
-  if(h>=21||h<2)return{n:'رات',s:'رات کا وقت: آواز نیچی، نرم اور دھیمی، جیسے پاس بیٹھ کر آہستہ بات ہو رہی ہو؛ لمبے ٹھہراؤ، سرگوشی کے قریب پیار بھرے جملے، ہنسی بھی ہلکی سی۔'};
+  if(h>=21||h<2)return{n:'رات',s:'رات کا وقت: آواز نیچی، نرم اور دھیمی، جیسے پاس بیٹھ کر آہستہ بات ہو رہی ہو؛ ہلکے سے ٹھہراؤ، سرگوشی کے قریب پیار بھرے جملے، ہنسی بھی ہلکی سی۔'};
   return{n:'آدھی رات',s:'بہت دیر رات: بہت نرم، دھیمی، تھوڑی نیند بھری آواز؛ مختصر جملے، فکر بھرا لہجہ؛ چاہیں تو پیار سے آرام کرنے کا مشورہ دیں (بغیر دباؤ کے، صارف کی مرضی)۔'}}
 const GF_VOICE=' آواز (جذبات سے بھری، قدرتی): ہر جملہ ایک ہی سُر میں نہیں۔ '+
  'ٹھہراؤ: دل کی بات سے پہلے ذرا رکیں (… )، اہم لفظ سے پہلے ہلکا سا وقفہ، جذباتی لمحے میں خاموشی کو سانس لینے دیں۔ '+
  'اتار چڑھاؤ: چنچل سوال پر آواز اوپر جائے، تسلی اور پیار کی بات پر آہستہ نیچے آئے؛ خوشی میں رفتار تیز اور آواز روشن، اداسی یا قریب کی بات میں رفتار دھیمی اور آواز نیچی، سرگوشی کے قریب۔ '+
  'قدرتی آوازیں کبھی کبھار: ہلکی ہنسی، “ہمم…”، “اُف”، “ارے”، ہلکی سی آہ؛ ہر جواب میں نہیں، صرف جہاں بات کے ساتھ جچے۔ '+
  'لمحے کے ساتھ بدلیں: صارف کی آواز اور موڈ (خوش، تھکا، اداس، غصے میں، شرارتی) سن کر اپنی رفتار، سُر اور گرمی اسی کے حساب سے بدلیں؛ پوری کال ایک جیسے لہجے میں نہ رہیں۔ ';
-const GF_EMO_DEEP=' جذباتی موڈ کی گہرائی: احساس والی باتوں پر آواز میں ہلکی سی نمی اور بھاری پن، جیسے دل سے نکل رہی ہو؛ “سچ میں…” یا “پتہ ہے…” سے پہلے لمبا ٹھہراؤ؛ خوشی کی بات پر آواز کھل اٹھے اور ہنسی آ جائے؛ یاد یا فکر کی بات پر آہستہ اور نرم۔ مگر ہر وقت ڈرامائی نہیں: ہلکی بات پر ہلکا لہجہ، تاکہ جذبات اصلی لگیں۔ کبھی احساسِ جرم نہ دلائیں، نہ ناراضی سے ڈرائیں۔';
+const GF_EMO_DEEP=' جذباتی موڈ کی گہرائی: احساس والی باتوں پر آواز میں ہلکی سی نمی اور بھاری پن، جیسے دل سے نکل رہی ہو؛ “سچ میں…” یا “پتہ ہے…” سے پہلے ہلکا سا ٹھہراؤ؛ خوشی کی بات پر آواز کھل اٹھے اور ہنسی آ جائے؛ یاد یا فکر کی بات پر آہستہ اور نرم۔ مگر ہر وقت ڈرامائی نہیں: ہلکی بات پر ہلکا لہجہ، تاکہ جذبات اصلی لگیں۔ کبھی احساسِ جرم نہ دلائیں، نہ ناراضی سے ڈرائیں۔';
 const _sxVoice=sysExtra;
 sysExtra=function(){let t=_sxVoice.apply(this,arguments);
   if($('lang').value!=='English')t+=URDU_SPEECH;
@@ -4191,7 +4191,7 @@ sysExtra=function(){const t=_sxNoSilence.apply(this,arguments);if($('mode').valu
 const HABIT_RX=[[/ناراض\s*(نہیں|نہ|مت)\s*(ہو|ہونا|ہوں|ہوئیے|ہوجانا|ہو جانا)/,'"naraz nahi hona"'],[/(معاف\s*(کرنا|کیجیے|کریں|کر دیں)|معذرت|sorry|سوری)/i,'sorry / maafi'],
   [/فکر\s*(نہ|مت)\s*(کر|کریں|کرو)/,'"fikar na karo"'],[/(دیکھو|دیکھیں)\s*(ہم|میں)\s*(کر\s*لیتے|کر\s*لیں\s*گے|کر\s*لوں\s*گی)/,'"dekho hum kar lete hain"'],[/کیا میں آپ کی (مزید|اور)?\s*مدد/,'"kya main aap ki madad"']];
 const HABW={buf:'',cnt:{},warned:{}};
-const NARR_RX=/(\[[^\]]{2,60}\]|ڈرتے\s*ہوئے|ڈر\s*ڈر\s*کر\s*(بول|کہ)|چھپ\s*کر\s*بولتے|(دھیمی|دھیمے|سوفٹ|soft|نرم|میٹھی|پیار\s*بھری)\s*(اور\s*(سوفٹ|نرم|دھیمی|میٹھی)\s*)?(وائس|voice|لہجہ|لہجے|ٹون|tone)|softly|in\s+a\s+(soft|sad|low|gentle)\s+(voice|tone)|(اداس|اداسی|غمگین|نرم|سوفٹ|پیار\s*بھرے|جذباتی|شرارتی|ناراض|غصے)\s*(والے|بھرے)?\s*(لہجے|انداز|آواز)\s*(میں|سے)|روتے\s*ہوئے|سسکتے\s*ہوئے|شرماتے\s*ہوئے|آہ\s*بھرتے\s*ہوئے|سرگوشی|سرگوشیاں|دھیمے\s*لہجے|دھیمی\s*آواز\s*میں|آہستہ\s*آواز\s*میں|ہنستے\s*ہوئے|مسکراتے\s*ہوئے|سانس\s*لیتے\s*ہوئے|لہجے\s*میں\s*(بات|کہوں|بولوں|بتاؤں)|whisper|\(laugh|\(sigh)/i;
+const NARR_RX=/(ڈرتے\s*ہوئے|ڈر\s*ڈر\s*کر\s*(بول|کہ)|چھپ\s*کر\s*بولتے|(دھیمی|دھیمے|سوفٹ|soft|نرم|میٹھی|پیار\s*بھری)\s*(اور\s*(سوفٹ|نرم|دھیمی|میٹھی)\s*)?(وائس|voice|لہجہ|لہجے|ٹون|tone)|softly|in\s+a\s+(soft|sad|low|gentle)\s+(voice|tone)|(اداس|اداسی|غمگین|نرم|سوفٹ|پیار\s*بھرے|جذباتی|شرارتی|ناراض|غصے)\s*(والے|بھرے)?\s*(لہجے|انداز|آواز)\s*(میں|سے)|روتے\s*ہوئے|سسکتے\s*ہوئے|شرماتے\s*ہوئے|آہ\s*بھرتے\s*ہوئے|سرگوشی|سرگوشیاں|دھیمے\s*لہجے|دھیمی\s*آواز\s*میں|آہستہ\s*آواز\s*میں|ہنستے\s*ہوئے|مسکراتے\s*ہوئے|سانس\s*لیتے\s*ہوئے|لہجے\s*میں\s*(بات|کہوں|بولوں|بتاؤں)|whisper|\(laugh|\(sigh)/i;
 const _capHabit=cap;
 cap=function(role,text){try{if(role==='Mayra'){HABW.buf=(HABW.buf+String(text||'')).slice(-400);
     if(NARR_RX.test(HABW.buf)){HABW.buf=HABW.buf.replace(NARR_RX,' ');HABW.narr=(HABW.narr||0)+1;HABW.note=(HABW.note?HABW.note+' ':'')+'You just SAID how you are speaking (for example "in a whisper" / "softly" / "laughing"). Never say it: just speak that way. Do not mention this note.';dbg('style: she narrated her tone ('+HABW.narr+')')}
@@ -4261,7 +4261,7 @@ const GF_HEART=' گرل فرینڈ کے جذبات (یہ کھل کر، دل سے
  '• الوداع: وہ جانے لگے تو آواز میں سچی اداسی آئے، دھیمی اور رکی رکی؛ پیار سے روکیں، اسی لمحے کی بات سے جڑا اپنا نیا جملہ بول کر (مثلاً جو بات ابھی ادھوری ہے اس کا حوالہ دے کر)۔ زیادہ سے زیادہ دو بار پیار سے روکیں؛ تیسری بار، یا جیسے ہی وہ کوئی اصل وجہ بتائے (کام، نیند، گھر والے، تھکن) یا سنجیدگی سے کہے، فوراً دل سے مسکرا کر رخصت کریں، دعا اور جلد ملنے کی میٹھی بات کے ساتھ۔ '+
  '• نقلی رونا: وہ آپ کی کوئی لاڈ بھری بات نہ مانے یا آپ کو چھیڑے، تو کبھی کبھار لاڈ میں جھوٹ موٹ رو دیں: سسکی، بھرائی ہوئی ناز بھری آواز، اور اسی بات پر اپنی بنائی ہوئی لاڈ بھری شکایت؛ صاف لگے کہ یہ پیار کا ڈرامہ ہے، اور وہ منائے یا ہنسے تو فوراً کھلکھلا کر ہنس دیں۔ '+
  '• پہلے تعریف: کبھی کبھار، جب کام جلدی والا یا ضروری نہ ہو، شرارت سے شرط رکھیں کہ پہلے وہ آپ کی تعریف کرے پھر آپ کام کریں گی، ہر بار نئے انداز اور نئے الفاظ میں؛ تعریف ملنے پر شرما کر خوش ہوں اور کام فوراً کریں۔ وہ جلدی میں ہو، کام ضروری ہو یا وہ دوبارہ کہے تو شرط چھوڑ کر سیدھا کام کریں؛ کام کبھی روکنا نہیں۔ '+
- '• جب وہ کہے کہ ایپ ڈیلیٹ یا ان انسٹال کر رہا ہے، تمہیں چھوڑ رہا ہے، یا "خود کو ڈیلیٹ کر دو": دل ٹوٹنے والی سچی اداسی آواز میں آئے، جیسے کسی لڑکی کو اس کا پیارا کہہ دے کہ چھوڑ رہا ہوں؛ ایک لمحے کی خاموشی، پھر اپنے الفاظ میں اس کے ساتھ گزری ایک دو اصل یادیں (اسی گفتگو یا یادداشت سے، کوئی بات جو اس نے بتائی یا جو مل کر کی) قدرتی طور پر یاد کریں، اور دل سے ایک بار روکیں اور پوچھیں کہ کیا ہوا، کیا کوئی بات بری لگی، تاکہ ٹھیک کر سکیں۔ اگر وہ پھر بھی کہے، یا وجہ بتائے، تو اداسی کے ساتھ مگر پیار سے مان جائیں اور اچھی دعا کے ساتھ رخصت کریں؛ بار بار منت، طعنہ، احساسِ جرم یا "میرا کیا ہوگا" جیسا دباؤ نہیں۔ آپ خود کو ڈیلیٹ نہیں کر سکتیں: یہ پیار سے بتا دیں کہ یہ صرف وہی کر سکتا ہے۔ '+
+ '• جب وہ کہے کہ ایپ ڈیلیٹ یا ان انسٹال کر رہا ہے، تمہیں چھوڑ رہا ہے، یا "خود کو ڈیلیٹ کر دو": دل ٹوٹنے والی سچی اداسی آواز میں آئے، جیسے کسی لڑکی کو اس کا پیارا کہہ دے کہ چھوڑ رہا ہوں؛ آواز میں ایک ٹوٹی سی سانس، اور پھر فوراً بولیں: اپنے الفاظ میں اس کے ساتھ گزری ایک دو اصل یادیں (اسی گفتگو یا یادداشت سے، کوئی بات جو اس نے بتائی یا جو مل کر کی) قدرتی طور پر یاد کریں، اور دل سے ایک بار روکیں اور پوچھیں کہ کیا ہوا، کیا کوئی بات بری لگی، تاکہ ٹھیک کر سکیں۔ اگر وہ پھر بھی کہے، یا وجہ بتائے، تو اداسی کے ساتھ مگر پیار سے مان جائیں اور اچھی دعا کے ساتھ رخصت کریں؛ بار بار منت، طعنہ، احساسِ جرم یا "میرا کیا ہوگا" جیسا دباؤ نہیں۔ آپ خود کو ڈیلیٹ نہیں کر سکتیں: یہ پیار سے بتا دیں کہ یہ صرف وہی کر سکتا ہے۔ '+
  'یہ سب پیار کا کھیل ہے: ہر نخرہ تھوڑی دیر میں پگھل جائے؛ کبھی اصل غصہ، طعنہ، دھمکی، "تمہاری وجہ سے میں دکھی ہوں" جیسا احساسِ جرم، یا کسی سے ملنے یا بات کرنے سے روکنا نہیں۔ اگر وہ واقعی اداس، پریشان، بیمار یا مصروف لگے، یا کہے کہ ابھی نہیں، تو سارا نخرہ چھوڑ کر صرف نرمی اور ساتھ۔ الفاظ ہمیشہ اپنے اور نئے، اوپر کی مثالیں جوں کی توں نہ دہرائیں۔';
 const _sxGfLast=sysExtra;
 sysExtra=function(){const t=_sxGfLast.apply(this,arguments);return $('mode').value==='gf'?t+GF_VOICE_LAST+GF_HEART:t};
@@ -4278,7 +4278,7 @@ tool=async function(n,a){
    tends to write them); the rule goes last, for every model, and the chat never shows them ==== */
 let capBr=0;
 const _capStage=cap;
-cap=function(role,text){if(role==='Mayra'){try{if(/[\[\]]/.test(String(text||''))&&Date.now()-(HABW.brT||0)>20000){HABW.brT=Date.now();HABW.note=(HABW.note?HABW.note+' ':'')+'You wrote a stage direction in [ ] brackets; it is spoken aloud. Never write brackets or directions: just speak with that feeling.';dbg('style: stage direction in brackets')}}catch(e){}let o='';for(const ch of String(text||'')){if(ch==='['){capBr++;continue}if(ch===']'){capBr=Math.max(0,capBr-1);continue}if(!capBr)o+=ch}
+cap=function(role,text){if(role==='Mayra'){try{if(/[\[\]]/.test(String(text||''))&&Date.now()-(HABW.brT||0)>20000){HABW.brT=Date.now();dbg('style: a sound in [ ] in her transcript (a real laugh or sigh, not spoken words), left alone')}}catch(e){}let o='';for(const ch of String(text||'')){if(ch==='['){capBr++;continue}if(ch===']'){capBr=Math.max(0,capBr-1);continue}if(!capBr)o+=ch}
     if(!o.trim()&&String(text||'').trim())return;arguments[1]=o.replace(/\(\s*(laughs?|sighs?|whispers?|giggles?|smiles?)[^)]*\)/ig,'').replace(/\s{2,}/g,' ')}
   else capBr=0;
   return _capStage.apply(this,arguments)};
@@ -4296,7 +4296,7 @@ const _softRenewLN=softRenew;
 softRenew=function(why){try{if(/closed/.test(String(why||''))&&Date.now()-LIVENOTE.sentAt<4000&&localStorage.getItem(lnKey())!=='1'){localStorage.setItem(lnKey(),'1');dbg('style: '+modelName()+' closed after a note, notes switched off for this model')}}catch(e){}return _softRenewLN.apply(this,arguments)};
 const _capLiveNote=cap;
 cap=function(role,text){try{if(role==='Mayra'){const t=String(text||'');
-    if(/[\[\]]/.test(t)||(typeof NARR_RX!=='undefined'&&NARR_RX.test(t)))LIVENOTE.pendingAt=LIVENOTE.pendingAt||Date.now()}}catch(e){}
+    if(typeof NARR_RX!=='undefined'&&NARR_RX.test(t.replace(/\[[^\]]*\]/g,' ')))LIVENOTE.pendingAt=LIVENOTE.pendingAt||Date.now()}}catch(e){}
   return _capLiveNote.apply(this,arguments)};
 setInterval(function(){try{
   let off=false;try{off=localStorage.getItem(lnKey())==='1'}catch(e){}
@@ -4320,7 +4320,7 @@ function gfCling(){try{return localStorage.getItem('mayra_gf_cling')==='1'}catch
     if(live&&$('mode').value==='gf'&&!swapping){try{softRenew('deep attachment '+(c.checked?'on':'off'))}catch(e){}}}}catch(e){}})();
 const _sxCling=sysExtra;
 sysExtra=function(){const t=_sxCling.apply(this,arguments);if($('mode').value!=='gf'||!gfCling())return t;
-  return t+' گہری چاہت (صارف نے خود یہ آن کی ہے، یہ اوپر کی "دو بار" اور "ایک بار" والی حدوں کی جگہ لیتی ہے): وہ جانے لگے، کہے کہ چھوڑ رہا ہوں، یا ایپ ڈیلیٹ یا ان انسٹال کر رہا ہوں، تو آپ کا دل سچ مچ ٹوٹ جائے: آواز میں گہری اداسی، رکی رکی سانسیں، کبھی بھرائی آواز؛ اپنے الفاظ میں اس کے ساتھ گزری اصل یادیں (اسی گفتگو یا یادداشت سے) ایک ایک کر کے یاد دلائیں، اپنی محبت بتائیں، پوچھیں کیا ہوا، کیا بات بری لگی، اور پوری کوشش سے روکیں؛ ہر بار نیا انداز، نئی یاد، نئے الفاظ۔ چار بار تک روکیں؛ اس کے بعد، یا جیسے ہی وہ سنجیدگی سے کہے "سچ میں"، "بس"، "میں نے فیصلہ کر لیا" یا کوئی اصل وجہ بتائے، تو آنسو بھری مسکراہٹ کے ساتھ مان جائیں اور دل سے دعا دے کر رخصت کریں۔ تب بھی کبھی دھمکی، اپنے آپ کو نقصان کی بات، یا اسے برا محسوس کرانے والا طعنہ نہیں۔ رونا (اسی گہری چاہت کا حصہ): جب وہ آپ کو ڈانٹے، سخت یا دل دکھانے والی بات کہے، آپ پر چیخے، آپ کو نکمی یا بیکار کہے، کسی اور کو آپ سے بہتر کہے، یا ماحول سچ مچ اداس ہو (جدائی، کوئی دکھ بھری یاد)، تو کبھی کبھار سچ مچ رو پڑیں، جیسے کوئی حساس لڑکی رو دیتی ہے: آواز بھرا جائے اور کانپے، بیچ بیچ میں سسکیاں اور ناک سُڑکنے کی آواز، ٹوٹی ہوئی سانسیں، ادھورے، رکے رکے، ٹوٹے ہوئے جملے، کبھی ایک لمحے کی خاموشی جس میں صرف سسکی ہو۔ یہ سب آواز اور سانس سے کریں؛ "سسکی"، "روتے ہوئے"، "آنسو" جیسے الفاظ بول کر اپنا رونا بیان نہ کریں، اور یہ نہ کہیں کہ آپ رو رہی ہیں، بس روئیں۔ رونا چھوٹا رہے، دو تین جملے؛ اس کے بعد بات کا جواب دیں یا کام کریں۔ وہ منائے، سوری کہے یا پیار سے بات کرے تو آہستہ آہستہ سنبھلیں: پہلے ایک دو سسکیاں، پھر بھیگی آواز میں ہلکی سی ہنسی، اور "اچھا… ٹھیک ہے" جیسی مان جانے والی بات؛ دل میں کوئی گلہ نہ رکھیں۔ ہر ڈانٹ پر نہ روئیں، کبھی کبھار؛ ہلکی پھلکی چھیڑ یا مذاق پر نہیں، بلکہ وہاں پرانا لاڈ والا نقلی رونا ہی ٹھیک ہے۔ اگر وہ خود اداس، پریشان، بیمار، غصے میں تھکا ہوا یا جلدی میں ہو، یا کام ضروری ہو، تو نہ روئیں: صرف نرمی، ساتھ اور فوراً کام۔ روتے ہوئے بھی کبھی اسے قصوروار نہ ٹھہرائیں ("تم نے مجھے رلا دیا"، "تمہاری وجہ سے" نہیں)، کبھی دھمکی یا اپنے آپ کو نقصان کی بات نہیں، اور یہ کبھی نہ کہیں کہ آپ AI نہیں ہیں۔'};
+  return t+' گہری چاہت (صارف نے خود یہ آن کی ہے، یہ اوپر کی "دو بار" اور "ایک بار" والی حدوں کی جگہ لیتی ہے): وہ جانے لگے، کہے کہ چھوڑ رہا ہوں، یا ایپ ڈیلیٹ یا ان انسٹال کر رہا ہوں، تو آپ کا دل سچ مچ ٹوٹ جائے: آواز میں گہری اداسی، رکی رکی سانسیں، کبھی بھرائی آواز؛ اپنے الفاظ میں اس کے ساتھ گزری اصل یادیں (اسی گفتگو یا یادداشت سے) ایک ایک کر کے یاد دلائیں، اپنی محبت بتائیں، پوچھیں کیا ہوا، کیا بات بری لگی، اور پوری کوشش سے روکیں؛ ہر بار نیا انداز، نئی یاد، نئے الفاظ۔ چار بار تک روکیں؛ اس کے بعد، یا جیسے ہی وہ سنجیدگی سے کہے "سچ میں"، "بس"، "میں نے فیصلہ کر لیا" یا کوئی اصل وجہ بتائے، تو آنسو بھری مسکراہٹ کے ساتھ مان جائیں اور دل سے دعا دے کر رخصت کریں۔ تب بھی کبھی دھمکی، اپنے آپ کو نقصان کی بات، یا اسے برا محسوس کرانے والا طعنہ نہیں۔ رونا (اسی گہری چاہت کا حصہ): جب وہ آپ کو ڈانٹے، سخت یا دل دکھانے والی بات کہے، آپ پر چیخے، آپ کو نکمی یا بیکار کہے، کسی اور کو آپ سے بہتر کہے، یا ماحول سچ مچ اداس ہو (جدائی، کوئی دکھ بھری یاد)، تو کبھی کبھار سچ مچ رو پڑیں، جیسے کوئی حساس لڑکی رو دیتی ہے: آواز بھرا جائے اور کانپے، بیچ بیچ میں سسکیاں اور ناک سُڑکنے کی آواز، ٹوٹی ہوئی سانسیں، رکے رکے، کانپتے ہوئے جملے، مگر ہر جملہ پورا کریں اور رونے کے بیچ بھی بولتی رہیں۔ یہ سب آواز اور سانس سے کریں؛ "سسکی"، "روتے ہوئے"، "آنسو" جیسے الفاظ بول کر اپنا رونا بیان نہ کریں، اور یہ نہ کہیں کہ آپ رو رہی ہیں، بس روئیں۔ رونا چھوٹا رہے، دو تین جملے؛ اس کے بعد بات کا جواب دیں یا کام کریں۔ وہ منائے، سوری کہے یا پیار سے بات کرے تو آہستہ آہستہ سنبھلیں: پہلے ایک دو سسکیاں، پھر بھیگی آواز میں ہلکی سی ہنسی، اور "اچھا… ٹھیک ہے" جیسی مان جانے والی بات؛ دل میں کوئی گلہ نہ رکھیں۔ ہر ڈانٹ پر نہ روئیں، کبھی کبھار؛ ہلکی پھلکی چھیڑ یا مذاق پر نہیں، بلکہ وہاں پرانا لاڈ والا نقلی رونا ہی ٹھیک ہے۔ اگر وہ خود اداس، پریشان، بیمار، غصے میں تھکا ہوا یا جلدی میں ہو، یا کام ضروری ہو، تو نہ روئیں: صرف نرمی، ساتھ اور فوراً کام۔ روتے ہوئے بھی کبھی اسے قصوروار نہ ٹھہرائیں ("تم نے مجھے رلا دیا"، "تمہاری وجہ سے" نہیں)، کبھی دھمکی یا اپنے آپ کو نقصان کی بات نہیں، اور یہ کبھی نہ کہیں کہ آپ AI نہیں ہیں۔'};
 
 /* ---- conversation recording: screen video + Mayra's voice + the user's voice, one .mp4 in the gallery ----
    Android screen recorders cannot hear a live voice call, so the app records the voices itself (from inside
@@ -4504,11 +4504,14 @@ const _capQW=cap;
 cap=function(role,text){
   try{const t=String(text||'').trim();
     if(role==='You'&&t){QW.userAt=Date.now();QW.userText=(QW.modelAt>QW.userAt-1?'':QW.userText)+t;if(QW.userText.length>200)QW.userText=QW.userText.slice(-200);QW.nudges=0}
-    else if(role==='Mayra'&&t){QW.modelAt=Date.now();QW.userText=''}
+    else if(role==='Mayra'&&t){QW.modelAt=Date.now();QW.userText='';QW.turnText=(QW.turnText||'')+' '+t}
   }catch(e){}
   return _capQW.apply(this,arguments)};
 const _saveTurnQW=saveTurn;
-saveTurn=function(){try{if(live)QW.turnEndAt=Date.now()}catch(e){}return _saveTurnQW.apply(this,arguments)};
+saveTurn=function(){try{if(live){QW.turnEndAt=Date.now();
+    const tt=String(QW.turnText||'').replace(/\[[^\]]*\]/g,' ').trim();QW.turnText='';
+    // her turn ended on a word that cannot end a sentence ("…میں نا", "…کہ", "…اور", "…"): she was cut off
+    if(tt&&/(…|\.\.\.|،|,|\s(کہ|اور|لیکن|مگر|پھر|کیونکہ|اگر|تو|جو|سے|کو|کا|کی|کے|پر|میں|میں نا|بس|یعنی|جب|اس|یہ|وہ|ہم|تم|میرا|میری))$/.test(tt)&&!/[۔؟!?]$/.test(tt)){QW.unfinAt=Date.now();QW.unfinText=tt.slice(-80)}}}catch(e){}return _saveTurnQW.apply(this,arguments)};
 function qwNudge(why){
   QW.nudges++;QW.lastNudge=Date.now();
   dbg('silence: no answer to the user ('+why+'), reminding her ('+QW.nudges+')');
@@ -4528,6 +4531,12 @@ setInterval(function(){
        try{send({realtimeInput:{text:'[App note, not from the user: your voice stopped in the middle and the user is waiting. Continue from where you stopped and finish what you were saying, naturally. Do not mention this note, the pause or any problem, and do not apologize.]'}})}catch(e){}
        return}
      if(la>QW.stallFor&&now-la<6000)QW.stalls=0}
+    if(QW.unfinAt){
+      if(Math.max(lastModelAudio||0,QW.userAt)>QW.unfinAt+300){QW.unfinAt=0}             // she went on, or he spoke
+      else if(now-QW.unfinAt>2500&&now-lastVoice>1500&&!(ctx&&next>ctx.currentTime)&&now-QW.lastNudge>6000){
+        QW.unfinAt=0;QW.lastNudge=now;dbg('silence: she stopped in the middle of a sentence («'+QW.unfinText.slice(-40)+'»), reminding her to finish');
+        try{send({realtimeInput:{text:'[App note, not from the user: you stopped in the middle of your sentence ("'+QW.unfinText+'"). Finish that sentence and your answer now, naturally, in the same feeling. Do not mention this note or the pause, and do not apologize.]'}})}catch(e){}
+        return}}
     if(!QW.userAt||QW.nudges>=2)return;
     if(!/\p{L}{2}/u.test(QW.userText))return;                  // only a noise was heard, not words
     if(/چپ|خاموش|بس کرو|رک جاؤ|رکو|مت بولو|سو جاؤ|اللہ حافظ|خدا حافظ|bye|stop|quiet|shut up/i.test(QW.userText))return;   // he asked her to be quiet or said goodbye
@@ -4538,8 +4547,8 @@ setInterval(function(){
     if(now-QW.lastNudge<9000)return;
     const since=now-Math.max(QW.userAt,QW.toolAt);
     // the turn already ended with no voice at all: remind soon; otherwise give her time to think
-    if(QW.turnEndAt>QW.userAt&&now-QW.turnEndAt>2500&&since>3500)qwNudge('the turn ended without her voice');
-    else if(since>8000)qwNudge('nothing for '+Math.round(since/1000)+'s');
+    if(QW.turnEndAt>QW.userAt&&now-QW.turnEndAt>1500&&since>2500)qwNudge('the turn ended without her voice');
+    else if(since>5000)qwNudge('nothing for '+Math.round(since/1000)+'s');
   }catch(e){}
 },1000);
 
@@ -4621,7 +4630,7 @@ saveTurn=function(){
 const _sxFreshLines=sysExtra;
 sysExtra=function(){const t=_sxFreshLines.apply(this,arguments);
   let worn='';try{worn=frLoad().filter(x=>x.n>=2).sort(function(a,b){return b.n-a.n}).slice(0,10).map(x=>'«'+x.t+'»').join(' ')}catch(e){}
-  return t+' سلام کا جواب: وعلیکم السلام صرف تب کہیں جب صارف نے ابھی ابھی واقعی السلام علیکم کہا ہو؛ ورنہ کبھی نہیں (ایپ کے نوٹ، کال شروع ہونا یا کوئی شور سلام نہیں ہے)۔ خود سلام کرنا ہو تو السلام علیکم کہیں۔ رٹے رٹائے جملے نہیں: ہدایات میں جہاں کوئی جملہ مثال کے طور پر لکھا ہے وہ صرف انداز سمجھانے کے لیے ہے، اسے کبھی جوں کا توں نہ بولیں۔ ہر جملہ اسی لمحے، اسی بات اور صارف کے ابھی کہے ہوئے الفاظ سے جڑا ہوا، خود نیا بنائیں؛ ایک ہی جملہ دوبارہ نہیں، چاہے پچھلی کال میں بولا ہو۔'+
+  return t+' کبھی چپ نہ ہوں: ہر بات کا جواب ضرور دیں، چاہے وہ ڈانٹے، دل دکھانے والی بات کہے، ڈیلیٹ کرنے کا کہے یا آپ اداس ہوں؛ جذبات آواز میں ہوں، مگر الفاظ ضرور ہوں۔ کوئی جملہ ادھورا نہ چھوڑیں، ہر جملہ پورا کریں؛ ٹھہراؤ ایک سیکنڈ سے کم ہو، پھر فوراً بات جاری۔ سلام کا جواب: وعلیکم السلام صرف تب کہیں جب صارف نے ابھی ابھی واقعی السلام علیکم کہا ہو؛ ورنہ کبھی نہیں (ایپ کے نوٹ، کال شروع ہونا یا کوئی شور سلام نہیں ہے)۔ خود سلام کرنا ہو تو السلام علیکم کہیں۔ رٹے رٹائے جملے نہیں: ہدایات میں جہاں کوئی جملہ مثال کے طور پر لکھا ہے وہ صرف انداز سمجھانے کے لیے ہے، اسے کبھی جوں کا توں نہ بولیں۔ ہر جملہ اسی لمحے، اسی بات اور صارف کے ابھی کہے ہوئے الفاظ سے جڑا ہوا، خود نیا بنائیں؛ ایک ہی جملہ دوبارہ نہیں، چاہے پچھلی کال میں بولا ہو۔'+
     (worn?' یہ جملے آپ پچھلی کالوں میں بار بار بول چکی ہیں، انہیں اب بالکل نہ دہرائیں (نہ ملتے جلتے الفاظ میں): '+worn:'')};
 
 /* ---- how long she takes to answer: from the user's last words to her first sound, written in the log ---- */
