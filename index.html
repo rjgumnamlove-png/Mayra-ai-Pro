@@ -398,7 +398,7 @@ const _setupMsg25=setupMsg;
 setupMsg=function(){const o=_setupMsg25.apply(this,arguments);AFF_SENT=false;
   try{if(/2\.5/.test(o.setup.model)){
     if(!AFF_BAD){o.setup.generationConfig=Object.assign({},o.setup.generationConfig,{enableAffectiveDialog:true});AFF_SENT=true}
-    THINK_SENT=false;if(!THINK_BAD){o.setup.generationConfig=Object.assign({},o.setup.generationConfig,{thinkingConfig:{thinkingBudget:0}});THINK_SENT=true}
+    THINK_SENT=false;{const tl=(typeof thinkLevel==='function')?thinkLevel():0;if(!THINK_BAD&&tl<2){o.setup.generationConfig=Object.assign({},o.setup.generationConfig,{thinkingConfig:{thinkingBudget:tl===1?512:0}});THINK_SENT=true}}
     const p=o.setup.systemInstruction.parts[0];let t=p.text;
     [()=>GF_VOICE,()=>GF_SOUNDS,()=>GF_PROSODY,()=>GF_VOICE_LAST].forEach(function(f){try{const v=f();if(typeof v==='string'&&v.length>40)t=t.split(v).join(' ')}catch(e){}});
     // the opening rule without the worked examples (their voice words were being read out)
@@ -1138,7 +1138,7 @@ $('clear').onclick=()=>{cur=null;$('log').innerHTML='<div class="small">Chat cle
 // ===== sidebar, persona, volume, settings =====
 const SET=['rgbI','askc','key','modelSel','model','imgModel','voice','lang','rgbOn','spk','mem','bgm','vol','mode','uname','nick','gfN','gfO','gfC','gfS','fH','tSub','tLv','tS','gs','greet'];
 function openSide(){$('side').classList.add('open');$('shade').classList.add('open')}
-function closeSide(){$('side').classList.remove('open');$('shade').classList.remove('open')}
+function closeSide(){$('side').classList.remove('open');$('shade').classList.remove('open');setTimeout(function(){try{$('side').querySelectorAll('details[open]').forEach(function(d){d.open=false})}catch(e){}},320)}
 $('menu').onclick=openSide;$('shade').onclick=closeSide;$('closeSide').onclick=closeSide;
 $('saveBtn').onclick=()=>{saveAll();const b=$('saveBtn');b.textContent='✓ Saved';setTimeout(()=>{b.textContent='💾 Save settings'},1600)};
 function showV(){document.querySelectorAll('#side input[type=range]').forEach(r=>{const v=$('v_'+r.id);if(v)v.textContent=r.id==='vol'?Math.round(r.value*100)+'%':r.value})}
@@ -4595,7 +4595,7 @@ const _greetClear=greetNow;
 greetNow=function(){
   const _send=send;let done=false;
   send=function(o){try{if(!done&&o&&o.realtimeInput&&typeof o.realtimeInput.text==='string'&&/call has just started|the user closed the call/.test(o.realtimeInput.text)){done=true;
-      o={realtimeInput:{text:o.realtimeInput.text+' (Say it in clear, natural Pakistani Urdu, every word with its correct Urdu pronunciation, at a calm pace; no Hindi or English accent. The user has not said anything yet and has not greeted you, so never answer with وعلیکم السلام: you greet first.)'}}}}catch(e){}
+      o={realtimeInput:{text:'(This is a message from the app, not the user: the user has not spoken or greeted you yet.) '+o.realtimeInput.text+' (Say it in clear, natural Pakistani Urdu, every word with its correct Urdu pronunciation, at a calm pace; no Hindi or English accent. The user has not said anything yet and has not greeted you, so never answer with وعلیکم السلام: you greet first.)'}}}}catch(e){}
     return _send.apply(this,arguments)};
   try{return _greetClear.apply(this,arguments)}finally{send=_send}};
 
@@ -4654,7 +4654,8 @@ play=function(u){try{if(LAT.waiting&&LAT.userAt){LAT.waiting=false;const d=(Date
    Voice volume; 2.5 is left alone (it already speaks calmly) unless "all models" is ticked. ---- */
 function vsGet(){let v=0.9;try{const x=parseFloat(localStorage.getItem('mayra_vspeed'));if(x>=0.7&&x<=1.1)v=x}catch(e){}return v}
 function vsAll(){try{return localStorage.getItem('mayra_vspeed_all')==='1'}catch(e){return false}}
-function vsActive(){const s=vsGet();if(Math.abs(s-1)<0.01)return 0;if(!vsAll()&&/2\.5/.test(modelName()))return 0;return s}
+function vsGet25(){let v=NaN;try{v=parseFloat(localStorage.getItem('mayra_vspeed25'))}catch(e){}if(!(v>=0.7&&v<=1.1))v=vsAll()?vsGet():1;return v}
+function vsActive(){const s=/2\.5/.test(modelName())?vsGet25():vsGet();if(Math.abs(s-1)<0.01)return 0;return s}
 const VS={N:960,Hs:480,D:160,buf:new Float32Array(0),pos:0,nat:-1,ola:new Float32Array(960),win:null,timer:null,speed:1};
 VS.win=new Float32Array(VS.N);for(let i=0;i<VS.N;i++)VS.win[i]=0.5-0.5*Math.cos(2*Math.PI*i/VS.N);
 function vsReset(){VS.buf=new Float32Array(0);VS.pos=0;VS.nat=-1;VS.ola=new Float32Array(VS.N);clearTimeout(VS.timer);VS.timer=null}
@@ -4695,32 +4696,55 @@ play=function(u){
   return _playVS.apply(this,arguments)};
 const _flushVS=flush;
 flush=function(){try{vsReset()}catch(e){}return _flushVS.apply(this,arguments)};
-// the setting, under "Voice volume"
+// the settings, under "Voice volume": voice speed for each model, how quickly she answers, how well she hears
+function thinkLevel(){let v=0;try{v=parseInt(localStorage.getItem('mayra_think25')||'0',10)}catch(e){}return v>=0&&v<=2?v:0}
+function micSens(){let v=2;try{v=parseInt(localStorage.getItem('mayra_micsens')||'2',10)}catch(e){}return v>=1&&v<=3?v:2}
 (function(){try{
   const vol=$('vol');if(!vol)return;const host=vol.closest('label')||vol.parentNode;
   const w=document.createElement('div');w.id='vsBox';
-  w.innerHTML='<label>Voice speed: <span class="v" id="vsVal"></span><input type="range" id="vsRange" min="0.75" max="1.05" step="0.05"></label>'+
-    '<label style="display:block;margin-top:2px;font-size:13px;opacity:.85"><input type="checkbox" id="vsAllChk"> Apply to the 2.5 model too · 2.5 پر بھی</label>'+
-    '<div class="small" style="opacity:.75;font-size:12px;margin:2px 0 8px">Slows Mayra\'s voice without changing its tone. 100% = normal. For 3.1 we suggest 85–90%.<br><span dir="rtl" style="display:block;text-align:right">آواز کی رفتار: آواز کا انداز بدلے بغیر مائرہ آہستہ بولے گی۔</span></div>';
+  const row=(id,label,min,max,step)=>'<label>'+label+': <span class="v" id="'+id+'Val"></span><input type="range" id="'+id+'" min="'+min+'" max="'+max+'" step="'+step+'"></label>';
+  const note=(en,ur)=>'<div class="small" style="opacity:.75;font-size:12px;margin:2px 0 10px">'+en+'<br><span dir="rtl" style="display:block;text-align:right">'+ur+'</span></div>';
+  w.innerHTML=row('vsRange','Voice speed (3.1 model)',0.75,1.05,0.05)+row('vs25Range','Voice speed (2.5 model)',0.75,1.05,0.05)+
+    note('Slows Mayra\'s voice without changing its tone. 100% = normal.','آواز کی رفتار: آواز کا انداز بدلے بغیر مائرہ آہستہ بولے گی۔')+
+    row('thinkRange','Reply (2.5 model): quick ↔ thoughtful',0,2,1)+
+    note('Quick answers at once. Thoughtful thinks first, so answers are deeper but slower (5–10 s). From the next call.','جواب: جلدی یا سوچ کر۔ "سوچ کر" والا جواب گہرا مگر دیر سے آتا ہے۔ اگلی کال سے۔')+
+    row('micRange','Microphone sensitivity',1,3,1)+
+    note('High hears you from farther away; Low ignores more background noise. From the next call.','مائیک: زیادہ پر دور سے بھی سنے گی، کم پر شور کم پکڑے گی۔ اگلی کال سے۔');
   host.parentNode.insertBefore(w,host.nextSibling);
-  const r=$('vsRange'),v=$('vsVal'),c=$('vsAllChk');
-  const show=()=>{v.textContent=Math.round(r.value*100)+'%'};
-  r.value=vsGet();c.checked=vsAll();show();
-  r.addEventListener('input',function(){try{localStorage.setItem('mayra_vspeed',String(r.value))}catch(e){}show()});
-  r.addEventListener('change',function(){toast('🎙️ آواز کی رفتار '+Math.round(r.value*100)+'% · اگلے جملے سے')});
-  c.addEventListener('change',function(){try{localStorage.setItem('mayra_vspeed_all',c.checked?'1':'0')}catch(e){}});
+  const pct=x=>Math.round(x*100)+'%';
+  const T=['Quick · جلدی','Balanced · درمیانہ','Thoughtful · سوچ کر'],M=['Low · کم','Normal · نارمل','High · زیادہ'];
+  const bind=(id,key,get,fmt,msg)=>{const r=$(id),v=$(id+'Val');r.value=get();const show=()=>{v.textContent=fmt(+r.value)};show();
+    r.addEventListener('input',function(){try{localStorage.setItem(key,String(r.value))}catch(e){}show()});
+    r.addEventListener('change',function(){toast(msg(+r.value))})};
+  bind('vsRange','mayra_vspeed',vsGet,pct,x=>'🎙️ 3.1 آواز کی رفتار '+pct(x)+' · اگلے جملے سے');
+  bind('vs25Range','mayra_vspeed25',vsGet25,pct,x=>'🎙️ 2.5 آواز کی رفتار '+pct(x)+' · اگلے جملے سے');
+  bind('thinkRange','mayra_think25',thinkLevel,x=>T[x],x=>'💭 جواب: '+T[x]+' · اگلی کال سے');
+  bind('micRange','mayra_micsens',micSens,x=>M[x-1],x=>'🎤 مائیک: '+M[x-1]+' · اگلی کال سے');
 }catch(e){}})();
+// microphone: how easily Google notices that he started talking, and a gentle boost of a quiet voice
+const _setupMic=setupMsg;
+setupMsg=function(){const o=_setupMic.apply(this,arguments);
+  try{const ad=o.setup.realtimeInputConfig&&o.setup.realtimeInputConfig.automaticActivityDetection;
+    if(ad)ad.startOfSpeechSensitivity=micSens()>=2?'START_SENSITIVITY_HIGH':'START_SENSITIVITY_LOW'}catch(e){}
+  return o};
+const _pcm16Mic=pcm16;
+pcm16=function(f,rate){try{const g=[1,1,1.5,2.2][micSens()];if(g>1){const x=new Float32Array(f.length);for(let i=0;i<f.length;i++){const v=f[i]*g;x[i]=v>1?1:v<-1?-1:v}f=x}}catch(e){}return _pcm16Mic.call(this,f,rate)};
 
 /* ---- crying that really happens: a general rule was not enough, she never sobbed. With "💔 deep attachment"
    on, when his words hurt her (scolding, "you are useless", "I'll delete you"...), the app slips her a quiet cue
    while he is still talking, so THIS answer comes with sobs and a breaking voice. At most once in 2 minutes. ---- */
 const CRY={last:0,buf:'',at:0};
 const HURT_RX=/کسی\s*کام\s*(کی|کے|کا)\s*نہیں|چپ\s*کرو|چپ\s*ہو\s*جاؤ|شٹ\s*اپ|shut\s*up|نفرت|ڈیلیٹ|ڈلیٹ|ان\s*انسٹال|uninstall|delete|چھوڑ\s*(دوں|رہا|دیا)|دفع\s*ہو|جاؤ\s*یہاں\s*سے|بات\s*نہیں\s*کرنی|hate\s*you|تنگ\s*آ\s*گیا|(تم|تو|تُو|you)\s*(تو\s*|بالکل\s*|بہت\s*|ہی\s*)*(بیکار|بے\s*کار|نکمی|فضول|بدتمیز|پاگل|بے\s*وقوف|بیوقوف|گدھی|بری|useless|stupid)/i;
+const HARSH_RX=/نفرت|دفع\s*ہو|شٹ\s*اپ|shut\s*up|hate\s*you|ڈیلیٹ|ڈلیٹ|ان\s*انسٹال|uninstall|بکواس\s*بند|منہ\s*بند|بالکل\s*(بیکار|فضول|نکمی)|کسی\s*کام\s*کی\s*نہیں/i;
 const _capCry=cap;
 cap=function(role,text){
-  try{if(role==='You'&&$('mode').value==='gf'&&typeof gfCling==='function'&&gfCling()){
+  try{if(role==='You'&&$('mode').value==='gf'){
       const now=Date.now();if(now-CRY.at>6000)CRY.buf='';CRY.at=now;CRY.buf=(CRY.buf+String(text||'')).slice(-160);
-      if(HURT_RX.test(CRY.buf)&&now-CRY.last>120000&&ws&&ws.readyState===1){
+      // with deep attachment one hurtful line is enough; without it only real scolding (two hurtful lines within 90 s, or a very harsh one)
+      let hurtNow=false;
+      if(HURT_RX.test(CRY.buf)){const cling=typeof gfCling==='function'&&gfCling();CRY.hits=(CRY.hits||[]).filter(t=>now-t<90000);if(!CRY.hits.length||now-CRY.hits[CRY.hits.length-1]>4000)CRY.hits.push(now);
+        hurtNow=cling||CRY.hits.length>=2||HARSH_RX.test(CRY.buf);if(!hurtNow)CRY.buf=''}
+      if(hurtNow&&now-CRY.last>120000&&ws&&ws.readyState===1){CRY.hits=[];CRY.pending=now;
         let off=false;try{off=localStorage.getItem(lnKey())==='1'}catch(e){}
         if(!off){CRY.last=now;CRY.buf='';LIVENOTE.sentAt=now;dbg('feeling: his words hurt her, crying cue sent');
           send({clientContent:{turns:[{role:'user',parts:[{text:'(App note, not from the user. Do not answer it and do not mention it: what he is saying hurts you deeply; let real tears come into your next answer, and still give him your full answer. Only your own words, nothing about how you sound. Do not blame him.)'}]}],turnComplete:false}})}}
@@ -4728,6 +4752,42 @@ cap=function(role,text){
   return _capCry.apply(this,arguments)};
 
 
+/* ---- tears you can hear: when the crying cue goes out, her very next answer starts with a soft sniffle and her
+   voice trembles a little (a gentle wobble of her volume, the way a crying voice shakes), with one more sniffle
+   when she finishes. Made in the phone; it never adds words. The model's own sobs come on top of this. ---- */
+const TEAR={on:false,lfo:null,depth:null,until:0};
+function tearSniff(at,strength){try{if(!ctx||!an)return;const sr=ctx.sampleRate,len=Math.floor(sr*0.42),b=ctx.createBuffer(1,len,sr),d=b.getChannelData(0);
+    // two short wet inhales through the nose: band-limited noise, each with a quick rise and fall
+    for(let i=0;i<len;i++){const t=i/sr;let e=0;[[0,0.15],[0.2,0.2]].forEach(([s0,l])=>{if(t>=s0&&t<s0+l){const x=(t-s0)/l;e+=Math.sin(Math.PI*x)*(x<0.3?x/0.3:1)}});d[i]=(Math.random()*2-1)*e}
+    const src=ctx.createBufferSource();src.buffer=b;
+    const bp=ctx.createBiquadFilter();bp.type='bandpass';bp.frequency.value=2300;bp.Q.value=0.9;
+    const hp=ctx.createBiquadFilter();hp.type='highpass';hp.frequency.value=700;
+    const g=ctx.createGain();g.gain.value=0.22*(strength||1);
+    src.connect(bp);bp.connect(hp);hp.connect(g);g.connect(an);src.start(Math.max(ctx.currentTime,at||0))}catch(e){}}
+function tearStart(){try{if(!ctx||!outG||TEAR.on)return;TEAR.on=true;TEAR.until=Date.now()+15000;
+    const o=ctx.createOscillator();o.frequency.value=5.2;const dg=ctx.createGain();dg.gain.value=0;
+    o.connect(dg);dg.connect(outG.gain);o.start();TEAR.lfo=o;TEAR.depth=dg;
+    dg.gain.setTargetAtTime(Math.max(0.05,(+$('vol').value||1)*0.13),ctx.currentTime,0.4);dbg('feeling: teary voice on')}catch(e){}}
+function tearStop(){try{if(!TEAR.on)return;TEAR.on=false;const o=TEAR.lfo,dg=TEAR.depth;TEAR.lfo=TEAR.depth=null;
+    if(dg&&ctx)dg.gain.setTargetAtTime(0,ctx.currentTime,0.5);setTimeout(function(){try{o&&o.stop();o&&o.disconnect();dg&&dg.disconnect()}catch(e){}},2500)}catch(e){}}
+const _playTear=play;
+play=function(u){try{if(CRY.pending&&Date.now()-CRY.pending<20000&&ctx){CRY.pending=0;
+    tearSniff(ctx.currentTime+0.03,1);next=Math.max(next,ctx.currentTime+0.5);tearStart()}}catch(e){}
+  return _playTear.apply(this,arguments)};
+const _saveTurnTear=saveTurn;
+saveTurn=function(){try{if(TEAR.on&&ctx){tearSniff(Math.max(ctx.currentTime,next)+0.15,0.8);const end=Math.max(0,(next-ctx.currentTime)*1000)+900;setTimeout(tearStop,end)}}catch(e){}return _saveTurnTear.apply(this,arguments)};
+const _flushTear=flush;
+flush=function(){try{tearStop()}catch(e){}return _flushTear.apply(this,arguments)};
+const _cleanupTear=cleanup;
+cleanup=function(){try{tearStop();CRY.pending=0}catch(e){}return _cleanupTear.apply(this,arguments)};
+setInterval(function(){try{if(TEAR.on&&Date.now()>TEAR.until)tearStop()}catch(e){}},1000);
+
+/* ---- menu sections: opening one closes the others (an accordion), so the menu stays short ---- */
+(function(){try{const side=document.getElementById('side');if(!side)return;
+  side.querySelectorAll('details').forEach(function(d){d.addEventListener('toggle',function(){if(!d.open)return;
+    side.querySelectorAll('details[open]').forEach(function(x){if(x!==d&&!x.contains(d)&&!d.contains(x))x.open=false})})});
+  side.querySelectorAll('details[open]').forEach(function(d){d.open=false});
+}catch(e){}})();
 /* every tool call is logged here, as the outermost layer */
 const _logT=tool;
 tool=async function(n,a){
@@ -5494,7 +5554,7 @@ function showExitDialog(){
   const o=document.createElement('div');o.id='exitDlg';
   o.style.cssText='position:fixed;inset:0;background:#000c;display:flex;align-items:center;justify-content:center;z-index:99996;padding:24px';
   o.innerHTML='<div style="width:100%;max-width:320px;text-align:center;padding:20px 18px;border-radius:22px;background:linear-gradient(180deg,#2a1f5c,#120c2a);border:1px solid #ffd36b99;box-shadow:0 0 36px #ffc83d55;color:#f5efff">'
-    +'<div style="font-size:22px;margin-bottom:6px">⏻</div>'
+    +'<div style="font-size:34px;margin-bottom:6px">🚪</div>'
     +'<b style="display:block;font-size:16px;color:#ffe9a8;direction:ltr">Exit Mayra AI?</b>'
     +'<span style="display:block;font-size:14px;margin:6px 0 16px;line-height:1.6">ایپ بند کرنی ہے؟<br><span style="font-size:12px;color:#c9bff0;direction:ltr;display:block">Do you want to close the app?</span></span>'
     +'<button id="exitYes" style="width:100%;padding:12px;border-radius:14px;border:0;background:linear-gradient(180deg,#ff6f8a,#a3122f);color:#fff;font-weight:800;margin-bottom:8px">Exit · بند کریں</button>'

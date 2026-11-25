@@ -98,13 +98,123 @@ public class MayraAccessService extends AccessibilityService {
     }
 
     // ---------- general phone control (used by Mayra's ui_* tools) ----------
+    // presses the thing itself; a clickable parent is used only when it is about the same size (a button around
+    // its label). A big parent (a whole row, card or page) would open something else: then false is returned and
+    // the caller taps the exact middle of the thing instead.
     static boolean clickNode(AccessibilityNodeInfo node) {
+        if (node == null) return false;
+        try { node.refresh(); } catch (Exception ignored) {}
+        Rect own = new Rect();
+        node.getBoundsInScreen(own);
+        long ownArea = Math.max(1L, (long) own.width() * own.height());
         AccessibilityNodeInfo c = node;
-        while (c != null) {
-            if (c.isClickable() && c.isEnabled()) return c.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+        for (int up = 0; c != null && up < 4; up++) {
+            if (c.isClickable() && c.isEnabled()) {
+                if (c != node) {
+                    Rect r = new Rect();
+                    c.getBoundsInScreen(r);
+                    long area = (long) r.width() * r.height();
+                    if (area > ownArea * 6 && area > 200L * 200L) return false;   // a big container: tap the spot instead
+                }
+                return c.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+            }
             c = c.getParent();
         }
         return false;
+    }
+
+    // ---------- wait until the screen stops moving (idea from JARVIS "Settle") ----------
+    // a tap is only as good as the place it was measured: while a list is still scrolling or a page is still
+    // sliding in, the place moves and the tap lands on something else. The biggest list's rows (and the number of
+    // boxes) are sampled every 100 ms; two equal samples = settled. Gives up after maxMs.
+    // like JARVIS: the main list is found once, then only ITS rows are re-read each time (cheap, no full walk)
+    private static AccessibilityNodeInfo mainList() {
+        AccessibilityNodeInfo best = null;
+        long bestArea = 0;
+        Rect r = new Rect();
+        for (AccessibilityNodeInfo n : screenNodes()) {
+            if (n == null || !n.isScrollable() || !n.isVisibleToUser()) continue;
+            n.getBoundsInScreen(r);
+            long a = (long) r.width() * r.height();
+            if (a > bestArea) { bestArea = a; best = n; }
+        }
+        return best;
+    }
+
+    private static String listSig(AccessibilityNodeInfo list) {
+        StringBuilder b = new StringBuilder();
+        try {
+            if (!list.refresh()) return "gone";
+            Rect r = new Rect();
+            b.append(list.getChildCount());
+            for (int i = 0; i < list.getChildCount() && i < 40; i++) {
+                AccessibilityNodeInfo ch = list.getChild(i);
+                if (ch == null) continue;
+                ch.getBoundsInScreen(r);
+                b.append(':').append(r.top).append(',').append(r.bottom);
+            }
+        } catch (Exception e) { return "err"; }
+        return b.toString();
+    }
+
+    static boolean settle(long maxMs) {
+        AccessibilityNodeInfo list;
+        try { list = mainList(); } catch (Exception e) { list = null; }
+        if (list == null) { try { Thread.sleep(150); } catch (InterruptedException ignored) {} return true; }
+        String prev = null;
+        long waited = 0;
+        while (waited <= maxMs) {
+            String now = listSig(list);
+            if (now.equals(prev)) return true;
+            prev = now;
+            try { Thread.sleep(100); } catch (InterruptedException e) { return false; }
+            waited += 100;
+        }
+        return false;
+    }
+
+    // the middle of the part of a thing that is really on the screen (not under the status bar, nav bar or keyboard)
+    private static float[] visibleCenter(AccessibilityNodeInfo n) {
+        Rect r = new Rect();
+        n.getBoundsInScreen(r);
+        MayraAccessService s = instance;
+        if (s == null) return new float[]{r.exactCenterX(), r.exactCenterY()};
+        DisplayMetrics dm = realMetrics(s);
+        Rect screen = new Rect(0, 0, dm.widthPixels, dm.heightPixels);
+        try {   // the keyboard covers the bottom: never tap under it
+            List<android.view.accessibility.AccessibilityWindowInfo> ws = s.getWindows();
+            if (ws != null) for (android.view.accessibility.AccessibilityWindowInfo w : ws) {
+                if (w.getType() != android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD) continue;
+                Rect k = new Rect();
+                w.getBoundsInScreen(k);
+                if (k.top > 0 && k.top < screen.bottom) screen.bottom = k.top;
+            }
+        } catch (Exception ignored) {}
+        Rect v = new Rect(r);
+        if (!v.intersect(screen)) return new float[]{r.exactCenterX(), r.exactCenterY()};
+        return new float[]{v.exactCenterX(), v.exactCenterY()};
+    }
+
+    // bring a thing that is half off the screen fully into view first (the app scrolls it itself)
+    private static AccessibilityNodeInfo showOnScreen(AccessibilityNodeInfo n) {
+        try {
+            MayraAccessService s = instance;
+            if (s == null || Build.VERSION.SDK_INT < 23) return n;
+            DisplayMetrics dm = realMetrics(s);
+            Rect r = new Rect();
+            n.getBoundsInScreen(r);
+            boolean cut = r.top < dm.heightPixels * 0.06f || r.bottom > dm.heightPixels * 0.92f;
+            if (!cut) return n;
+            for (AccessibilityNodeInfo.AccessibilityAction a : n.getActionList()) {
+                if (a.getId() == AccessibilityNodeInfo.AccessibilityAction.ACTION_SHOW_ON_SCREEN.getId()) {
+                    n.performAction(a.getId());
+                    settle(1000);
+                    n.refresh();
+                    break;
+                }
+            }
+        } catch (Exception ignored) {}
+        return n;
     }
 
     private static String cut(CharSequence s) {
@@ -181,6 +291,7 @@ public class MayraAccessService extends AccessibilityService {
         String w = where == null ? "" : where.trim().toLowerCase();
         boolean nav = false;
         for (String x : NAV_WORDS) if (x.equals(l)) { nav = true; break; }
+        settle(1200);
         List<AccessibilityNodeInfo> nodes = screenNodes();
         if (nodes.isEmpty()) return null;
         AccessibilityNodeInfo best = null;
@@ -191,7 +302,9 @@ public class MayraAccessService extends AccessibilityService {
             if (n == null || !n.isVisibleToUser()) continue;
             String t = n.getText() == null ? "" : n.getText().toString().trim();
             String d = n.getContentDescription() == null ? "" : n.getContentDescription().toString().trim();
-            int st = score(t.toLowerCase(), l), sd = score(d.toLowerCase(), l);
+            String hn = (Build.VERSION.SDK_INT >= 26 && n.getHintText() != null) ? n.getHintText().toString().trim() : "";
+            int st = score(t.toLowerCase(), l), sd = score(d.toLowerCase(), l), sh = score(hn.toLowerCase(), l);
+            if (sh > sd) { sd = sh; d = hn; }                       // an empty box found by its hint ("Title", "Add a description")
             int sc = Math.max(st, sd);
             if (sc <= 0) continue;
             Rect r = new Rect();
@@ -205,8 +318,10 @@ public class MayraAccessService extends AccessibilityService {
             if (sc > bestScore) { bestScore = sc; best = n; bestR = r; bestText = st >= sd ? t : d; }
         }
         if (best == null) return null;
+        best = showOnScreen(best);
         if (clickNode(best)) return bestText;
-        if (bestR != null && tapAt(bestR.exactCenterX(), bestR.exactCenterY())) return bestText;
+        float[] c = visibleCenter(best);                            // the exact middle of the thing itself
+        if (tapAt(c[0], c[1])) return bestText;
         return null;
     }
 
@@ -408,11 +523,26 @@ public class MayraAccessService extends AccessibilityService {
 
     // ---------- fill a named text box (upload screens: title, description, caption, tags) ----------
     // walks the screen; hidden parts (old pages an app keeps in memory) are skipped, so the visible page is always reached
-    private static void all(AccessibilityNodeInfo n, List<AccessibilityNodeInfo> out) {
-        if (n == null || out.size() > 3000) return;
-        if (!out.isEmpty() && !n.isVisibleToUser()) return;
-        out.add(n);
-        for (int i = 0; i < n.getChildCount(); i++) all(n.getChild(i), out);
+    // walks the whole tree like JARVIS does (no branch is thrown away because its parent says "not visible":
+    // in WebViews and lists a hidden-looking parent often holds the visible title box). Visible branches are
+    // walked first, branches under a hidden parent afterwards, so old pages kept in memory never crowd out the
+    // page on screen. Every user of this list still checks isVisibleToUser() on each node.
+    private static void all(AccessibilityNodeInfo root, List<AccessibilityNodeInfo> out) {
+        if (root == null) return;
+        java.util.ArrayDeque<AccessibilityNodeInfo> now = new java.util.ArrayDeque<>(), later = new java.util.ArrayDeque<>();
+        now.add(root);
+        while ((!now.isEmpty() || !later.isEmpty()) && out.size() < 6000) {
+            AccessibilityNodeInfo n = !now.isEmpty() ? now.pollFirst() : later.pollFirst();
+            if (n == null) continue;
+            out.add(n);
+            boolean vis = n.isVisibleToUser();
+            for (int i = 0; i < n.getChildCount(); i++) {
+                AccessibilityNodeInfo ch;
+                try { ch = n.getChild(i); } catch (Exception e) { ch = null; }
+                if (ch == null) continue;
+                if (vis || ch.isVisibleToUser()) now.add(ch); else later.add(ch);
+            }
+        }
     }
 
     // the screen = the active window, plus the other app/system windows on top (dialogs, bottom sheets)
@@ -466,20 +596,21 @@ public class MayraAccessService extends AccessibilityService {
         AccessibilityNodeInfo root = s.getRootInActiveWindow();
         if (root == null) return false;
         String l = label == null ? "" : label.trim().toLowerCase();
+        settle(1200);
         List<AccessibilityNodeInfo> nodes = screenNodes();
         AccessibilityNodeInfo target = null;
         if (!l.isEmpty()) {
             for (AccessibilityNodeInfo n : nodes) {                  // the box itself shows the label (hint)
-                if (n != null && n.isEditable() && words(n).contains(l)) { target = n; break; }
+                if (n != null && n.isEditable() && n.isVisibleToUser() && words(n).contains(l)) { target = n; break; }
             }
             if (target == null) {                                     // a label written next to the box
                 for (AccessibilityNodeInfo n : nodes) {
-                    if (n == null || n.isEditable() || !words(n).contains(l)) continue;
+                    if (n == null || n.isEditable() || !n.isVisibleToUser() || !words(n).contains(l)) continue;
                     AccessibilityNodeInfo p = n.getParent();
                     for (int up = 0; up < 2 && p != null && target == null; up++) {
                         List<AccessibilityNodeInfo> near = new ArrayList<>();
                         all(p, near);
-                        for (AccessibilityNodeInfo m : near) { if (m != null && m.isEditable()) { target = m; break; } }
+                        for (AccessibilityNodeInfo m : near) { if (m != null && m.isEditable() && m.isVisibleToUser()) { target = m; break; } }
                         p = p.getParent();
                     }
                     if (target != null) break;
@@ -490,6 +621,7 @@ public class MayraAccessService extends AccessibilityService {
             if (target == null) target = findEditableNotSearch(root);
         }
         if (target == null) return false;
+        target = showOnScreen(target);
         target.performAction(AccessibilityNodeInfo.ACTION_FOCUS);
         target.performAction(AccessibilityNodeInfo.ACTION_CLICK);
         Bundle b = new Bundle();
@@ -505,6 +637,7 @@ public class MayraAccessService extends AccessibilityService {
         JSONObject res = new JSONObject();
         AccessibilityNodeInfo root = s.getRootInActiveWindow();
         if (root == null) return res;
+        settle(1000);
         DisplayMetrics dm = realMetrics(s);
         float W = Math.max(1, dm.widthPixels), H = Math.max(1, dm.heightPixels);
         JSONArray out = new JSONArray();
@@ -512,7 +645,8 @@ public class MayraAccessService extends AccessibilityService {
         try {
             res.put("app", root.getPackageName() == null ? "" : root.getPackageName().toString());
             for (AccessibilityNodeInfo n : nodes) {
-                if (n == null || !n.isVisibleToUser() || out.length() >= 220) continue;
+                if (n == null || !n.isVisibleToUser()) continue;
+                if (out.length() >= 320 && !n.isEditable()) continue;      // text boxes are always listed, even on long pages
                 CharSequence t = n.getText(), d = n.getContentDescription();
                 CharSequence h = Build.VERSION.SDK_INT >= 26 ? n.getHintText() : null;
                 String id = n.getViewIdResourceName();
@@ -546,6 +680,7 @@ public class MayraAccessService extends AccessibilityService {
     static boolean tapPercent(float px, float py) {
         MayraAccessService s = instance;
         if (s == null) return false;
+        settle(800);
         DisplayMetrics dm = realMetrics(s);
         return tapAt(dm.widthPixels * px / 100f, dm.heightPixels * py / 100f);
     }
@@ -568,6 +703,7 @@ public class MayraAccessService extends AccessibilityService {
         final MayraAccessService s = instance;
         if (s == null) { cb.done(null, "accessibility off"); return; }
         if (Build.VERSION.SDK_INT < 30) { cb.done(null, "android older than 11"); return; }
+        settle(800);   // a picture of a screen that is still moving gives taps in the wrong place
         try {
             s.takeScreenshot(android.view.Display.DEFAULT_DISPLAY, s.getMainExecutor(), new TakeScreenshotCallback() {
                 @Override
