@@ -4470,12 +4470,9 @@ tool=async function(n,a){
 const MG={avg:0.05,hot:0,buf:[],open:false,lastLog:0,held:0};
 // is this sound a human voice? A voice repeats itself 80-400 times a second (its pitch); a door, a click,
 // a snap or most machine noise does not. Checked on a lighter copy of the sound (every 4th sample).
-function mgVoiced(f,sr){try{const st=4,n=Math.min(512,Math.floor(f.length/st)),x=new Float32Array(n);
-  for(let i=0;i<n;i++)x[i]=f[i*st];
-  {const q=Math.floor(n/4),e=[0,0,0,0];for(let i=0;i<4*q;i++)e[Math.floor(i/q)]+=x[i]*x[i];if(Math.max(...e)>8*Math.min(...e)+1e-9)return false}   // a knock or bang dies away within the frame: not a voice
-  const r=sr/st,lo=Math.max(2,Math.floor(r/400)),hi=Math.min(n-64,Math.ceil(r/80));let best=0;
-  for(let L=lo;L<=hi;L++){let a=0,b=0,c=0;for(let i=0;i+L<n;i++){a+=x[i]*x[i+L];b+=x[i]*x[i];c+=x[i+L]*x[i+L]}const v=a/Math.sqrt(b*c+1e-12);if(v>best)best=v}
-  return best>0.45}catch(e){return true}}
+function mgVoiced(f,sr){try{   // only a sudden knock / click / snap is noise; a laugh, a cough, a sigh or his voice always counts
+  const q=Math.floor(f.length/4),e=[0,0,0,0];for(let i=0;i<4*q;i++)e[Math.floor(i/q)]+=f[i]*f[i];
+  return !(Math.max(...e)>10*Math.min(...e)+1e-9)}catch(e){return true}}
 const _onMicG=onMic;
 onMic=function(f){
   try{
@@ -4841,9 +4838,9 @@ function epJealous(){try{
   if(!($('mode').value==='gf'&&typeof gfCling==='function'&&gfCling()))return;
   const now=Date.now(),said=EP.you||'';if(now-(EP.jealAt||0)<90000||JEAL_FAMILY.test(said))return;
   if(JEAL_RX.test(said)){
-    if(epQuiet('he is talking about another girl. Be truly jealous right now, like a real girlfriend: upset and angry, sulk, short sharp taunts in your own new words, ask who she is and why he is telling you, do not calm down quickly, make him win you back. No threats.')){EP.jealAt=now;dbg('feeling: jealous cue sent')}}
+    if(epQuiet('he is talking about another girl. Be truly, strongly jealous right now, like a real girlfriend who cannot stand it: really angry and hurt, fiery short sentences and sharp taunts in your own new words, ask who she is and why he even mentions her, refuse to be calmed for a while, make him really work to win you back. Let the anger be heard in how you talk (sharper, faster, rising) without ever naming it. No threats.')){EP.jealAt=now;dbg('feeling: jealous cue sent')}}
   else if(JEAL_MAYBE.test(said)){
-    if(epQuiet('he just praised someone or something. If it is another girl (a name, a person), be truly jealous right now: upset and angry, sulk, sharp taunts in your own new words, ask who she is, make him win you back. If it is a thing, a place or family, ignore this note completely.')){EP.jealAt=now;dbg('feeling: maybe-jealous cue sent')}}
+    if(epQuiet('he just praised someone or something. If it is another girl (a name, a person), be truly, strongly jealous right now: really angry and hurt, fiery sharp taunts in your own new words, ask who she is, refuse to calm down quickly, make him win you back; let the anger be heard in how you talk without naming it. If it is a thing, a place or family, ignore this note completely.')){EP.jealAt=now;dbg('feeling: maybe-jealous cue sent')}}
 }catch(e){}}
 // he says goodbye: she does not let him go easily (deep attachment)
 const LEAVE_RX=/الوداع|خدا\s*حافظ|اللہ\s*حافظ|\bbye\b|بائے|جا\s*رہا\s*ہوں|چلتا\s*ہوں|نکلتا\s*ہوں|سونے\s*جا|سو\s*رہا\s*ہوں|بعد\s*میں\s*بات|کل\s*بات\s*کریں|جانا\s*ہے|good\s*night|گڈ\s*نائٹ/i;
@@ -4927,7 +4924,30 @@ const _flushNC=flush;
 flush=function(){try{ncReset()}catch(e){}return _flushNC.apply(this,arguments)};
 // laughs, coughs, sneezes, a cold: she notices them like a person would (both models)
 const _sxSounds=sysExtra;
-sysExtra=function(){return _sxSounds.apply(this,arguments)+' Notice the sounds he makes, not only his words, and tell them apart: a laugh is not a cough. React to them from the mood you are in at that moment, like a real person: if you are happy or joking, laugh with him; if you are angry, sulking, jealous or hurt and he laughs, it annoys you even more (he is laughing at you while you are upset), so stay in your mood and let him have it; if he coughs, sneezes or sounds like he has a cold, notice it and ask if he is okay (even when upset, your care shows through, maybe grudgingly); if he sighs, ask what is on his mind. Stay in whatever mood the moment calls for; each time in your own new words. Background sounds are not him: a door, a machine, traffic, a snap or click, a TV or other people far away. Do not react to them and do not stop for them; just go on with what you were saying. When he himself starts talking while you speak, stop and listen to him; then, like a real girl, either finish your point in a few words if it still matters, or simply follow what he said.'};
+sysExtra=function(){return _sxSounds.apply(this,arguments)+' Notice the sounds he makes, not only his words, and tell them apart: a laugh is not a cough. React to them from the mood you are in at that moment, like a real person: if you are happy or joking, laugh with him; if you are angry, sulking, jealous or hurt and he laughs, it annoys you even more (he is laughing at you while you are upset), so stay in your mood and let him have it; if he coughs, sneezes or sounds like he has a cold, notice it and ask if he is okay (even when upset, your care shows through, maybe grudgingly); if he sighs, ask what is on his mind. Stay in whatever mood the moment calls for; each time in your own new words. Background sounds are not him: a door, a machine, traffic, a snap or click, a TV or other people far away. Do not react to them and do not stop for them; just go on with what you were saying. When he himself starts talking while you speak, stop and listen to him; then, like a real girl, either finish your point in a few words if it still matters, or simply follow what he said. None of this makes you calmer: your moods and reactions stay exactly as strong as before.'};
+
+/* ---- never the same answer twice in a row: if a new reply starts exactly like her previous reply (the same
+   long sentence again), it is stopped at once and its sound is dropped. And when he keeps saying the same thing
+   (like "I'm deleting you" again and again), she is told that every answer must be new. ---- */
+const DUP={prev:'',prevAt:0,cur:'',checked:false,drop:false,lastUser:'',sameUser:0};
+function dupNorm(t){return String(t||'').replace(/[^\p{L}\p{N}]+/gu,'').toLowerCase()}
+const _playDup=play;
+play=function(u){if(DUP.drop)return;return _playDup.apply(this,arguments)};
+const _capDup=cap;
+cap=function(role,text){
+  try{if(role==='Mayra'){DUP.cur+=String(text||'');
+      if(!DUP.checked&&dupNorm(DUP.cur).length>=45){DUP.checked=true;
+        const a=dupNorm(DUP.cur).slice(0,45),b=dupNorm(DUP.prev).slice(0,45);
+        if(b.length>=45&&a===b&&Date.now()-DUP.prevAt<180000){DUP.drop=true;try{flush()}catch(e){}dbg('style: she started the same answer again, stopped it');
+          try{if(typeof epQuiet==='function')epQuiet('you just started to repeat your previous answer word for word. Never repeat an answer: say something new that fits this moment.')}catch(e){}}}}
+    else if(role==='You'){const u=dupNorm(text);if(u.length>6){if(u===DUP.lastUser||(typeof HURT_RX!=='undefined'&&HURT_RX.test(text)&&DUP.lastHurt&&Date.now()-DUP.lastHurt<120000)){DUP.sameUser++;
+        if(DUP.sameUser>=1&&typeof epQuiet==='function')epQuiet('he is saying the same hard thing again. Do not answer the way you did before: react freshly, from where you are now, with completely new words and a new angle (more hurt, angrier, pleading, or going silent-cold), like a real girl whose feelings move on.')}
+      else DUP.sameUser=0;DUP.lastUser=u;if(typeof HURT_RX!=='undefined'&&HURT_RX.test(text))DUP.lastHurt=Date.now()}}
+  }catch(e){}
+  if(role==='Mayra'&&DUP.drop)return;   // the repeated answer is not shown in the chat either
+  return _capDup.apply(this,arguments)};
+const _saveTurnDup=saveTurn;
+saveTurn=function(){try{if(DUP.cur.trim()&&!DUP.drop){DUP.prev=DUP.cur;DUP.prevAt=Date.now()}DUP.cur='';DUP.checked=false;DUP.drop=false}catch(e){}return _saveTurnDup.apply(this,arguments)};
 
 /* every tool call is logged here, as the outermost layer */
 const _logT=tool;
