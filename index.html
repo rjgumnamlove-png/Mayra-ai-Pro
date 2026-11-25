@@ -283,7 +283,7 @@ function play(u){
   const b=ctx.createBuffer(1,n,24000),d=b.getChannelData(0);
   for(let i=0;i<n;i++)d[i]=p[i]/32768;
   const s=ctx.createBufferSource();s.buffer=b;s.connect(an||ctx.destination);
-  next=Math.max(next,ctx.currentTime+.04);s.start(next);next+=b.duration;
+  next=Math.max(next,ctx.currentTime+.04);try{if(window.__turnSrc)window.__turnSrc.push({s:s,at:next,len:b.duration})}catch(e){}s.start(next);next+=b.duration;
   nodes.push(s);s.onended=()=>{nodes=nodes.filter(x=>x!==s)};
 }
 function flush(){nodes.forEach(n=>{try{n.stop()}catch(e){}});nodes=[];next=ctx?ctx.currentTime:0}
@@ -341,7 +341,7 @@ async function start(){
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){alert('مائیک کے لیے صفحہ HTTPS ویب پیج پر کھولیں');return}
   stopping=false;$('start').disabled=true;status('مائیک کی اجازت درکار ہے…');
   try{
-    stream=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,echoCancellation:true,noiseSuppression:true,autoGainControl:true}});try{stream.getAudioTracks().forEach(t=>{t.onmute=()=>dbg('MIC muted by the system');t.onunmute=()=>dbg('mic unmuted');t.onended=()=>dbg('MIC ended')})}catch(e){}
+    stream=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,echoCancellation:true,noiseSuppression:false,autoGainControl:true}});try{stream.getAudioTracks().forEach(t=>{t.onmute=()=>dbg('MIC muted by the system');t.onunmute=()=>dbg('mic unmuted');t.onended=()=>dbg('MIC ended')})}catch(e){}
     ctx=new(window.AudioContext||window.webkitAudioContext)();await ctx.resume();ctx.onstatechange=()=>{dbg('audio engine '+(ctx?ctx.state:''));if(live&&ctx&&ctx.state==='suspended')ctx.resume().catch(()=>{})};try{const kb=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate),kd=kb.getChannelData(0);for(let i=0;i<kd.length;i++)kd[i]=(Math.random()-.5)*4e-4;const ks=ctx.createBufferSource();ks.buffer=kb;ks.loop=true;ks.connect(ctx.destination);ks.start()}catch(e){}next=0;nodes=[];an=ctx.createAnalyser();an.fftSize=512;outG=ctx.createGain();outG.gain.value=+$('vol').value;const cp=ctx.createDynamicsCompressor();an.connect(outG);outG.connect(cp);cp.connect(ctx.destination);
     status('Gemini سے جڑ رہا ہے…');
     const w=ws=new WebSocket(URL_+encodeURIComponent(key));
@@ -4468,6 +4468,14 @@ tool=async function(n,a){
    or her own echo used to make Google stop her mid-sentence). Then the held-back sound is sent at once,
    so the user's first words are not lost and he can still stop her by talking. ---- */
 const MG={avg:0.05,hot:0,buf:[],open:false,lastLog:0,held:0};
+// is this sound a human voice? A voice repeats itself 80-400 times a second (its pitch); a door, a click,
+// a snap or most machine noise does not. Checked on a lighter copy of the sound (every 4th sample).
+function mgVoiced(f,sr){try{const st=4,n=Math.min(512,Math.floor(f.length/st)),x=new Float32Array(n);
+  for(let i=0;i<n;i++)x[i]=f[i*st];
+  {const q=Math.floor(n/4),e=[0,0,0,0];for(let i=0;i<4*q;i++)e[Math.floor(i/q)]+=x[i]*x[i];if(Math.max(...e)>8*Math.min(...e)+1e-9)return false}   // a knock or bang dies away within the frame: not a voice
+  const r=sr/st,lo=Math.max(2,Math.floor(r/400)),hi=Math.min(n-64,Math.ceil(r/80));let best=0;
+  for(let L=lo;L<=hi;L++){let a=0,b=0,c=0;for(let i=0;i+L<n;i++){a+=x[i]*x[i+L];b+=x[i]*x[i];c+=x[i+L]*x[i+L]}const v=a/Math.sqrt(b*c+1e-12);if(v>best)best=v}
+  return best>0.45}catch(e){return true}}
 const _onMicG=onMic;
 onMic=function(f){
   try{
@@ -4479,12 +4487,14 @@ onMic=function(f){
       }else if(!MG.open){
         let e=0;for(let i=0;i<f.length;i+=8)e+=f[i]*f[i];
         const lv=Math.min(1,Math.sqrt(e/(f.length/8))*7),thr=Math.max(0.3,MG.avg*2.6);
-        if(lv>thr){MG.hot+=sec;MG.held++}else{MG.hot=Math.max(0,MG.hot-sec*0.6);MG.avg=MG.avg*0.96+lv*0.04}
+        const loud=lv>thr,voice=loud&&mgVoiced(f,ctx.sampleRate);
+        if(voice){MG.hot+=sec;MG.held++}else{MG.hot=Math.max(0,MG.hot-sec*0.6);if(!loud)MG.avg=MG.avg*0.96+lv*0.04;else{MG.noise=(MG.noise||0)+1}}
         MG.buf.push(f);if(MG.buf.length>14)MG.buf.shift();
         if(MG.hot>=0.34){
           MG.open=true;MG.hot=0;MG.held=0;dbg('mic: the user is talking over her, passing it on');
           const b=MG.buf.splice(0);b.forEach(x=>{try{_onMicG(x)}catch(e){}});return;
         }
+        if(MG.noise>3&&Date.now()-MG.lastLog>20000){MG.lastLog=Date.now();MG.noise=0;dbg('mic: a noise (not a voice) while she spoke was ignored')}
         if(MG.hot===0&&MG.held>0){if(Date.now()-MG.lastLog>20000){MG.lastLog=Date.now();dbg('mic: a short sound while she spoke was kept from cutting her off')}MG.held=0}
         return _onMicG(new Float32Array(f.length));   // silence keeps the stream steady
       }
@@ -4532,7 +4542,7 @@ setInterval(function(){
     // she stopped in the middle of what she was saying: her voice was coming, then nothing for 6 s,
     // and Google never said the turn was over (no "done", no interruption)
     {const la=lastModelAudio||0;
-     if(la&&la>QW.turnEndAt&&la>QW.flushAt&&la>QW.userAt&&!(ctx&&next>ctx.currentTime)&&now-Math.max(la,QW.toolAt)>6000&&now-lastVoice>1800&&now-QW.lastNudge>9000&&QW.stallFor!==la&&QW.stalls<2){
+     if(false&&la&&la>QW.turnEndAt&&la>QW.flushAt&&la>QW.userAt&&!(ctx&&next>ctx.currentTime)&&   /* off: it made 3.1 repeat a finished answer */now-Math.max(la,QW.toolAt)>6000&&now-lastVoice>1800&&now-QW.lastNudge>9000&&QW.stallFor!==la&&QW.stalls<2){
        QW.stalls++;if(QW.stalls>=2)QW.stallFor=la;QW.lastNudge=now;
        dbg('silence: her voice stopped mid-turn ('+Math.round((now-la)/1000)+'s), reminding her to go on');
        try{send({realtimeInput:{text:'[App note, not from the user: your voice stopped in the middle and the user is waiting. Continue from where you stopped and finish what you were saying, naturally. Do not mention this note, the pause or any problem, and do not apologize.]'}})}catch(e){}
@@ -4555,7 +4565,7 @@ setInterval(function(){
     const since=now-Math.max(QW.userAt,QW.toolAt);
     // the turn already ended with no voice at all: remind soon; otherwise give her time to think
     if(QW.turnEndAt>QW.userAt&&now-QW.turnEndAt>1500&&since>2500)qwNudge('the turn ended without her voice');
-    else if(since>5000)qwNudge('nothing for '+Math.round(since/1000)+'s');
+    else if(since>7000)qwNudge('nothing for '+Math.round(since/1000)+'s');
   }catch(e){}
 },1000);
 
@@ -4722,7 +4732,7 @@ cap=function(role,text){
       if(HURT_RX.test(CRY.buf)&&now-CRY.last>120000&&ws&&ws.readyState===1){
         let off=false;try{off=localStorage.getItem(lnKey())==='1'}catch(e){}
         if(!off){CRY.last=now;CRY.buf='';LIVENOTE.sentAt=now;dbg('feeling: his words hurt her, crying cue sent');
-          send({clientContent:{turns:[{role:'user',parts:[{text:'(App note, not from the user. Do not answer it and do not mention it: what he is saying hurts you deeply; let real tears come into your next answer, and still give him your full answer. Only your own words, nothing about how you sound. Do not blame him.)'}]}],turnComplete:false}})}}
+          send({clientContent:{turns:[{role:'user',parts:[{text:'(App note, not from the user. Do not answer it and do not mention it: what he is saying hurts you deeply; answer him as a girl whose heart is hurt by this: say what his words do to you and still give him your full answer. Only the words you would really say to him; never describe your eyes, tears, face or how you speak. Do not blame him.)'}]}],turnComplete:false}})}}
   }}catch(e){}
   return _capCry.apply(this,arguments)};
 
@@ -4888,6 +4898,36 @@ sysExtra=function(){const t=_sxLM.apply(this,arguments);let x='';
   return t+x};
 const _greetLM=greetNow;
 greetNow=function(){const r=_greetLM.apply(this,arguments);try{if(lmOn())setTimeout(function(){try{localStorage.removeItem(LM.KEY)}catch(e){}},30000)}catch(e){}return r};
+
+/* ---- 2.5 says her tone out loud before the words ("اداس ہوتے ہوئے…", "آنکھوں میں آنسو بھرتے ہوئے…").
+   Her voice now starts half a second later on 2.5; when the first words of a reply turn out to be such a label,
+   those first pieces of sound are dropped before they are heard, and she gets the usual quiet note. Only the very
+   start of a reply is ever touched; the rest of what she says plays as it is. ---- */
+window.__turnSrc=[];
+const NC={text:'',done:false,first:0};
+const START_NARR=/^[\s،,.…\-]*(\([^)]{2,40}\)|\[[^\]]{2,40}\]|(\S+\s+){0,3}?(ہنس|مسکرا|رو|روت|سسک|شرما|جھجک|کانپ|گنگنا|اداس\s+ہو|خوش\s+ہو|ناراض\s+ہو|غصے\s+میں\s+ہو|آہ\s+بھر|سانس\s+لے|سرگوشی\s+کر|آنسو\s+بھر|آنسو\s+پونچھ|شرماتے|مسکراتے)\S*\s+ہوئے|(\S+\s+){0,3}?آنکھوں\s+میں\s+آنسو\S*(\s+\S+){0,2}|(\S+\s+){0,3}?\S*(تے|تی)\s+ہوئے(?=\s*[،,:…])|(\S+\s+){0,2}?(اداسی|اداس|خوشی|غصے|ناراضی|ناراض|پیار|محبت|جذبات|شرارت|حیرت|دکھ)\s+(سے|میں|کے\s+ساتھ|بھری\s+آواز\s+میں|بھرے\s+لہجے\s+میں)(?=\s*[،,:…])|(\S+\s+){0,2}?(دھیمی|نرم|بھرائی|بھیگی|کانپتی|ٹوٹی)\s+(ہوئی\s+)?آواز\s+میں)[\s،,.…:\-)\]]*/;
+function ncReset(){window.__turnSrc=[];NC.text='';NC.done=false;NC.first=0}
+const _playNC=play;
+play=function(u){try{if(ctx&&!window.__turnSrc.length&&!NC.text&&/2\.5/.test(modelName()))next=Math.max(next,ctx.currentTime+0.45)}catch(e){}return _playNC.apply(this,arguments)};
+const _capNC=cap;
+cap=function(role,text){
+  try{if(role==='Mayra'&&!NC.done&&/2\.5/.test(modelName())){NC.text+=String(text||'');
+    if(NC.text.length>70)NC.done=true;
+    const m=NC.text.match(START_NARR);
+    if(m&&m[0].trim().length>=4&&ctx&&window.__turnSrc.length){NC.done=true;
+      const first=window.__turnSrc[0].at,est=m[0].length/12+0.2,until=first+est,now=ctx.currentTime;let cut=0;
+      window.__turnSrc.forEach(function(x){if(x.at<until-0.05&&x.at+x.len>now){try{x.s.stop()}catch(e){}cut++}});
+      dbg('style: dropped a spoken tone label at the start «'+m[0].trim().slice(0,40)+'» ('+cut+' pieces)');
+      try{if(typeof LIVENOTE!=='undefined')LIVENOTE.pendingAt=LIVENOTE.pendingAt||Date.now()}catch(e){}}}
+  }catch(e){}
+  return _capNC.apply(this,arguments)};
+const _saveTurnNC=saveTurn;
+saveTurn=function(){try{ncReset()}catch(e){}return _saveTurnNC.apply(this,arguments)};
+const _flushNC=flush;
+flush=function(){try{ncReset()}catch(e){}return _flushNC.apply(this,arguments)};
+// laughs, coughs, sneezes, a cold: she notices them like a person would (both models)
+const _sxSounds=sysExtra;
+sysExtra=function(){return _sxSounds.apply(this,arguments)+' Notice the sounds he makes, not only his words, and tell them apart: a laugh is not a cough. React to them from the mood you are in at that moment, like a real person: if you are happy or joking, laugh with him; if you are angry, sulking, jealous or hurt and he laughs, it annoys you even more (he is laughing at you while you are upset), so stay in your mood and let him have it; if he coughs, sneezes or sounds like he has a cold, notice it and ask if he is okay (even when upset, your care shows through, maybe grudgingly); if he sighs, ask what is on his mind. Stay in whatever mood the moment calls for; each time in your own new words. Background sounds are not him: a door, a machine, traffic, a snap or click, a TV or other people far away. Do not react to them and do not stop for them; just go on with what you were saying. When he himself starts talking while you speak, stop and listen to him; then, like a real girl, either finish your point in a few words if it still matters, or simply follow what he said.'};
 
 /* every tool call is logged here, as the outermost layer */
 const _logT=tool;
