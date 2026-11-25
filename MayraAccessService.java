@@ -101,8 +101,20 @@ public class MayraAccessService extends AccessibilityService {
     // presses the thing itself; a clickable parent is used only when it is about the same size (a button around
     // its label). A big parent (a whole row, card or page) would open something else: then false is returned and
     // the caller taps the exact middle of the thing instead.
+    // Mayra must never press her own buttons (menu, Exit, settings): only other apps are controlled
+    static boolean isOwn(AccessibilityNodeInfo n) {
+        try { CharSequence p = n == null ? null : n.getPackageName(); return p != null && p.toString().startsWith("com.rjbilal"); }
+        catch (Exception e) { return false; }
+    }
+
+    static boolean mayraOnTop() {
+        MayraAccessService s = instance;
+        if (s == null) return false;
+        try { return isOwn(s.getRootInActiveWindow()); } catch (Exception e) { return false; }
+    }
+
     static boolean clickNode(AccessibilityNodeInfo node) {
-        if (node == null) return false;
+        if (node == null || isOwn(node)) return false;
         try { node.refresh(); } catch (Exception ignored) {}
         Rect own = new Rect();
         node.getBoundsInScreen(own);
@@ -299,7 +311,7 @@ public class MayraAccessService extends AccessibilityService {
         String bestText = null;
         Rect bestR = null;
         for (AccessibilityNodeInfo n : nodes) {
-            if (n == null || !n.isVisibleToUser()) continue;
+            if (n == null || !n.isVisibleToUser() || isOwn(n)) continue;
             String t = n.getText() == null ? "" : n.getText().toString().trim();
             String d = n.getContentDescription() == null ? "" : n.getContentDescription().toString().trim();
             String hn = (Build.VERSION.SDK_INT >= 26 && n.getHintText() != null) ? n.getHintText().toString().trim() : "";
@@ -328,6 +340,7 @@ public class MayraAccessService extends AccessibilityService {
     static boolean tapAt(float x, float y) {
         MayraAccessService s = instance;
         if (s == null || Build.VERSION.SDK_INT < 24) return false;
+        if (mayraOnTop()) return false;                     // never tap inside Mayra's own screen
         Path p = new Path();
         p.moveTo(x, y);
         GestureDescription g = new GestureDescription.Builder()
@@ -338,6 +351,7 @@ public class MayraAccessService extends AccessibilityService {
     // ---------- scroll the main list (forms, settings, upload screens) without changing a video ----------
     static boolean scroll(String dir) {
         MayraAccessService s = instance;
+        if (mayraOnTop()) return false;
         if (s == null) return false;
         List<AccessibilityNodeInfo> nodes = screenNodes();
         if (nodes.isEmpty()) return false;
@@ -412,6 +426,7 @@ public class MayraAccessService extends AccessibilityService {
 
     static boolean swipe(String dir) {
         MayraAccessService s = instance;
+        if (mayraOnTop()) return false;
         if (s == null || Build.VERSION.SDK_INT < 24) return false;
         DisplayMetrics dm = s.getResources().getDisplayMetrics();
         float w = dm.widthPixels, h = dm.heightPixels;
@@ -508,6 +523,7 @@ public class MayraAccessService extends AccessibilityService {
     // ---------- double tap in the middle of the screen (like a reel / TikTok / Instagram video) ----------
     static boolean doubleTap() {
         MayraAccessService s = instance;
+        if (mayraOnTop()) return false;
         if (s == null || Build.VERSION.SDK_INT < 24) return false;
         DisplayMetrics dm = s.getResources().getDisplayMetrics();
         float x = dm.widthPixels / 2f, y = dm.heightPixels * 0.45f;
@@ -620,7 +636,7 @@ public class MayraAccessService extends AccessibilityService {
             target = focusedBox();
             if (target == null) target = findEditableNotSearch(root);
         }
-        if (target == null) return false;
+        if (target == null || isOwn(target)) return false;
         target = showOnScreen(target);
         target.performAction(AccessibilityNodeInfo.ACTION_FOCUS);
         target.performAction(AccessibilityNodeInfo.ACTION_CLICK);

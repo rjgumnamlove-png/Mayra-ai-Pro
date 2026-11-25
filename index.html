@@ -4595,7 +4595,7 @@ const _greetClear=greetNow;
 greetNow=function(){
   const _send=send;let done=false;
   send=function(o){try{if(!done&&o&&o.realtimeInput&&typeof o.realtimeInput.text==='string'&&/call has just started|the user closed the call/.test(o.realtimeInput.text)){done=true;
-      o={realtimeInput:{text:'(This is a message from the app, not the user: the user has not spoken or greeted you yet.) '+o.realtimeInput.text+' (Say it in clear, natural Pakistani Urdu, every word with its correct Urdu pronunciation, at a calm pace; no Hindi or English accent. The user has not said anything yet and has not greeted you, so never answer with وعلیکم السلام: you greet first.)'}}}}catch(e){}
+      o={realtimeInput:{text:'(This is a message from the app, not the user: the user has not spoken or greeted you yet.) '+o.realtimeInput.text+' (Say it in clear, natural Pakistani Urdu, every word with its correct Urdu pronunciation, at a calm pace; no Hindi or English accent. The user has not said anything yet and has not greeted you, so never answer with وعلیکم السلام: you greet first. Begin your very first words with السلام علیکم, ہائے or ہیلو.)'}}}}catch(e){}
     return _send.apply(this,arguments)};
   try{return _greetClear.apply(this,arguments)}finally{send=_send}};
 
@@ -4752,35 +4752,25 @@ cap=function(role,text){
   return _capCry.apply(this,arguments)};
 
 
-/* ---- tears you can hear: when the crying cue goes out, her very next answer starts with a soft sniffle and her
-   voice trembles a little (a gentle wobble of her volume, the way a crying voice shakes), with one more sniffle
-   when she finishes. Made in the phone; it never adds words. The model's own sobs come on top of this. ---- */
-const TEAR={on:false,lfo:null,depth:null,until:0};
-function tearSniff(at,strength){try{if(!ctx||!an)return;const sr=ctx.sampleRate,len=Math.floor(sr*0.42),b=ctx.createBuffer(1,len,sr),d=b.getChannelData(0);
-    // two short wet inhales through the nose: band-limited noise, each with a quick rise and fall
-    for(let i=0;i<len;i++){const t=i/sr;let e=0;[[0,0.15],[0.2,0.2]].forEach(([s0,l])=>{if(t>=s0&&t<s0+l){const x=(t-s0)/l;e+=Math.sin(Math.PI*x)*(x<0.3?x/0.3:1)}});d[i]=(Math.random()*2-1)*e}
-    const src=ctx.createBufferSource();src.buffer=b;
-    const bp=ctx.createBiquadFilter();bp.type='bandpass';bp.frequency.value=2300;bp.Q.value=0.9;
-    const hp=ctx.createBiquadFilter();hp.type='highpass';hp.frequency.value=700;
-    const g=ctx.createGain();g.gain.value=0.22*(strength||1);
-    src.connect(bp);bp.connect(hp);hp.connect(g);g.connect(an);src.start(Math.max(ctx.currentTime,at||0))}catch(e){}}
-function tearStart(){try{if(!ctx||!outG||TEAR.on)return;TEAR.on=true;TEAR.until=Date.now()+15000;
-    const o=ctx.createOscillator();o.frequency.value=5.2;const dg=ctx.createGain();dg.gain.value=0;
-    o.connect(dg);dg.connect(outG.gain);o.start();TEAR.lfo=o;TEAR.depth=dg;
-    dg.gain.setTargetAtTime(Math.max(0.05,(+$('vol').value||1)*0.13),ctx.currentTime,0.4);dbg('feeling: teary voice on')}catch(e){}}
-function tearStop(){try{if(!TEAR.on)return;TEAR.on=false;const o=TEAR.lfo,dg=TEAR.depth;TEAR.lfo=TEAR.depth=null;
-    if(dg&&ctx)dg.gain.setTargetAtTime(0,ctx.currentTime,0.5);setTimeout(function(){try{o&&o.stop();o&&o.disconnect();dg&&dg.disconnect()}catch(e){}},2500)}catch(e){}}
-const _playTear=play;
-play=function(u){try{if(CRY.pending&&Date.now()-CRY.pending<20000&&ctx){CRY.pending=0;
-    tearSniff(ctx.currentTime+0.03,1);next=Math.max(next,ctx.currentTime+0.5);tearStart()}}catch(e){}
-  return _playTear.apply(this,arguments)};
-const _saveTurnTear=saveTurn;
-saveTurn=function(){try{if(TEAR.on&&ctx){tearSniff(Math.max(ctx.currentTime,next)+0.15,0.8);const end=Math.max(0,(next-ctx.currentTime)*1000)+900;setTimeout(tearStop,end)}}catch(e){}return _saveTurnTear.apply(this,arguments)};
-const _flushTear=flush;
-flush=function(){try{tearStop()}catch(e){}return _flushTear.apply(this,arguments)};
-const _cleanupTear=cleanup;
-cleanup=function(){try{tearStop();CRY.pending=0}catch(e){}return _cleanupTear.apply(this,arguments)};
-setInterval(function(){try{if(TEAR.on&&Date.now()>TEAR.until)tearStop()}catch(e){}},1000);
+
+/* ---- Mayra never touches her own app: she opened her own menu and pressed Exit. While Mayra's own screen is
+   in front, every tapping/typing tool is refused (the native side refuses too). ---- */
+const SELF_TOOLS=/^(ui_click|ui_tap_at|ui_double_tap|ui_swipe|ui_scroll|ui_fill|ui_type|ui_send|tap_on|tap_and_type|type_here|smart_fill)$/;
+const _toolSelf=tool;
+tool=async function(n,a){
+  if(/^(open_app|my_profile|youtube|open_whatsapp|open_google|open_maps|open_gallery|open_video_edit|open_post_edit|watch_video)$/.test(n))SEO_RUN.openedAt=Date.now();
+  if(SELF_TOOLS.test(n)&&!document.hidden&&Date.now()-(SEO_RUN.openedAt||0)>5000){dbg(n+': refused, Mayra\'s own screen is in front');
+    return{error:'Mayra\'s own app is on the screen. Never tap, type or press anything in Mayra\'s own app (its menu, settings or Exit). First open the app the user means (open_app, my_profile, youtube...), then act there.'}}
+  // youtube_seo: only one at a time, whatever the words; a second call while one runs returns at once
+  if(n==='youtube_seo'){
+    if(SEO_RUN.p){dbg('youtube_seo: one is already running, this call waits for nothing');
+      return{status:'still working on the YouTube title and description from your earlier call. Do not call youtube_seo again: tell the user in one short line that you are on it, and wait for the result.'}}
+    const p=_toolSelf.apply(this,arguments);SEO_RUN.p=p;SEO_RUN.t=Date.now();
+    try{return await Promise.race([p,new Promise(function(res){setTimeout(function(){res({error:'this took more than 90 seconds, so it was stopped waiting. Look at the screen: the page may already be done. Tell the user what you see; do not call youtube_seo again right away.'})},90000)})])}
+    finally{p.then(function(){SEO_RUN.p=null},function(){SEO_RUN.p=null});}
+  }
+  return _toolSelf.apply(this,arguments)};
+const SEO_RUN={p:null,t:0};
 
 /* ---- menu sections: opening one closes the others (an accordion), so the menu stays short ---- */
 (function(){try{const side=document.getElementById('side');if(!side)return;
