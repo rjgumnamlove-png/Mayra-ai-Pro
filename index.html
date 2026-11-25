@@ -4517,7 +4517,7 @@ const _saveTurnQW=saveTurn;
 saveTurn=function(){try{if(live){QW.turnEndAt=Date.now();
     const tt=String(QW.turnText||'').replace(/\[[^\]]*\]/g,' ').trim();QW.turnText='';
     // her turn ended on a word that cannot end a sentence ("…میں نا", "…کہ", "…اور", "…"): she was cut off
-    if(tt&&/(…|\.\.\.|،|,|\s(کہ|اور|لیکن|مگر|پھر|کیونکہ|اگر|تو|جو|سے|کو|کا|کی|کے|پر|میں|میں نا|بس|یعنی|جب|اس|یہ|وہ|ہم|تم|میرا|میری))$/.test(tt)&&!/[۔؟!?]$/.test(tt)){QW.unfinAt=Date.now();QW.unfinText=tt.slice(-80)}}}catch(e){}return _saveTurnQW.apply(this,arguments)};
+    if(tt&&/\s(کہ|اور|لیکن|مگر|کیونکہ|اگر|جو|کا|کی|کے|میں نا|یعنی|جب|میرا|میری)[\s…\.،,]*$/.test(tt)&&!/[۔؟!?]$/.test(tt)){QW.unfinAt=Date.now();QW.unfinText=tt.slice(-80)}}}catch(e){}return _saveTurnQW.apply(this,arguments)};
 function qwNudge(why){
   QW.nudges++;QW.lastNudge=Date.now();
   dbg('silence: no answer to the user ('+why+'), reminding her ('+QW.nudges+')');
@@ -4588,7 +4588,7 @@ tool=async function(n,a){
    first sound gets a short lead so the start of the first word is not swallowed while the audio starts ---- */
 let firstAudioDone=false;
 const _playFirst=play;
-play=function(u){try{if(!firstAudioDone&&ctx){firstAudioDone=true;next=Math.max(next,ctx.currentTime+0.25)}}catch(e){}return _playFirst.apply(this,arguments)};
+play=function(u){try{if(!firstAudioDone&&ctx){firstAudioDone=true;next=Math.max(next,ctx.currentTime+0.6)}}catch(e){}return _playFirst.apply(this,arguments)};
 const _cleanFirst=cleanup;
 cleanup=function(){firstAudioDone=false;return _cleanFirst.apply(this,arguments)};
 const _greetClear=greetNow;
@@ -4759,8 +4759,7 @@ const SELF_TOOLS=/^(ui_click|ui_tap_at|ui_double_tap|ui_swipe|ui_scroll|ui_fill|
 const _toolSelf=tool;
 tool=async function(n,a){
   if(/^(open_app|my_profile|youtube|open_whatsapp|open_google|open_maps|open_gallery|open_video_edit|open_post_edit|watch_video)$/.test(n))SEO_RUN.openedAt=Date.now();
-  if(SELF_TOOLS.test(n)&&!document.hidden&&Date.now()-(SEO_RUN.openedAt||0)>5000){dbg(n+': refused, Mayra\'s own screen is in front');
-    return{error:'Mayra\'s own app is on the screen. Never tap, type or press anything in Mayra\'s own app (its menu, settings or Exit). First open the app the user means (open_app, my_profile, youtube...), then act there.'}}
+  // (the guard against Mayra pressing her own buttons lives in the Android part, which knows for sure which app is in front)
   // youtube_seo: only one at a time, whatever the words; a second call while one runs returns at once
   if(n==='youtube_seo'){
     if(SEO_RUN.p){dbg('youtube_seo: one is already running, this call waits for nothing');
