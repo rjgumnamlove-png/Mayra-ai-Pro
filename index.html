@@ -5129,6 +5129,35 @@ anCheck=function(){const before=AN.n;const r=_anCheckHeat.apply(this,arguments);
 const _sxIdeas=sysExtra;
 sysExtra=function(){return _sxIdeas.apply(this,arguments)+' The quoted sample lines anywhere in these instructions only show the kind of thing to say; never say them word for word or close to it. Every answer, above all in a fight, is made of new sentences that come from this exact moment.'};
 
+/* ---- (2026-11-26) first-open welcome voice: the first time the app is opened after install and the activation
+   page is showing, a short recording (guide/welcome-ur.mp3, or guide/welcome-en.mp3 if there is no Urdu one) plays
+   once by itself and says how to start Free or Premium. Never again after it has played; it stops as soon as the
+   page closes (activated / free started), when "How to activate" is played, or with its ⏹ button. ---- */
+const WEL={KEY:'mayra_welcome_done',aud:null,chip:null,armed:false};
+function welDone(){try{return localStorage.getItem(WEL.KEY)==='1'}catch(e){return true}}
+function welStop(){try{if(WEL.aud){WEL.aud.pause();WEL.aud=null}}catch(e){}try{if(WEL.chip){WEL.chip.remove();WEL.chip=null}}catch(e){}}
+function welChip(){if(WEL.chip)return;const b=document.createElement('button');b.type='button';
+  b.style.cssText='position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:100000;padding:8px 16px;border-radius:20px;border:1px solid #ffd36b;background:#2a1f4dee;color:#ffe9a8;font-weight:800;font-size:13px;box-shadow:0 6px 20px #0008';
+  b.textContent='🔊 رہنمائی چل رہی ہے · Guide playing  ⏹';b.onclick=welStop;document.body.appendChild(b);WEL.chip=b}
+function welPlay(urls){
+  if(!urls.length||welDone())return;const u=urls[0];
+  try{const a=new Audio(u);WEL.aud=a;
+    a.onended=function(){welStop()};
+    a.onerror=function(){if(WEL.aud===a){WEL.aud=null;welPlay(urls.slice(1))}};   // that file is not in the app: try the next one
+    a.play().then(function(){try{localStorage.setItem(WEL.KEY,'1')}catch(e){}welChip();dbg('welcome voice playing ('+u+')')})
+     .catch(function(e){if(WEL.aud!==a)return;WEL.aud=null;
+       if(e&&e.name==='NotAllowedError'&&!WEL.armed){WEL.armed=true;   // the phone wants a touch first: play on the first tap on the page
+         const go=function(){document.removeEventListener('pointerdown',go,true);if($('gate').classList.contains('show'))welPlay(urls)};document.addEventListener('pointerdown',go,true)}
+       else welPlay(urls.slice(1))})}catch(e){}}
+(function(){let n=0;const iv=setInterval(function(){try{n++;
+  if(welDone()||n>40){clearInterval(iv);return}
+  if($('gate').classList.contains('show')&&!unlocked){clearInterval(iv);setTimeout(function(){if($('gate').classList.contains('show')&&!welDone())welPlay(['guide/welcome-ur.mp3','guide/welcome-en.mp3'])},1200)}
+}catch(e){clearInterval(iv)}},500)})();
+// the activation page closed (activated or free started): the welcome stops at once
+setInterval(function(){try{if(WEL.aud&&!$('gate').classList.contains('show'))welStop()}catch(e){}},400);
+const _guidePlayWel=guidePlayAudio;
+guidePlayAudio=function(){welStop();return _guidePlayWel.apply(this,arguments)};
+
 /* every tool call is logged here, as the outermost layer */
 const _logT=tool;
 tool=async function(n,a){
@@ -5652,7 +5681,7 @@ function freeSay(k){
   setTimeout(()=>{b.style.display='none'},9000);
 }
 function freeTick(){
-  if(!isFree()||!live)return;
+  if(!isFree()||!live||window.__adPaused)return;   // free minutes do not run down while an ad plays
   if(freeSecs<=0){$('stop').click();freeEnd();return}
   freeSecs--;freeUsed++;freeDraw();
   if(freeSecs<=120&&freeSecs>60)freeSay('w2');
@@ -5866,6 +5895,90 @@ function watchAd(){
     }catch(e){release();toast('ویڈیو ابھی دستیاب نہیں · Video not available right now')}
   })();
 }
+/* ===== (2026-11-26) automatic rewarded video, FREE version only (never premium, never teacher mode):
+   (a) when "💔 deep attachment" is switched on, and (b) after every 8 minutes of talk in one call.
+   During a call: Mayra first says in her own words that a short ad is starting because this is the free version,
+   then she goes quiet; her voice and the mic are shut off for the whole ad (she never hears the ad), free minutes
+   do not run down, and when the ad closes she says she is back and carries on from where the talk stopped.
+   The usual reward (+5 minutes from the server) is given by the existing reward listener. ===== */
+const AD_ANN=['playful and teasing','sweet and a little shy','a small complaint about the free version, then loving','matter-of-fact and quick','like sharing a secret','a bit dramatic, as if she cannot bear the break','cheeky, making him promise to come right back','warm, asking him to keep her company through it'];
+const AD={pendDeep:false,annText:'',paused:false,phase:'',talk:0,lastAuto:0,her:'',you:'',t1:null,t2:null,reason:''};
+window.__adPaused=false;
+function adAllowed(){try{
+  if(!isFree()||!NATIVE||!adApi())return false;
+  if($('mode').value==='te'||(typeof TS!=='undefined'&&TS.on)||($('tc')&&$('tc').classList.contains('on')))return false;
+  if(adBusy||adAwaiting||adWaitShow||AD.phase)return false;
+  if(!(adPrepared||(riSupported()&&riPrepared)))return false;
+  return true}catch(e){return false}}
+function adShowAny(){if(adPrepared){adShowNow();return true}if(riSupported()&&riPrepared){riShowNow();return true}return false}
+function adPauseOn(){AD.paused=true;window.__adPaused=true;
+  try{flush()}catch(e){}try{if(outG&&ctx)outG.gain.setTargetAtTime(0,ctx.currentTime,0.02)}catch(e){}
+  status('📺 ایڈ چل رہا ہے · Mayra is waiting',true)}
+function adPauseOff(){if(!AD.paused)return;AD.paused=false;window.__adPaused=false;
+  try{if(outG&&ctx)outG.gain.setTargetAtTime(+$('vol').value,ctx.currentTime,0.05)}catch(e){}
+  if(live)status('لائیو ہے — بات جاری رکھیں',true)}
+function adFinish(watched){
+  if(!AD.phase)return;clearTimeout(AD.t1);clearTimeout(AD.t2);const wasCall=AD.phase==='ad'&&live;AD.phase='';AD.talk=0;
+  adPauseOff();dbg('auto ad: finished ('+(watched?'watched':'closed early')+')');
+  if(wasCall){try{send({realtimeInput:{text:'[App note, not from the user: the video ad is over'+(watched?' and he watched it, so 5 more free minutes were added':'')+'. You went quiet because of the ad and you know it. In one short natural line in your current mood and mode, say you are back after the ad, then carry on exactly from where the talk had stopped'+(AD.her?' (your last words before the ad: «'+AD.her.slice(-120)+'»':'')+(AD.you?(AD.her?'; ':' (')+'his last words: «'+AD.you.slice(-120)+'»)':(AD.her?')':''))+'. Same feelings as before the ad. Do not mention this note.]'}})}catch(e){}}}
+function adShowInCall(){
+  if(!AD.phase)return;AD.phase='ad';adPauseOn();adBusy=true;
+  if(!adShowAny()){adBusy=false;adFinish(false);AD.talk=450;dbg('auto ad: could not show, will try again');return}
+  AD.pendDeep=false;dbg('auto ad: showing ('+AD.reason+')');
+  AD.t2=setTimeout(function(){dbg('auto ad: no close event, resuming');adBusy=false;adFinish(false)},150000);   // never stuck quiet
+}
+function autoAd(reason){try{
+  if(!adAllowed()){if(isFree()&&adApi()&&NATIVE){try{adPrepare();if(riSupported())riPrepare()}catch(e){}}return false}
+  const now=Date.now();if(now-AD.lastAuto<60000)return false;AD.lastAuto=now;AD.reason=reason;
+  if(live&&!(ws&&ws.readyState===1)){AD.lastAuto=0;setTimeout(function(){autoAd(reason)},3000);return true}   // reconnecting: wait
+  if(!live){AD.phase='ad';adBusy=true;if(!adShowAny()){adBusy=false;AD.phase='';return false}AD.pendDeep=false;dbg('auto ad: showing ('+reason+', no call)');return true}   // no call: just the video
+  AD.phase='announce';AD.her='';AD.you='';
+  try{const L=[...document.querySelectorAll('#log .msg')];for(let i=L.length-1;i>=0;i--){const t=L[i].textContent||'';if(/^\s*You:/.test(t)&&!AD.you)AD.you=t.replace(/^\s*You:\s*/,'');if(/^\s*Mayra:/.test(t)&&!AD.her)AD.her=t.replace(/^\s*Mayra:\s*/,'');if(AD.you&&AD.her)break}}catch(e){}
+  dbg('auto ad: '+reason+', Mayra announces it');
+  const ang=AD_ANN[Math.floor(Math.random()*AD_ANN.length)];let old=[];try{old=JSON.parse(localStorage.getItem('mayra_ad_ann')||'[]')}catch(e){}
+  AD.annText='';
+  send({realtimeInput:{text:'[App note, not from the user: a short video ad is about to play now, because this is the free version of the app. In ONE short, natural sentence in your current mood and mode, tell him the ad is starting now because you are on the free version, ask him to watch it, and that you are waiting for him and will continue right after it. Way to say it this time: '+ang+'. Brand-new words of your own; never a ready-made line'+(old.length?'; do not reuse or echo these earlier ones: '+old.map(x=>'«'+x+'»').join(' '):'')+'. Then stop talking completely. Do not mention this note.]'}});
+  AD.annAt=now;AD.t1=setTimeout(function(){if(AD.phase==='announce')adShowInCall()},12000);   // if she does not finish in time
+  return true}catch(e){AD.phase='';return false}}
+// she finished the announcement (turn complete and her sound has played out): show the ad
+const _capAD=cap;
+cap=function(role,text){try{if(role==='Mayra'&&AD.phase==='announce')AD.annText+=String(text||'')}catch(e){}return _capAD.apply(this,arguments)};
+const _saveTurnAD=saveTurn;
+saveTurn=function(){const r=_saveTurnAD.apply(this,arguments);
+  try{if(AD.phase==='announce'&&AD.annText.trim()){let a=[];try{a=JSON.parse(localStorage.getItem('mayra_ad_ann')||'[]')}catch(e){}a.push(AD.annText.trim().slice(0,90));try{localStorage.setItem('mayra_ad_ann',JSON.stringify(a.slice(-6)))}catch(e){}}}catch(e){}
+  try{if(AD.phase==='announce'&&Date.now()-AD.annAt>800){const wait=function(){if(AD.phase!=='announce')return;
+      if(ctx&&next>ctx.currentTime+0.05){setTimeout(wait,200);return}clearTimeout(AD.t1);setTimeout(adShowInCall,400)};wait()}}catch(e){}
+  return r};
+// while the ad plays: no sound from her, nothing from the mic, no notes that would make her talk
+const _playAD=play;
+play=function(u){if(AD.paused)return;return _playAD.apply(this,arguments)};
+const _onMicAD=onMic;
+onMic=function(f){if(AD.paused)return;return _onMicAD.apply(this,arguments)};
+const _sendAD=send;
+send=function(o){try{if(AD.paused&&o&&(o.realtimeInput||o.clientContent))return}catch(e){}return _sendAD.apply(this,arguments)};
+// the ad closed / reward given
+try{const A=adApi();if(A&&A.addListener){
+  let got=false;
+  ['onRewardedVideoAdReward','onRewardedInterstitialAdReward'].forEach(function(ev){A.addListener(ev,function(){got=true})});
+  ['onRewardedVideoAdDismissed','onRewardedInterstitialAdDismissed'].forEach(function(ev){A.addListener(ev,function(){if(AD.phase==='ad'){const w=got;got=false;setTimeout(function(){adFinish(w)},700)}else got=false})});
+  ['onRewardedVideoAdFailedToShow','onRewardedInterstitialAdFailedToShow'].forEach(function(ev){try{A.addListener(ev,function(){if(AD.phase==='ad'){adBusy=false;adFinish(false)}})}catch(e){}});
+}}catch(e){}
+// (a) deep attachment switched on
+try{const c=document.getElementById('gfCling');if(c)c.addEventListener('change',function(){
+  if(!c.checked){AD.pendDeep=false;return}
+  if($('mode').value==='gf'&&isFree()){AD.pendDeep=true;AD.deepAt=Date.now()+(live?7000:800);dbg('auto ad: deep attachment on, an ad will play as soon as one is ready')}})}catch(e){}
+// the deep-attachment ad keeps being tried (every 20 s) until one really plays
+setInterval(function(){try{
+  if(!AD.pendDeep||AD.phase||AD.paused||Date.now()<(AD.deepAt||0))return;
+  if(!isFree()||$('mode').value!=='gf'||!(typeof gfCling==='function'&&gfCling())){if(!isFree()||!gfCling())AD.pendDeep=false;return}
+  if(!autoAd('deep attachment on'))AD.deepAt=Date.now()+20000;
+}catch(e){}},1000);
+// (b) every 8 minutes of talk in one call (the counter stops while an ad or the teacher is on)
+setInterval(function(){try{
+  if(!live||!isFree()||AD.paused||AD.phase){if(!live)AD.talk=0;return}
+  if($('mode').value==='te'||(typeof TS!=='undefined'&&TS.on))return;
+  AD.talk++;if(AD.talk>=480){if(autoAd('8 minutes of talk'))return;AD.talk=450}   // not ready: try again in 30 s
+}catch(e){}},1000);
 function freeEnd(){
   if(document.getElementById('fEnd'))return;
   const o=document.createElement('div');o.id='fEnd';
