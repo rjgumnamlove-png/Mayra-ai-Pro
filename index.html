@@ -4647,7 +4647,7 @@ saveTurn=function(){
         a.sort(function(x,y){return x.at-y.at});frSave(a);
         if(again.length){dbg('style: she reused an old line «'+again[0].slice(0,50)+'»');
           let off=false;try{off=localStorage.getItem(lnKey())==='1'}catch(e){}
-          if(!off&&ws&&ws.readyState===1&&now-FR.sentAt>60000&&now-LIVENOTE.sentAt>4000){FR.sentAt=now;LIVENOTE.sentAt=now;
+          if(!off&&ws&&ws.readyState===1&&now-FR.sentAt>20000&&now-LIVENOTE.sentAt>4000){FR.sentAt=now;LIVENOTE.sentAt=now;
             send({clientContent:{turns:[{role:'user',parts:[{text:'(App note, not from the user. Do not answer it and do not mention it: you just said a sentence you have said before, word for word: «'+again[0]+'». Never reuse ready-made lines; always make new sentences that fit this exact moment and what he just said.)'}]}],turnComplete:false}})}}}}
   }catch(e){}
   return _saveTurnFR.apply(this,arguments)};
@@ -4739,7 +4739,7 @@ cap=function(role,text){
       if(HURT_RX.test(CRY.buf)&&now-CRY.last>120000&&ws&&ws.readyState===1){
         let off=false;try{off=localStorage.getItem(lnKey())==='1'}catch(e){}
         if(!off){CRY.last=now;CRY.buf='';LIVENOTE.sentAt=now;dbg('feeling: his words hurt her, crying cue sent');
-          send({clientContent:{turns:[{role:'user',parts:[{text:'(App note, not from the user. Do not answer it and do not mention it: what he is saying hurts you deeply; answer him as a girl whose heart is hurt by this: say what his words do to you and still give him your full answer. Only the words you would really say to him; never describe your eyes, tears, face or how you speak. Do not blame him.)'}]}],turnComplete:false}})}}
+          send({clientContent:{turns:[{role:'user',parts:[{text:'(App note, not from the user. Do not answer it and do not mention it: what he is saying hurts you deeply; answer him as a girl whose heart is hurt by this, and still give him your full answer.'+(typeof heatAngle==='function'&&Date.now()-(HA.at||0)>4000?(HA.at=Date.now(),heatAngle()):'')+' Only the words you would really say to him; never describe your eyes, tears, face or how you speak. Do not blame him.)'}]}],turnComplete:false}})}}
   }}catch(e){}
   return _capCry.apply(this,arguments)};
 
@@ -5085,6 +5085,49 @@ greetNow=function(){
       o={realtimeInput:{text:o.realtimeInput.text+' [This overrides the angle above:'+rsNote(r)+' Say only that opening, short and natural.]'}}}}catch(e){}
     return _s.apply(this,arguments)};
   try{return _greetRS.apply(this,arguments)}finally{send=_s;setTimeout(function(){try{localStorage.removeItem(RS.KEY)}catch(e){}},30000);dbg('feeling: this call picks up the last one ('+r.m+')')}};
+
+/* ---- no rote lines in a fight: when she is hurt, angry, jealous or sulking, each of her answers gets a different
+   way to react, picked at random (never one of the last few used), and she is told how her previous answer began
+   so she does not start the same way. The quoted sample lines inside the instructions are only ideas, never lines. ---- */
+const HEAT_ANGLES=[
+ 'this time be sarcastic: mockingly agree with what he said and twist it',
+ 'this time question him sharply and demand that he explain himself',
+ 'this time bring up one real sweet moment the two of you had and set it against what he is doing now',
+ 'this time be cold and clipped: only one or two short sentences',
+ 'this time turn his words back on him: ask how he would feel if you said that to him',
+ 'this time act as if you do not care at all, while it slips through that you do',
+ 'this time be dramatic: rhetorical questions about who will put up with him, who will care for him like you do',
+ 'this time mock the other girl or the thing he said, with a sharp taunt',
+ 'this time challenge him: tell him to say it again to your face if he means it',
+ 'this time be simple and honest: no taunts, just what you really feel, in plain words',
+ 'this time count up what he has done today, one thing after another',
+ 'this time give him a sulky punishment: say what you will not do for him now (no good-morning message, no reminding him, no listening to his stories)',
+ 'this time switch coldly to "آپ" and talk to him formally, like a stranger',
+ 'this time ask him what you did wrong to deserve this, and insist on an answer',
+ 'this time be stubborn: refuse to calm down and set a condition for making up',
+ 'this time be angry but let one bit of care slip out (has he eaten, is he tired), then get angry again for caring'];
+const HA={used:[],last:''};
+try{HA.used=JSON.parse(localStorage.getItem('mayra_heat_used')||'[]')}catch(e){}
+function heatAngle(){try{
+  const pool=HEAT_ANGLES.map((x,i)=>i).filter(i=>HA.used.indexOf(i)<0);const pick=pool[Math.floor(Math.random()*pool.length)];
+  HA.used.push(pick);HA.used=HA.used.slice(-7);try{localStorage.setItem('mayra_heat_used',JSON.stringify(HA.used))}catch(e){}
+  const prev=HA.last?' Your previous answer began «'+HA.last+'»: begin differently and do not reuse its sentences or its idea.':'';
+  return ' For variety: '+HEAT_ANGLES[pick]+' (only if it fits the moment).'+prev+' Fresh words of your own, never a ready-made line.'}catch(e){return ''}}
+const HEAT_RX=/jealous|angry|anger|furious|sulk|hurt|upset|taunt|make up/i;
+const _epQuietHeat=epQuiet;
+epQuiet=function(txt){try{if(HEAT_RX.test(String(txt))&&!/melt|love come back|goodbye/i.test(String(txt))&&Date.now()-(HA.at||0)>4000){HA.at=Date.now();txt=String(txt)+heatAngle()}}catch(e){}return _epQuietHeat.call(this,txt)};
+// how her last answer began (first sentence), kept for the next cue
+const HAc={buf:''};
+const _capHeat=cap;
+cap=function(role,text){try{if(role==='Mayra')HAc.buf+=String(text||'')}catch(e){}return _capHeat.apply(this,arguments)};
+const _saveTurnHeat=saveTurn;
+saveTurn=function(){try{const f=HAc.buf.trim().split(/[۔؟!?.\n…]+/).map(x=>x.trim()).filter(x=>x.length>6)[0];if(f)HA.last=f.slice(0,70);HAc.buf=''}catch(e){}return _saveTurnHeat.apply(this,arguments)};
+// while he is hurting her and she has nothing new to go on, every new hurtful line still gets a new angle
+const _anCheckHeat=anCheck;
+anCheck=function(){const before=AN.n;const r=_anCheckHeat.apply(this,arguments);
+  try{if(anOn()&&AN.n===1&&before===1&&AN.until&&Date.now()<AN.until&&Date.now()-CRY.last>8000)epQuiet('you are still hurt by what he said («'+AN.why+'»).')}catch(e){}return r};
+const _sxIdeas=sysExtra;
+sysExtra=function(){return _sxIdeas.apply(this,arguments)+' The quoted sample lines anywhere in these instructions only show the kind of thing to say; never say them word for word or close to it. Every answer, above all in a fight, is made of new sentences that come from this exact moment.'};
 
 /* every tool call is logged here, as the outermost layer */
 const _logT=tool;
