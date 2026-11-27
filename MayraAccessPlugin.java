@@ -57,91 +57,7 @@ public class MayraAccessPlugin extends Plugin {
     @PluginMethod
     public void uiClick(PluginCall call) {
         JSObject o = new JSObject();
-        String hit = MayraAccessService.smartClick(call.getString("label", ""), call.getString("where", ""));
-        o.put("ok", hit != null);
-        if (hit != null) o.put("text", hit);
-        call.resolve(o);
-    }
-
-    @PluginMethod
-    public void uiKeyboard(PluginCall call) {
-        JSObject o = new JSObject();
-        String mode = call.getString("mode", "replace");
-        if ("read".equals(mode)) {
-            String t = MayraAccessService.imeRead();
-            o.put("ok", t != null);
-            if (t != null) o.put("text", t);
-        } else {
-            boolean ok = MayraAccessService.imeWrite(call.getString("text", ""), mode);
-            o.put("ok", ok);
-            String t = ok ? MayraAccessService.imeRead() : null;
-            if (t != null) o.put("text", t);
-        }
-        o.put("ready", MayraAccessService.imeReady());
-        call.resolve(o);
-    }
-
-    @PluginMethod
-    public void uiSnap(final PluginCall call) {
-        MayraAccessService.snap(new MayraAccessService.SnapResult() {
-            @Override
-            public void done(String b64, String error) {
-                JSObject o = new JSObject();
-                o.put("ok", b64 != null);
-                if (b64 != null) o.put("data", b64);
-                if (error != null) o.put("error", error);
-                call.resolve(o);
-            }
-        });
-    }
-
-    @PluginMethod
-    public void uiEnter(PluginCall call) {
-        JSObject o = new JSObject();
-        o.put("ok", MayraAccessService.imeEnter());
-        call.resolve(o);
-    }
-
-    @PluginMethod
-    public void uiMap(PluginCall call) {
-        org.json.JSONObject m = MayraAccessService.screenMap();
-        if (m == null) { call.reject("not enabled"); return; }
-        try { call.resolve(JSObject.fromJSONObject(m)); } catch (Exception e) { call.reject(String.valueOf(e.getMessage())); }
-    }
-
-    @PluginMethod
-    public void uiTapAt(PluginCall call) {
-        JSObject o = new JSObject();
-        Double x = call.getDouble("x", 50.0), y = call.getDouble("y", 50.0);
-        o.put("ok", MayraAccessService.tapPercent(x == null ? 50f : x.floatValue(), y == null ? 50f : y.floatValue()));
-        call.resolve(o);
-    }
-
-    @PluginMethod
-    public void uiScroll(PluginCall call) {
-        JSObject o = new JSObject();
-        o.put("ok", MayraAccessService.scroll(call.getString("dir", "down")));
-        call.resolve(o);
-    }
-
-    @PluginMethod
-    public void uiFill(PluginCall call) {
-        JSObject o = new JSObject();
-        o.put("ok", MayraAccessService.fillField(call.getString("label", ""), call.getString("text", "")));
-        call.resolve(o);
-    }
-
-    @PluginMethod
-    public void uiDoubleTap(PluginCall call) {
-        JSObject o = new JSObject();
-        o.put("ok", MayraAccessService.doubleTap());
-        call.resolve(o);
-    }
-
-    @PluginMethod
-    public void uiSubmit(PluginCall call) {
-        JSObject o = new JSObject();
-        o.put("ok", MayraAccessService.submit());
+        o.put("ok", MayraAccessService.clickLabel(call.getString("label", "")));
         call.resolve(o);
     }
 
@@ -331,5 +247,55 @@ public class MayraAccessPlugin extends Plugin {
             }
         }
         call.reject(lastErr);
+    }
+
+    // ---------- (2026-11-27) WhatsApp voice note ----------
+    @PluginMethod
+    public void waVoiceFind(PluginCall call) {
+        JSObject o = new JSObject();
+        float[] b = MayraAccessService.findWaVoiceButton();
+        o.put("ok", b != null);
+        if (b != null) { o.put("x", b[0]); o.put("y", b[1]); o.put("byId", b[2] > 0); }
+        call.resolve(o);
+    }
+
+    @PluginMethod
+    public void waVoiceStart(PluginCall call) {
+        JSObject o = new JSObject();
+        float[] b = MayraAccessService.findWaVoiceButton();
+        if (b == null) { o.put("ok", false); o.put("error", "WhatsApp mic button not found"); call.resolve(o); return; }
+        o.put("ok", MayraAccessService.voiceHoldStart(b[0], b[1]));
+        call.resolve(o);
+    }
+
+    @PluginMethod
+    public void waVoiceStop(PluginCall call) {
+        MayraAccessService.voiceHoldStop();
+        JSObject o = new JSObject();
+        o.put("ok", true);
+        call.resolve(o);
+    }
+
+    @PluginMethod
+    public void waVoiceState(PluginCall call) {
+        JSObject o = new JSObject();
+        o.put("holding", MayraAccessService.holding);
+        call.resolve(o);
+    }
+
+    @PluginMethod
+    public void hideKeyboard(PluginCall call) {
+        JSObject o = new JSObject();
+        o.put("ok", MayraAccessService.hideKeyboard());
+        call.resolve(o);
+    }
+
+    @PluginMethod
+    public void waInstalled(PluginCall call) {
+        JSObject o = new JSObject();
+        PackageManager pm = getContext().getPackageManager();
+        o.put("normal", pm.getLaunchIntentForPackage("com.whatsapp") != null);
+        o.put("business", pm.getLaunchIntentForPackage("com.whatsapp.w4b") != null);
+        call.resolve(o);
     }
 }

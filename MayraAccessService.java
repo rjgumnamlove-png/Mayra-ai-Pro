@@ -639,4 +639,86 @@ public class MayraAccessService extends AccessibilityService {
             return t == null || t.getText() == null ? "" : t.getText().toString();
         } catch (Throwable e) { return null; }
     }
+
+    // ---------- (2026-11-27) WhatsApp voice note: find WhatsApp's OWN mic button and hold it down ----------
+    // Only a node inside the WhatsApp / WhatsApp Business window counts (never the keyboard's mic, which lives in
+    // the keyboard app's window). The press is kept down with continued strokes until voiceHoldStop() is called.
+    static volatile boolean holding = false;
+    static volatile long holdStartedAt = 0;
+    static float holdX, holdY;
+    static GestureDescription.StrokeDescription holdStroke;
+
+    static float[] findWaVoiceButton() {
+        for (AccessibilityNodeInfo root : roots()) {
+            if (root == null || root.getPackageName() == null) continue;
+            String pk = root.getPackageName().toString();
+            if (!pk.equals("com.whatsapp") && !pk.equals("com.whatsapp.w4b")) continue;
+            List<AccessibilityNodeInfo> all = new ArrayList<>();
+            all(root, all);
+            for (AccessibilityNodeInfo n : all) {
+                if (n == null || !n.isVisibleToUser()) continue;
+                String id = n.getViewIdResourceName() == null ? "" : n.getViewIdResourceName();
+                String d = n.getContentDescription() == null ? "" : n.getContentDescription().toString().toLowerCase();
+                boolean byId = id.endsWith(":id/voice_note_btn");
+                boolean byDesc = (d.contains("voice message") || d.contains("voice note") || d.contains("record voice")) && !d.contains("play");
+                if (!byId && !byDesc) continue;
+                Rect r = new Rect();
+                n.getBoundsInScreen(r);
+                if (r.width() <= 0 || r.height() <= 0) continue;
+                return new float[]{r.exactCenterX(), r.exactCenterY(), byId ? 1 : 0};
+            }
+        }
+        return null;
+    }
+
+    private static void holdNext(final boolean keep) {
+        final MayraAccessService s = instance;
+        if (s == null || Build.VERSION.SDK_INT < 26 || holdStroke == null) { holding = false; return; }
+        Path p = new Path();
+        p.moveTo(holdX, holdY);
+        try {
+            holdStroke = holdStroke.continueStroke(p, 0, keep ? 400 : 40, keep);
+            GestureDescription g = new GestureDescription.Builder().addStroke(holdStroke).build();
+            s.dispatchGesture(g, new GestureResultCallback() {
+                @Override public void onCompleted(GestureDescription d) {
+                    if (!keep) { holding = false; holdStroke = null; return; }
+                    if (System.currentTimeMillis() - holdStartedAt > 58000) holding = false;   // WhatsApp limit for this trick
+                    holdNext(holding);
+                }
+                @Override public void onCancelled(GestureDescription d) { holding = false; holdStroke = null; }
+            }, null);
+        } catch (Exception e) { holding = false; holdStroke = null; }
+    }
+
+    static boolean voiceHoldStart(float x, float y) {
+        final MayraAccessService s = instance;
+        if (s == null || Build.VERSION.SDK_INT < 26 || holding) return false;
+        holdX = x; holdY = y;
+        Path p = new Path();
+        p.moveTo(x, y);
+        holdStroke = new GestureDescription.StrokeDescription(p, 0, 400, true);
+        holding = true;
+        holdStartedAt = System.currentTimeMillis();
+        boolean ok = s.dispatchGesture(new GestureDescription.Builder().addStroke(holdStroke).build(), new GestureResultCallback() {
+            @Override public void onCompleted(GestureDescription d) { holdNext(holding); }
+            @Override public void onCancelled(GestureDescription d) { holding = false; holdStroke = null; }
+        }, null);
+        if (!ok) { holding = false; holdStroke = null; }
+        return ok;
+    }
+
+    // the next continued stroke lifts the finger, and WhatsApp sends the recording
+    static void voiceHoldStop() { holding = false; }
+
+    static boolean hideKeyboard() {
+        MayraAccessService s = instance;
+        if (s == null) return false;
+        try {
+            if (Build.VERSION.SDK_INT >= 24) {
+                return s.getSoftKeyboardController().setShowMode(AccessibilityService.SHOW_MODE_HIDDEN)
+                        && s.getSoftKeyboardController().setShowMode(AccessibilityService.SHOW_MODE_AUTO);
+            }
+        } catch (Exception ignored) {}
+        return false;
+    }
 }
